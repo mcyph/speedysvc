@@ -14,11 +14,11 @@ def get_sock():
 
 
 def send(data):
-    print 'send:', [data]
-    print 'SOCK:', get_sock().sendall(data)
+    #print 'send:', [data]
+    get_sock().sendall(data)
 
 def recv(amount, sock=None):
-    print 'recv:', amount,
+    #print 'recv:', amount,
     s = ''
     sock = sock or get_sock()
 
@@ -28,18 +28,18 @@ def recv(amount, sock=None):
         a = sock.recv(amount)
 
         if a:
-            print 'RECV:', [a], len(a)
+            #print 'RECV:', [a], len(a)
             amount -= len(a)
             s += a
         else:
             raise Exception("connection terminated")
 
     assert amount==0
-    print [s]
+    #print [s]
     return s
 
 def recv_line(sock=None):
-    print 'recv_line:',
+    #print 'recv_line:',
     sock = sock or get_sock()
 
     L = []
@@ -53,7 +53,7 @@ def recv_line(sock=None):
             raise Exception("connection terminated")
 
     r = ''.join(L)
-    print [r]
+    #print [r]
     return r
 
 def handle_response():

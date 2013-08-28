@@ -28,7 +28,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.BaseRequestHandler):
     def handle(self):
         while 1:
             line = recv_line(self.request)
-            print 'cmd:', line.rstrip('\n')
+            #print 'cmd:', line.rstrip('\n')
             if not line:
                 return
 
@@ -69,18 +69,18 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.BaseRequestHandler):
         elif cmd == 'call':
             id, args_amount, kw_amount = data.split('\t')
 
-            print 'READ1:', args_amount
+            #print 'READ1:', args_amount
             args = loads(recv(int(args_amount), self.request))
-            print 'READ2:', kw_amount
+            #print 'READ2:', kw_amount
             kw = loads(recv(int(kw_amount), self.request))
 
-            print args, kw
+            #print args, kw
 
             o = DVars[int(id)](*args, **kw)
             self._handle_obj(o)
 
     def _handle_obj(self, o):
-        print 'handle:', o, type(o)
+        #print 'handle:', o, type(o)
 
         if type(o) in SNoPickle:
             global var_id
@@ -91,7 +91,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.BaseRequestHandler):
             data = dumps(o)
             send = 'pickle\t%s\n%s' % (len(data), data)
 
-        print 'send:', [send]
+        #print 'send:', [send]
         self.request.sendall(send)
 
 
