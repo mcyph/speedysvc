@@ -2,15 +2,16 @@ import os
 import mmap
 import time
 import thread
-from random import random
 
 from Base import Base
 
 
 class Server(Base):
-    def __init__(self):
+    def __init__(self, DCmds):
+        self.DCmds = DCmds
+
         for x in xrange(self.MAX_CONNECTIONS):
-            thread.start_new_thread(self.main, ())
+            thread.start_new_thread(self.main, (x,))
 
 
     def main(self, thread_num):
@@ -40,10 +41,15 @@ class Server(Base):
 
         while 1:
             if cur_state_int.value == self.STATE_CMD_TO_SERVER:
-                data = str(random())* 10000
-                buf[DATA_OFFSET:DATA_OFFSET+len(data)] = data
-                amount_int.value = len(data)
-                assert amount_int.value == len(data)
+                # Get the command/command argument from the client
+                recv_data = buf[DATA_OFFSET:DATA_OFFSET+amount_int.value]
+                cmd, _, recv_data = recv_data.partition(' ')
+
+                # Send a response to the client
+                send_data = self.DCmds[cmd](recv_data)
+                buf[DATA_OFFSET:DATA_OFFSET+len(send_data)] = send_data
+                amount_int.value = len(send_data)
+                assert amount_int.value == len(send_data)
 
                 cur_state_int.value = self.STATE_DATA_TO_CLIENT
                 x = 1
@@ -59,10 +65,9 @@ class Server(Base):
 
 
 if __name__ == '__main__':
-    inst = Server()
+    inst = Server({
+        'echo': lambda data: data
+    })
 
     while 1:
-        # Simulate a simple echo server
-        i = inst.recv()
-        print i
-        inst.send(i)
+        time.sleep(1)

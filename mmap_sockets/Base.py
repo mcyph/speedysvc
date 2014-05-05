@@ -8,11 +8,9 @@ class Base:
     PATH = '/tmp/mmaptest-%s'
 
 
-    # Number of threads in each process
-    MAX_CONNECTIONS = 15
-    # Number of processes, and also how many
-    # LevelDB instances to create
-    NUM_PROCESSES = 10
+    # Number of threads on a server, and how
+    # many clients can connect at once
+    MAX_CONNECTIONS = 10
 
 
     # time.sleep performance-related options
@@ -23,16 +21,10 @@ class Base:
     # Current network state
     STATE_DATA_TO_CLIENT = 0
     STATE_CMD_TO_SERVER = 1
-    STATE_ITER_MORE_TO_COME = 2
-    STATE_ITER_GET_MORE = 3
-    STATE_ITER_NO_MORE = 4
 
 
     SClientValues = {
-        STATE_DATA_TO_CLIENT,
-        STATE_ITER_GET_MORE,
-        STATE_ITER_MORE_TO_COME,
-        STATE_ITER_NO_MORE
+        STATE_DATA_TO_CLIENT
     }
 
 

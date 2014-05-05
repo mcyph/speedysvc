@@ -1,10 +1,25 @@
-import os
+import sys, os
 import mmap
 import time
 import thread
-from lockfile import LockFile, AlreadyLocked, NotLocked
+from toolkit.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
 
 from Base import Base
+
+
+def set_exit_handler(func):
+    if os.name == "nt":
+        try:
+            import win32api
+            win32api.SetConsoleCtrlHandler(func, True)
+        except ImportError:
+            version = '.'.join(map(str, sys.version_info[:2]))
+            raise Exception('pywin32 not installed for Python ' + version)
+    else:
+        import signal
+        signal.signal(signal.SIGABRT, func)
+        signal.signal(signal.SIGTERM, func)
+
 
 
 class Client(Base):
@@ -22,16 +37,18 @@ class Client(Base):
             mmap.PROT_READ|mmap.PROT_WRITE
         )
         Base.__init__(self, buf)
-
-        self.DInfo = self.get('', {})
+        set_exit_handler(self._release_lock)
 
 
     def __del__(self):
-        if hasattr(self, 'lock_file'):
-            try:
-                self.lock_file.release()
-            except NotLocked:
-                pass
+        self._release_lock()
+
+
+    def _release_lock(self):
+        try:
+            unlock(self.lock_file)
+        except:
+            pass
 
 
     #=================================================================#
@@ -40,15 +57,24 @@ class Client(Base):
 
 
     def _acquire_lock(self):
-        for x in xrange(self.NUM_PROCESSES):
-            lock_file = LockFile(
-                self.PATH % (str(x)+'.lockfile')
+        print 'Acquire mmap lock:',
+        for x in xrange(self.MAX_CONNECTIONS):
+            lock_file_path = self.lock_file_path = (
+                self.PATH % (str(x)+'.lock')
             )
+
+            lock_file = open(lock_file_path, "a+")
+
             try:
-                lock_file.acquire(0)
-            except AlreadyLocked:
+                lock(lock_file, LOCK_EX|LOCK_NB)
+            except (LockException, IOError):
+                try:
+                    lock_file.close()
+                except:
+                    pass
                 continue
 
+            print 'Lock %s acquired!' % x
             self.lock_file = lock_file
             return x
 
@@ -66,7 +92,7 @@ class Client(Base):
         while 1:
             cur_state = self.cur_state_int.value
 
-            if cur_state not in self.SClientValues:
+            if cur_state == self.STATE_DATA_TO_CLIENT:
                 amount = self.amount_int.value
                 data = self.buf[DATA_OFFSET:DATA_OFFSET+amount]
 
@@ -74,16 +100,24 @@ class Client(Base):
                 break
 
 
-            if x % sleep_every == 0:
+            i_t = time.time()-t
+            if i_t > 20: #x % sleep_every == 0:
+                time.sleep(0.1)
+                #if sleep_every > 1:
+                #    sleep_every //= self.SLEEP_DIV_BY
+            elif i_t > 10:
+                time.sleep(0.05)
+
+            elif i_t > 1:
                 time.sleep(0.001)
-                if sleep_every > 1:
-                    sleep_every //= self.SLEEP_DIV_BY
+
             else:
-                x += 1
+                pass
+                #x += 1
 
 
-        print time.time()-t
-        return cur_state, data
+        #print time.time()-t
+        return data
 
 
     def send(self, cmd, data):
@@ -95,7 +129,11 @@ class Client(Base):
         DATA_OFFSET = self.DATA_OFFSET
 
         self.buf[DATA_OFFSET:DATA_OFFSET+len(send_me)] = send_me
+        self.amount_int.value = len(send_me)
+        assert self.cur_state_int.value != self.STATE_CMD_TO_SERVER
         self.cur_state_int.value = self.STATE_CMD_TO_SERVER
+
+        return self.recv()
 
 
 
@@ -103,7 +141,11 @@ if __name__ == '__main__':
     from random import randint
 
     inst = Client()
-    while 1:
-        i = randint(0, 5000000)
-        inst.send(str(i))
-        print i, inst.recv()
+    t = time.time()
+    for x in xrange(1000000):
+        i = str(randint(0, 5000000))*500
+        #print 'SEND:', i
+        inst.send('echo', i)
+        assert inst.recv() == i
+
+    print time.time()-t
