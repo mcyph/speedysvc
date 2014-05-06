@@ -10,15 +10,17 @@ class Server(Base):
     def __init__(self, DCmds):
         self.DCmds = DCmds
 
-        for x in xrange(self.MAX_CONNECTIONS):
-            thread.start_new_thread(self.main, (x,))
+        self.num_threads = 1
+        thread.start_new_thread(self.main, (0,))
 
 
     def main(self, thread_num):
+        print 'Starting new server thread:', thread_num
+
         # Open the file, and zero out the data
         path = self.PATH % thread_num
         fd = os.open(path, os.O_CREAT|os.O_TRUNC|os.O_RDWR)
-        sz = 1048576*100 # 100MB
+        sz = 10485760 # 10MB
         sz -= sz % mmap.PAGESIZE
         assert os.write(fd, '\x00' * sz) == sz
 
@@ -34,34 +36,45 @@ class Server(Base):
         cur_state_int = self.cur_state_int
         amount_int = self.amount_int
         DATA_OFFSET = self.DATA_OFFSET
+        t = time.time()
 
-
-        x = 1
-        sleep_every = self.SLEEP_EVERY
 
         while 1:
             if cur_state_int.value == self.STATE_CMD_TO_SERVER:
+                if (
+                    thread_num+1 == self.num_threads and
+                    self.num_threads+1 < self.MAX_CONNECTIONS
+                ):
+                    self.num_threads += 1
+                    thread.start_new_thread(self.main, (self.num_threads-1,))
+
+
                 # Get the command/command argument from the client
                 recv_data = buf[DATA_OFFSET:DATA_OFFSET+amount_int.value]
                 cmd, _, recv_data = recv_data.partition(' ')
 
                 # Send a response to the client
                 send_data = self.DCmds[cmd](recv_data)
+
                 buf[DATA_OFFSET:DATA_OFFSET+len(send_data)] = send_data
                 amount_int.value = len(send_data)
+                # This might be overkill, but just to be sure...
+                assert buf[DATA_OFFSET:DATA_OFFSET+len(send_data)] == send_data
                 assert amount_int.value == len(send_data)
 
                 cur_state_int.value = self.STATE_DATA_TO_CLIENT
-                x = 1
-                sleep_every = self.SLEEP_EVERY
+                t = time.time()
 
 
-            if x % sleep_every == 0:
+            i_t = time.time()-t
+            if i_t > 20:
+                time.sleep(0.1)
+            elif i_t > 10:
+                time.sleep(0.05)
+            elif i_t > 1:
                 time.sleep(0.001)
-                if sleep_every > 1:
-                    sleep_every //= self.SLEEP_DIV_BY
             else:
-                x += 1
+                pass
 
 
 if __name__ == '__main__':

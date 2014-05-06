@@ -38,6 +38,7 @@ class Client(Base):
         )
         Base.__init__(self, buf)
         set_exit_handler(self._release_lock)
+        self.cur_state_int.value = self.STATE_DATA_TO_CLIENT
 
 
     def __del__(self):
@@ -58,7 +59,9 @@ class Client(Base):
 
     def _acquire_lock(self):
         print 'Acquire mmap lock:',
-        for x in xrange(self.MAX_CONNECTIONS):
+
+        x = 0
+        while 1:
             lock_file_path = self.lock_file_path = (
                 self.PATH % (str(x)+'.lock')
             )
@@ -72,6 +75,10 @@ class Client(Base):
                     lock_file.close()
                 except:
                     pass
+
+                x += 1
+                if x > self.MAX_CONNECTIONS:
+                    raise Exception('too many connections!')
                 continue
 
             print 'Lock %s acquired!' % x
@@ -83,11 +90,7 @@ class Client(Base):
 
     def recv(self):
         t = time.time()
-        x = 1
-        sleep_every = self.SLEEP_EVERY
-
         DATA_OFFSET = self.DATA_OFFSET
-
 
         while 1:
             cur_state = self.cur_state_int.value
@@ -95,28 +98,18 @@ class Client(Base):
             if cur_state == self.STATE_DATA_TO_CLIENT:
                 amount = self.amount_int.value
                 data = self.buf[DATA_OFFSET:DATA_OFFSET+amount]
-
-                x = 1
                 break
 
-
             i_t = time.time()-t
-            if i_t > 20: #x % sleep_every == 0:
+            if i_t > 20:
                 time.sleep(0.1)
-                #if sleep_every > 1:
-                #    sleep_every //= self.SLEEP_DIV_BY
             elif i_t > 10:
                 time.sleep(0.05)
-
-            elif i_t > 1:
+            elif i_t > 0.1:
                 time.sleep(0.001)
-
             else:
                 pass
-                #x += 1
 
-
-        #print time.time()-t
         return data
 
 
@@ -130,9 +123,11 @@ class Client(Base):
 
         self.buf[DATA_OFFSET:DATA_OFFSET+len(send_me)] = send_me
         self.amount_int.value = len(send_me)
-        assert self.cur_state_int.value != self.STATE_CMD_TO_SERVER
-        self.cur_state_int.value = self.STATE_CMD_TO_SERVER
+        # This might be overkill, but just to be sure...
+        assert self.buf[DATA_OFFSET:DATA_OFFSET+len(send_me)] == send_me
+        assert self.amount_int.value == len(send_me)
 
+        self.cur_state_int.value = self.STATE_CMD_TO_SERVER
         return self.recv()
 
 
