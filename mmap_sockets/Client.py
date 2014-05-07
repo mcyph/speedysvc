@@ -21,7 +21,6 @@ def set_exit_handler(func):
         signal.signal(signal.SIGTERM, func)
 
 
-
 class Client(Base):
     def __init__(self):
         self.thread_lock = thread.allocate_lock()
@@ -36,7 +35,11 @@ class Client(Base):
             mmap.MAP_SHARED,
             mmap.PROT_READ|mmap.PROT_WRITE
         )
-        Base.__init__(self, buf)
+
+        self.cur_state_int, self.amount_int, self.DATA_OFFSET = (
+            Base.get_variables(self, buf)
+        )
+
         set_exit_handler(self._release_lock)
         self.cur_state_int.value = self.STATE_DATA_TO_CLIENT
 
@@ -88,7 +91,26 @@ class Client(Base):
         raise Exception("No available connections!")
 
 
-    def recv(self):
+    def send(self, cmd, data):
+        """
+        cmd -> one of CMD_GET, CMD_PUT, CMD_ITER_STARTSWITH
+        DParams -> any parameters to be sent via
+        """
+        with self.thread_lock:
+            send_me = '%s %s' % (cmd, data)
+            DATA_OFFSET = self.DATA_OFFSET
+
+            self.buf[DATA_OFFSET:DATA_OFFSET+len(send_me)] = send_me
+            self.amount_int.value = len(send_me)
+            # This might be overkill, but just to be sure...
+            assert self.buf[DATA_OFFSET:DATA_OFFSET+len(send_me)] == send_me
+            assert self.amount_int.value == len(send_me)
+
+            self.cur_state_int.value = self.STATE_CMD_TO_SERVER
+            return self.__recv()
+
+
+    def __recv(self):
         t = time.time()
         DATA_OFFSET = self.DATA_OFFSET
 
@@ -101,34 +123,12 @@ class Client(Base):
                 break
 
             i_t = time.time()-t
-            if i_t > 20:
+            if i_t > 1:
                 time.sleep(0.1)
-            elif i_t > 10:
-                time.sleep(0.05)
             elif i_t > 0.1:
                 time.sleep(0.001)
-            else:
-                pass
 
         return data
-
-
-    def send(self, cmd, data):
-        """
-        cmd -> one of CMD_GET, CMD_PUT, CMD_ITER_STARTSWITH
-        DParams -> any parameters to be sent via
-        """
-        send_me = '%s %s' % (cmd, data)
-        DATA_OFFSET = self.DATA_OFFSET
-
-        self.buf[DATA_OFFSET:DATA_OFFSET+len(send_me)] = send_me
-        self.amount_int.value = len(send_me)
-        # This might be overkill, but just to be sure...
-        assert self.buf[DATA_OFFSET:DATA_OFFSET+len(send_me)] == send_me
-        assert self.amount_int.value == len(send_me)
-
-        self.cur_state_int.value = self.STATE_CMD_TO_SERVER
-        return self.recv()
 
 
 
@@ -140,7 +140,6 @@ if __name__ == '__main__':
     for x in xrange(1000000):
         i = str(randint(0, 5000000))*500
         #print 'SEND:', i
-        inst.send('echo', i)
-        assert inst.recv() == i
+        assert inst.send('echo', i) == i
 
     print time.time()-t

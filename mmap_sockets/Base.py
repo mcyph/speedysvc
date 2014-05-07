@@ -35,17 +35,23 @@ class Base:
 
 
 
-    def __init__(self, buf):
-        cur_state_int = self.cur_state_int = (
+    def get_variables(self, buf):
+        cur_state_int = (
             c_ushort.from_buffer(buf)
         )
-        AMOUNT_OFFSET = self.AMOUNT_OFFSET = (
+        AMOUNT_OFFSET = (
             struct.calcsize('@'+cur_state_int._type_)
         )
 
-        amount_int = self.amount_int = c_uint.from_buffer(buf, AMOUNT_OFFSET)
-        self.DATA_OFFSET = AMOUNT_OFFSET + struct.calcsize(
+        amount_int = c_uint.from_buffer(buf, AMOUNT_OFFSET)
+        DATA_OFFSET = AMOUNT_OFFSET + struct.calcsize(
             '@'+amount_int._type_
+        )
+
+        return (
+            cur_state_int,
+            amount_int,
+            DATA_OFFSET
         )
 
 

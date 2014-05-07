@@ -29,13 +29,11 @@ class Server(Base):
             mmap.MAP_SHARED,
             mmap.PROT_WRITE|mmap.PROT_READ
         )
-        Base.__init__(self, buf)
-
+        cur_state_int, amount_int, DATA_OFFSET = (
+            Base.get_variables(self, buf)
+        )
 
         # Assign some communication values locally
-        cur_state_int = self.cur_state_int
-        amount_int = self.amount_int
-        DATA_OFFSET = self.DATA_OFFSET
         t = time.time()
 
 
@@ -67,14 +65,10 @@ class Server(Base):
 
 
             i_t = time.time()-t
-            if i_t > 20:
+            if i_t > 1:
                 time.sleep(0.1)
-            elif i_t > 10:
-                time.sleep(0.05)
-            elif i_t > 1:
+            elif i_t > 0.1:
                 time.sleep(0.001)
-            else:
-                pass
 
 
 if __name__ == '__main__':
