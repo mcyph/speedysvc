@@ -26,12 +26,13 @@ class Client(Base):
         self.thread_lock = thread.allocate_lock()
 
         # Open the file for reading
-        path = self.PATH % self._acquire_lock()
+        path = self.path = self.PATH % self._acquire_lock()
         fd = self.fd = os.open(path, os.O_RDWR)
 
         # Memory map the file
+        file_size = self.file_size = os.path.getsize(path)
         buf = self.buf = mmap.mmap(
-            fd, os.path.getsize(path),
+            fd, file_size,
             mmap.MAP_SHARED,
             mmap.PROT_READ|mmap.PROT_WRITE
         )
@@ -119,6 +120,8 @@ class Client(Base):
 
             if cur_state == self.STATE_DATA_TO_CLIENT:
                 amount = self.amount_int.value
+                self.__resize_mmap_if_needed(amount)
+
                 data = self.buf[DATA_OFFSET:DATA_OFFSET+amount]
                 break
 
@@ -130,6 +133,18 @@ class Client(Base):
 
         return data
 
+
+    def __resize_mmap_if_needed(self, amount):
+        # Resize the buffer if data is more
+        # than the currently mmapped area
+        if amount+self.DATA_OFFSET > self.file_size:
+            file_size = self.file_size = os.path.getsize(self.path)
+            print 'RESIZE MMAP:', file_size
+            self.buf.resize(file_size)
+
+            self.cur_state_int, self.amount_int, self.DATA_OFFSET = (
+                Base.get_variables(self, self.buf)
+            )
 
 
 if __name__ == '__main__':

@@ -53,6 +53,22 @@ class Server(Base):
 
                 # Send a response to the client
                 send_data = self.DCmds[cmd](recv_data)
+                #assert isinstance(send_data, str), (cmd, repr(send_data))
+
+
+                # Resize the mmap if data is too large for it
+                if len(send_data) > (sz-DATA_OFFSET):
+                    sz = int(len(send_data) * 1.5)
+                    sz -= sz % mmap.PAGESIZE
+                    print 'RESIZE MMAP:', sz, len(send_data)
+                    buf.resize(sz)
+
+                    # These variables are c pointers which
+                    # become invalid after a resize
+                    cur_state_int, amount_int, DATA_OFFSET = (
+                        Base.get_variables(self, buf)
+                    )
+
 
                 buf[DATA_OFFSET:DATA_OFFSET+len(send_data)] = send_data
                 amount_int.value = len(send_data)
