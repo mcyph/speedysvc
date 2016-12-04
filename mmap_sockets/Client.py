@@ -114,6 +114,7 @@ class Client(Base):
     def __recv(self):
         t = time.time()
         DATA_OFFSET = self.DATA_OFFSET
+        sleep = time.sleep
 
         while 1:
             cur_state = self.cur_state_int.value
@@ -127,9 +128,9 @@ class Client(Base):
 
             i_t = time.time()-t
             if i_t > 1:
-                time.sleep(0.1)
+                sleep(0.05)
             elif i_t > 0.1:
-                time.sleep(0.001)
+                sleep(0.001)
 
         return data
 

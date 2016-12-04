@@ -37,8 +37,10 @@ class Server(Base):
         t = time.time()
 
 
+
         while 1:
             if cur_state_int.value == self.STATE_CMD_TO_SERVER:
+
                 if (
                     thread_num+1 == self.num_threads and
                     self.num_threads+1 < self.MAX_CONNECTIONS
@@ -54,6 +56,7 @@ class Server(Base):
                 # Send a response to the client
                 send_data = self.DCmds[cmd](recv_data)
                 #assert isinstance(send_data, str), (cmd, repr(send_data))
+
 
 
                 # Resize the mmap if data is too large for it
@@ -82,7 +85,7 @@ class Server(Base):
 
             i_t = time.time()-t
             if i_t > 1:
-                time.sleep(0.1)
+                time.sleep(0.05)
             elif i_t > 0.1:
                 time.sleep(0.001)
 
