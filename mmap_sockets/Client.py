@@ -27,7 +27,14 @@ class Client(Base):
 
         # Open the file for reading
         path = self.path = self.PATH % self._acquire_lock()
-        fd = self.fd = os.open(path, os.O_RDWR)
+        while 1:
+            try:
+                fd = self.fd = os.open(path, os.O_RDWR)
+                break
+            except OSError:
+                time.sleep(1)
+                print 'Server not ready. Trying again in 1 seconds...'
+                continue
 
         # Memory map the file
         file_size = self.file_size = os.path.getsize(path)
