@@ -75,9 +75,11 @@ class Server(Base):
 
                 buf[DATA_OFFSET:DATA_OFFSET+len(send_data)] = send_data
                 amount_int.value = len(send_data)
-                # This might be overkill, but just to be sure...
-                assert buf[DATA_OFFSET:DATA_OFFSET+len(send_data)] == send_data
-                assert amount_int.value == len(send_data)
+
+                if False:
+                    # This might be overkill, but just to be sure...
+                    assert buf[DATA_OFFSET:DATA_OFFSET+len(send_data)] == send_data
+                    assert amount_int.value == len(send_data)
 
                 cur_state_int.value = self.STATE_DATA_TO_CLIENT
                 t = time.time()
