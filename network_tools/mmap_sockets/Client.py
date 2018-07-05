@@ -2,7 +2,7 @@ import sys, os
 import mmap
 import time
 import thread
-from toolkit.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
+from toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
 
 from Base import Base
 
