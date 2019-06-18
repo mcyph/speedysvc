@@ -7,18 +7,21 @@ from Base import Base
 
 
 class Server(Base):
-    def __init__(self, DCmds):
+    def __init__(self, DCmds, port):
         self.DCmds = DCmds
+        # A "port", to allow uniquely identifying a specific service
+        # I'm using only a number here, to allow portability with
+        # other kinds of RPC later.
+        self.port = port
 
         self.num_threads = 1
         thread.start_new_thread(self.main, (0,))
-
 
     def main(self, thread_num):
         print 'Starting new server thread:', thread_num
 
         # Open the file, and zero out the data
-        path = self.PATH % thread_num
+        path = self.PATH % (self.port, thread_num)
         fd = os.open(path, os.O_CREAT|os.O_TRUNC|os.O_RDWR)
         sz = 10485760 # 10MB
         sz -= sz % mmap.PAGESIZE
@@ -36,8 +39,6 @@ class Server(Base):
         # Assign some communication values locally
         t = time.time()
 
-
-
         while 1:
             if cur_state_int.value == self.STATE_CMD_TO_SERVER:
 
@@ -48,7 +49,6 @@ class Server(Base):
                     self.num_threads += 1
                     thread.start_new_thread(self.main, (self.num_threads-1,))
 
-
                 # Get the command/command argument from the client
                 recv_data = buf[DATA_OFFSET:DATA_OFFSET+amount_int.value]
                 cmd, _, recv_data = recv_data.partition(' ')
@@ -56,8 +56,6 @@ class Server(Base):
                 # Send a response to the client
                 send_data = self.DCmds[cmd](recv_data)
                 #assert isinstance(send_data, str), (cmd, repr(send_data))
-
-
 
                 # Resize the mmap if data is too large for it
                 if len(send_data) > (sz-DATA_OFFSET):
@@ -72,7 +70,6 @@ class Server(Base):
                         Base.get_variables(self, buf)
                     )
 
-
                 buf[DATA_OFFSET:DATA_OFFSET+len(send_data)] = send_data
                 amount_int.value = len(send_data)
 
@@ -83,7 +80,6 @@ class Server(Base):
 
                 cur_state_int.value = self.STATE_DATA_TO_CLIENT
                 t = time.time()
-
 
             i_t = time.time()-t
             if i_t > 1:

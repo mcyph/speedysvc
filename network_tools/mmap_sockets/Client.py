@@ -22,11 +22,11 @@ def set_exit_handler(func):
 
 
 class Client(Base):
-    def __init__(self):
+    def __init__(self, port):
         self.thread_lock = thread.allocate_lock()
 
         # Open the file for reading
-        path = self.path = self.PATH % self._acquire_lock()
+        path = self.path = self.PATH % (port, self._acquire_lock())
         while 1:
             try:
                 fd = self.fd = os.open(path, os.O_RDWR)
@@ -51,10 +51,8 @@ class Client(Base):
         set_exit_handler(self._release_lock)
         self.cur_state_int.value = self.STATE_DATA_TO_CLIENT
 
-
     def __del__(self):
         self._release_lock()
-
 
     def _release_lock(self):
         try:
@@ -62,11 +60,9 @@ class Client(Base):
         except:
             pass
 
-
     #=================================================================#
     #                     Shared Resource Methods                     #
     #=================================================================#
-
 
     def _acquire_lock(self):
         print 'Acquire mmap lock:',
@@ -98,7 +94,6 @@ class Client(Base):
 
         raise Exception("No available connections!")
 
-
     def send(self, cmd, data):
         """
         cmd -> one of CMD_GET, CMD_PUT, CMD_ITER_STARTSWITH
@@ -116,7 +111,6 @@ class Client(Base):
 
             self.cur_state_int.value = self.STATE_CMD_TO_SERVER
             return self.__recv()
-
 
     def __recv(self):
         t = time.time()
@@ -140,7 +134,6 @@ class Client(Base):
                 sleep(0.001)
 
         return data
-
 
     def __resize_mmap_if_needed(self, amount):
         # Resize the buffer if data is more
