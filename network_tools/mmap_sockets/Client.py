@@ -1,10 +1,10 @@
 import sys, os
 import mmap
 import time
-import thread
+import _thread
 from toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
 
-from Base import Base
+from .Base import Base
 
 
 def set_exit_handler(func):
@@ -23,7 +23,7 @@ def set_exit_handler(func):
 
 class Client(Base):
     def __init__(self, port):
-        self.thread_lock = thread.allocate_lock()
+        self.thread_lock = _thread.allocate_lock()
 
         # Open the file for reading
         path = self.path = self.PATH % (port, self._acquire_lock())
@@ -33,7 +33,7 @@ class Client(Base):
                 break
             except OSError:
                 time.sleep(1)
-                print 'Server not ready. Trying again in 1 seconds...'
+                print('Server not ready. Trying again in 1 seconds...')
                 continue
 
         # Memory map the file
@@ -65,7 +65,7 @@ class Client(Base):
     #=================================================================#
 
     def _acquire_lock(self):
-        print 'Acquire mmap lock:',
+        print('Acquire mmap lock:', end=' ')
 
         x = 0
         while 1:
@@ -88,7 +88,7 @@ class Client(Base):
                     raise Exception('too many connections!')
                 continue
 
-            print 'Lock %s acquired!' % x
+            print('Lock %s acquired!' % x)
             self.lock_file = lock_file
             return x
 
@@ -140,7 +140,7 @@ class Client(Base):
         # than the currently mmapped area
         if amount+self.DATA_OFFSET > self.file_size:
             file_size = self.file_size = os.path.getsize(self.path)
-            print 'RESIZE MMAP:', file_size
+            print('RESIZE MMAP:', file_size)
             self.buf.resize(file_size)
 
             self.cur_state_int, self.amount_int, self.DATA_OFFSET = (
@@ -153,9 +153,9 @@ if __name__ == '__main__':
 
     inst = Client()
     t = time.time()
-    for x in xrange(1000000):
+    for x in range(1000000):
         i = str(randint(0, 5000000))*500
         #print 'SEND:', i
         assert inst.send('echo', i) == i
 
-    print time.time()-t
+    print(time.time()-t)

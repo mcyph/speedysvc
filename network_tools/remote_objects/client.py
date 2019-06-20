@@ -1,5 +1,5 @@
 from pickle import dumps, loads
-from thread import get_ident
+from _thread import get_ident
 import socket
 
 DSocks = {}
@@ -14,7 +14,7 @@ def get_sock():
 
 
 def send(data):
-    print 'send:', [data]
+    print('send:', [data])
     get_sock().sendall(data)
 
 def recv(amount, sock=None):
@@ -57,9 +57,9 @@ def recv_line(sock=None):
     return r
 
 def handle_response():
-    print 'RECV LINE:',
+    print('RECV LINE:', end=' ')
     typ, _, data = recv_line().partition('\t')
-    print typ, _, data
+    print(typ, _, data)
 
     if typ == 'object':
         return Object(int(data))
@@ -120,8 +120,8 @@ class Object:
 
 if __name__ == '__main__':
     o = import_('import sys')
-    print o.byteorder
-    print o.getfilesystemencoding()
+    print(o.byteorder)
+    print(o.getfilesystemencoding())
 
     del o
 

@@ -8,8 +8,8 @@ from types import (
     UnboundMethodType, MethodType, ModuleType, ObjectType
 )
 
-from cPickle import dumps, loads
-import SocketServer
+from pickle import dumps, loads
+import socketserver
 
 SNoPickle = set([
     InstanceType, ClassType, FunctionType, BuiltinFunctionType,
@@ -17,7 +17,7 @@ SNoPickle = set([
     UnboundMethodType, MethodType, ModuleType, ObjectType, type
 ])
 
-from client import recv_line, recv
+from .client import recv_line, recv
 
 var_id = 0
 DVars = {}
@@ -27,12 +27,12 @@ from socket import *
 sock=socket()
 sock.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
-class Server(SocketServer.ThreadingMixIn, SocketServer.BaseRequestHandler):
+class Server(socketserver.ThreadingMixIn, socketserver.BaseRequestHandler):
     allow_reuse_address = True
 
     def __init__(self, *args, **kw):
         self.allow_reuse_address = True
-        SocketServer.BaseRequestHandler.__init__(
+        socketserver.BaseRequestHandler.__init__(
             self, *args, **kw
         )
 
@@ -48,7 +48,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.BaseRequestHandler):
 
             try:
                 self._handle(cmd, data)
-            except Exception, exc:
+            except Exception as exc:
                 from traceback import print_exc
                 print_exc()
                 self._handle_obj(exc)
@@ -103,7 +103,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.BaseRequestHandler):
             try:
                 data = dumps(o)
             except TypeError:
-                print 'TYPE WARNING:', [o]
+                print('TYPE WARNING:', [o])
                 return self._handle_obj(o, force=True)
 
             send = 'pickle\t%s\n%s' % (len(data), data)
@@ -112,7 +112,7 @@ class Server(SocketServer.ThreadingMixIn, SocketServer.BaseRequestHandler):
         self.request.sendall(send)
 
 
-class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
 

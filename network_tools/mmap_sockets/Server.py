@@ -1,9 +1,9 @@
 import os
 import mmap
 import time
-import thread
+import _thread
 
-from Base import Base
+from .Base import Base
 
 
 class Server(Base):
@@ -15,10 +15,10 @@ class Server(Base):
         self.port = port
 
         self.num_threads = 1
-        thread.start_new_thread(self.main, (0,))
+        _thread.start_new_thread(self.main, (0,))
 
     def main(self, thread_num):
-        print 'Starting new server thread:', thread_num
+        print('Starting new server thread:', thread_num)
 
         # Open the file, and zero out the data
         path = self.PATH % (self.port, thread_num)
@@ -47,7 +47,7 @@ class Server(Base):
                     self.num_threads+1 < self.MAX_CONNECTIONS
                 ):
                     self.num_threads += 1
-                    thread.start_new_thread(self.main, (self.num_threads-1,))
+                    _thread.start_new_thread(self.main, (self.num_threads-1,))
 
                 # Get the command/command argument from the client
                 recv_data = buf[DATA_OFFSET:DATA_OFFSET+amount_int.value]
@@ -61,7 +61,7 @@ class Server(Base):
                 if len(send_data) > (sz-DATA_OFFSET):
                     sz = int(len(send_data) * 1.5)
                     sz -= sz % mmap.PAGESIZE
-                    print 'RESIZE MMAP:', sz, len(send_data)
+                    print('RESIZE MMAP:', sz, len(send_data))
                     buf.resize(sz)
 
                     # These variables are c pointers which
