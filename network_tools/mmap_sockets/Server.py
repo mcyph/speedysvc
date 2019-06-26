@@ -25,7 +25,7 @@ class Server(Base):
         fd = os.open(path, os.O_CREAT|os.O_TRUNC|os.O_RDWR)
         sz = 10485760 # 10MB
         sz -= sz % mmap.PAGESIZE
-        assert os.write(fd, '\x00' * sz) == sz
+        assert os.write(fd, b'\x00' * sz) == sz
 
         buf = mmap.mmap(
             fd, sz,
@@ -51,10 +51,10 @@ class Server(Base):
 
                 # Get the command/command argument from the client
                 recv_data = buf[DATA_OFFSET:DATA_OFFSET+amount_int.value]
-                cmd, _, recv_data = recv_data.partition(' ')
+                cmd, _, recv_data = recv_data.partition(b' ')
 
                 # Send a response to the client
-                send_data = self.DCmds[cmd](recv_data)
+                send_data = self.DCmds[cmd.decode('ascii')](recv_data)
                 #assert isinstance(send_data, str), (cmd, repr(send_data))
 
                 # Resize the mmap if data is too large for it

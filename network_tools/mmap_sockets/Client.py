@@ -1,6 +1,7 @@
 import sys, os
 import mmap
 import time
+from json import dumps, loads
 import _thread
 from toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
 
@@ -24,6 +25,7 @@ def set_exit_handler(func):
 class Client(Base):
     def __init__(self, port):
         self.thread_lock = _thread.allocate_lock()
+        self.port = port
 
         # Open the file for reading
         path = self.path = self.PATH % (port, self._acquire_lock())
@@ -70,7 +72,7 @@ class Client(Base):
         x = 0
         while 1:
             lock_file_path = self.lock_file_path = (
-                self.PATH % (str(x)+'.lock')
+                self.PATH % (self.port, str(x)+'.lock')
             )
 
             lock_file = open(lock_file_path, "a+")
@@ -94,13 +96,22 @@ class Client(Base):
 
         raise Exception("No available connections!")
 
+    def send_json(self, cmd, data):
+        """
+        The same as send(), but sends and receives as JSON
+        """
+        data = dumps(data).encode('utf-8')
+        return loads(self.send(cmd, data), encoding='utf-8')
+
     def send(self, cmd, data):
         """
         cmd -> one of CMD_GET, CMD_PUT, CMD_ITER_STARTSWITH
         DParams -> any parameters to be sent via
         """
+        cmd = cmd.encode('ascii')  # We'll keep it simple here
+
         with self.thread_lock:
-            send_me = '%s %s' % (cmd, data)
+            send_me = b'%s %s' % (cmd, data)
             DATA_OFFSET = self.DATA_OFFSET
 
             self.buf[DATA_OFFSET:DATA_OFFSET+len(send_me)] = send_me
