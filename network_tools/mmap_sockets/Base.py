@@ -13,7 +13,7 @@ class MMapVariables:
 
 class Base:
     # mmap path for transfers
-    PATH = '/tmp/mmaptest-%s-%s'
+    PATH = '/tmp/mmapsrv-%s-%s'
 
     # Number of threads on a server, and how
     # many clients can connect at once

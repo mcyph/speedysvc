@@ -16,7 +16,7 @@ def json_method(fn):
     return fn
 
 
-class Server(Base):
+class MMapServer(Base):
     def __init__(self, DCmds, port):
         self.DCmds = DCmds
         # A "port", to allow uniquely identifying a specific service
@@ -159,7 +159,7 @@ class Server(Base):
 
 
 if __name__ == '__main__':
-    inst = Server({
+    inst = MMapServer({
         'echo': lambda data: data
     }, port=5555)
 

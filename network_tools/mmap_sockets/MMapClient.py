@@ -25,7 +25,7 @@ def set_exit_handler(func):
         signal.signal(signal.SIGTERM, func)
 
 
-class Client(Base):
+class MMapClient(Base):
     def __init__(self, port):
         self.thread_lock = _thread.allocate_lock()
         self.port = port
@@ -182,10 +182,10 @@ class Client(Base):
 if __name__ == '__main__':
     from random import randint
 
-    inst = Client(5555)
+    inst = MMapClient(5555)
     t = time.time()
-    for x in range(1000000):
-        i = bytes([randint(0, 255)])*5000
+    for x in range(100000):
+        i = bytes([randint(0, 255)])*500
         #print('SEND:', i)
         assert inst.send('echo', i) == i
 

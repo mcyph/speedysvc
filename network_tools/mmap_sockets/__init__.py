@@ -1,2 +1,2 @@
-from .Client import Client
-from .Server import Server
+from .MMapClient import MMapClient
+from .MMapServer import MMapServer
