@@ -2,6 +2,14 @@ import struct
 
 from ctypes import c_ushort, c_uint
 
+from dataclasses import dataclass
+
+@dataclass
+class MMapVariables:
+    cur_state_int: type(c_ushort)
+    amount_int: type(c_uint)
+    DATA_OFFSET: int
+
 
 class Base:
     # mmap path for transfers
@@ -32,17 +40,16 @@ class Base:
         cur_state_int = (
             c_ushort.from_buffer(buf)
         )
+
         AMOUNT_OFFSET = (
             struct.calcsize('@'+cur_state_int._type_)
         )
-
         amount_int = c_uint.from_buffer(buf, AMOUNT_OFFSET)
+
         DATA_OFFSET = AMOUNT_OFFSET + struct.calcsize(
             '@'+amount_int._type_
         )
 
-        return (
-            cur_state_int,
-            amount_int,
-            DATA_OFFSET
+        return MMapVariables(
+            cur_state_int, amount_int, DATA_OFFSET
         )
