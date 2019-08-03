@@ -31,18 +31,33 @@ class MMapClient(Base):
         self.port = port
 
         # Open the file for reading
+        num_tries = 0
         path = self.path = self.PATH % (port, self._acquire_lock())
         while 1:
             try:
                 fd = self.fd = os.open(path, os.O_RDWR)
                 break
             except OSError:
-                time.sleep(1)
-                print('Server not ready. Trying again in 1 seconds...')
+                num_tries += 1
+
+                if num_tries > 100:
+                    print('Server not ready. Trying again in 3 seconds...')
+                    time.sleep(3)
+                else:
+                    time.sleep(0.1)
+
                 continue
 
         # Memory map the file
-        file_size = self.file_size = os.path.getsize(path)
+
+
+        while 1:
+            file_size = self.file_size = os.path.getsize(path)
+            if file_size >= self.INITIAL_MMAP_FILE_SIZE:
+                break
+            else:
+                time.sleep(0.1)
+
         buf = self.buf = mmap.mmap(
             fd, file_size,
             mmap.MAP_SHARED,
@@ -55,6 +70,9 @@ class MMapClient(Base):
 
         set_exit_handler(self._release_lock)
         self.mmap_vars.cur_state_int.value = self.STATE_DATA_TO_CLIENT
+
+        # Send the first command to make the server create a new thread
+        assert self.send('greet', b'') == b'ok'
 
     def __del__(self):
         self._release_lock()
@@ -182,11 +200,18 @@ class MMapClient(Base):
 if __name__ == '__main__':
     from random import randint
 
-    inst = MMapClient(5555)
+    LInsts = []
+    for x in range(10):
+        inst = MMapClient(5555)
+        LInsts.append(inst)
+
+
     t = time.time()
+
     for x in range(100000):
         i = bytes([randint(0, 255)])*500
         #print('SEND:', i)
-        assert inst.send('echo', i) == i
+        for inst in LInsts:
+            assert inst.send('echo', i) == i
 
     print(time.time()-t)

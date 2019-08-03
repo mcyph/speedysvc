@@ -1,3 +1,4 @@
+import mmap
 import struct
 
 from ctypes import c_ushort, c_uint
@@ -14,6 +15,9 @@ class MMapVariables:
 class Base:
     # mmap path for transfers
     PATH = '/tmp/mmapsrv-%s-%s'
+
+    INITIAL_MMAP_FILE_SIZE = 10485760  # 10MB
+    INITIAL_MMAP_FILE_SIZE -= INITIAL_MMAP_FILE_SIZE % mmap.PAGESIZE
 
     # Number of threads on a server, and how
     # many clients can connect at once

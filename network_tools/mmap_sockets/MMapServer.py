@@ -18,6 +18,9 @@ def json_method(fn):
 
 class MMapServer(Base):
     def __init__(self, DCmds, port):
+        DCmds.update({
+            'greet': lambda data: b'ok'
+        })
         self.DCmds = DCmds
         # A "port", to allow uniquely identifying a specific service
         # I'm using only a number here, to allow portability with
@@ -57,8 +60,8 @@ class MMapServer(Base):
         # Open the file, and zero out the data
         path = self.PATH % (self.port, thread_num)
         fd = os.open(path, os.O_CREAT|os.O_TRUNC|os.O_RDWR)
-        mmap_file_size = 10485760 # 10MB
-        mmap_file_size -= mmap_file_size % mmap.PAGESIZE
+
+        mmap_file_size = self.INITIAL_MMAP_FILE_SIZE
         assert os.write(fd, b'\x00' * mmap_file_size) == mmap_file_size
 
         mmap_buf = mmap.mmap(
@@ -96,6 +99,8 @@ class MMapServer(Base):
             # command, to allow for additional connections
             self.num_threads += 1
             _thread.start_new_thread(self.main, (self.num_threads-1,))
+        #else:
+            #print("HANDLE:", thread_num+1, self.num_threads)
 
         # Get the command/command argument from the client
         recv_data = mmap_buf[
