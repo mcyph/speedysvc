@@ -1,14 +1,16 @@
 import time
 import mmap
+import msgpack
 import _thread
 import sys, os
 
 from json import dumps, loads
 from toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
+#from toolkit.io.shm_ctypes import shm_open
 
 from network_tools.mmap_sockets.Base import Base
 
-DEBUG = False
+DEBUG = True
 
 
 def set_exit_handler(func):
@@ -77,7 +79,7 @@ class MMapClient(Base):
     def __del__(self):
         self._release_lock()
 
-    def _release_lock(self):
+    def _release_lock(self, *args, **kw):
         try:
             unlock(self.lock_file)
         except:
@@ -123,6 +125,19 @@ class MMapClient(Base):
         """
         data = dumps(data).encode('utf-8')
         return loads(self.send(cmd, data), encoding='utf-8')
+
+    def send_msgpack(self, cmd, data):
+        """
+        The same as send(), but sends and receives as msgpack,
+        which should be faster/more compact than JSON
+        note lists will be output as tuples here for performance.
+        """
+        data = msgpack.dumps(data)
+        return msgpack.loads(
+            self.send(cmd, data),
+            encoding='utf-8',
+            use_bin_type=True
+        )
 
     def send(self, cmd, data):
         """
@@ -209,9 +224,9 @@ if __name__ == '__main__':
     t = time.time()
 
     for x in range(100000):
-        i = bytes([randint(0, 255)])*500
+        i = b'blah'#bytes([randint(0, 255)])*500
         #print('SEND:', i)
-        for inst in LInsts:
-            assert inst.send('echo', i) == i
+        #for inst in LInsts:
+        assert LInsts[0].send('echo', i) == i
 
     print(time.time()-t)

@@ -21,7 +21,7 @@ class Base:
 
     # Number of threads on a server, and how
     # many clients can connect at once
-    MAX_CONNECTIONS = 25
+    MAX_CONNECTIONS = 100
 
     # time.sleep performance-related options
     SLEEP_EVERY = 1000
