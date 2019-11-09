@@ -116,7 +116,7 @@ class MMapServer(Base):
             if hasattr(fn, 'is_json'):
                 # Use JSON if method defined using @json_method
                 send_data = b'+'+dumps(self.DCmds[cmd.decode('ascii')](
-                    **loads(recv_data.decode('utf-8'))
+                    *loads(recv_data.decode('utf-8'))
                 )).encode('utf-8')
             else:
                 # Otherwise use raw data

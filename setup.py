@@ -53,7 +53,8 @@ setup(
     packages=find_packages(),
 
     install_requires=[
-        'msgpack'
+        'msgpack',
+        'dataclasses',
     ],
 
     zip_safe=True
