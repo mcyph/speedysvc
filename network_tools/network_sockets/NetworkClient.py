@@ -1,5 +1,6 @@
 import time
 import socket
+import msgpack
 from json import dumps, loads
 
 
@@ -56,6 +57,19 @@ class NetworkClient:
         """
         data = dumps(data).encode('utf-8')
         return loads(self.send(cmd, data), encoding='utf-8')
+
+    def send_msgpack(self, cmd, data):
+        """
+        The same as send(), but sends and receives as msgpack,
+        although I doubt performance will be the primary consideration for NetworkClient.
+        note lists will be output as tuples here for performance.
+        """
+        data = msgpack.dumps(data)
+        return msgpack.loads(
+            self.send(cmd, data),
+            encoding='utf-8',
+            use_bin_type=True
+        )
 
 
 if __name__ == '__main__':

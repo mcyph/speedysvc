@@ -1,14 +1,18 @@
 import os
+import re
 import mmap
 import time
 import fcntl
 import _thread
+import msgpack
+import setproctitle
 from glob import glob
 from json import dumps, loads
 
 from network_tools.mmap_sockets.Base import Base
+from toolkit.io.shm_ctypes import shm_open, shm_unlink
 
-DEBUG = False
+DEBUG = True
 
 
 def json_method(fn):
@@ -16,10 +20,19 @@ def json_method(fn):
     return fn
 
 
+def msgpack_method(fn):
+    fn.is_msgpack = True
+    return fn
+
+
 class MMapServer(Base):
     def __init__(self, DCmds, port):
+        def greet(data):
+            #print("GREET!")
+            return b'ok'
+
         DCmds.update({
-            'greet': lambda data: b'ok'
+            'greet': greet
         })
         self.DCmds = DCmds
         # A "port", to allow uniquely identifying a specific service
@@ -27,11 +40,22 @@ class MMapServer(Base):
         # other kinds of RPC later.
         self.port = port
 
+        self.update_process_name()
         self.lockfile = self.acquire_lock()
         self.clean_mmap_files()
 
         self.num_threads = 1
         _thread.start_new_thread(self.main, (0,))
+
+    def update_process_name(self):
+        """
+        Change the process name to be that of the subclass name,
+        so as to be able to track memory usage in task managers
+        :return: None
+        """
+        setproctitle.setproctitle(
+            ("mmap" + self.__class__.__name__.lower())[:15]
+        )
 
     def acquire_lock(self):
         path = self.PATH % (self.port, 'serverlock')
@@ -118,6 +142,17 @@ class MMapServer(Base):
                 send_data = b'+'+dumps(self.DCmds[cmd.decode('ascii')](
                     *loads(recv_data.decode('utf-8'))
                 )).encode('utf-8')
+            elif hasattr(fn, 'is_msgpack'):
+                # Use msgpack
+                send_data = b'+' + msgpack.dumps(
+                    self.DCmds[cmd.decode('ascii')](
+                        **msgpack.loads(
+                            recv_data,
+                            encoding='utf-8',
+                            use_bin_type=True
+                        )
+                    )
+                )
             else:
                 # Otherwise use raw data
                 send_data = b'+'+self.DCmds[cmd.decode('ascii')](recv_data)
@@ -126,6 +161,8 @@ class MMapServer(Base):
             # Just send a basic Exception instance for now, but would be nice
             # if could recreate some kinds of exceptions on the other end
             send_data = b'-'+repr(exc).encode('utf-8')
+            import traceback
+            traceback.print_exc()
 
         if DEBUG:
             assert isinstance(send_data, bytes), (cmd, repr(send_data))

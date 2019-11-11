@@ -54,6 +54,7 @@ setup(
 
     install_requires=[
         'msgpack',
+        'setproctitle',
         'dataclasses',
     ],
 
