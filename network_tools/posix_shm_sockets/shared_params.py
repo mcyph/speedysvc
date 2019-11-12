@@ -1,6 +1,5 @@
 import msgpack
 from cinda.ipc.queue import BaseQueue, SerializedQueue
-from cinda.ipc.shm import free
 
 Q_LEN = 1
 MSG_SIZE = 64*1024  # 64kb
