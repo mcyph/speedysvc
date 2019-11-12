@@ -1,8 +1,9 @@
 from time import time
-from network_tools.posix_shm_sockets.shared_params import Q_LEN, MSG_SIZE
+from network_tools.posix_shm_sockets.shared_params import Q_LEN
+from network_tools.posix_shm_sockets.SHMSocket import SHMSocket
 
-recv_q = BytesQueue('serv_q', Q_LEN, MSG_SIZE)
-send_q = BytesQueue('client_q', Q_LEN, MSG_SIZE)
+recv_q = SHMSocket('serv_q', clean_up=False)
+send_q = SHMSocket('client_q', clean_up=False)
 from_time = time()
 
 for x in range(500000):

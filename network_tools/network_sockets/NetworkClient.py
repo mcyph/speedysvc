@@ -77,8 +77,8 @@ if __name__ == '__main__':
 
     inst = NetworkClient(5555)
     t = time.time()
-    for x in range(100000):
-        i = bytes([randint(0, 255)])*500
+    for x in range(500000):
+        i = b"my vfdsfdsfsdfsdfsdfdsfsdaluetasdsadasdsadsadsaest"# bytes([randint(0, 255)])*500
         #print('SEND:', i)
         assert inst.send('echo', i) == i
 
