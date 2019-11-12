@@ -52,14 +52,15 @@ class SHMSocket:
         semaphore.release()
 
     def __del__(self):
-        # Clean up
+        """
+        Clean up
+        """
         self.mapfile.close()
 
         if self.clean_up:
             # Only clear out the memory/
             # semaphore if in server mode
             self.memory.unlink()
-            #posix_ipc.unlink_shared_memory('server_queue')
             self.semaphore.unlink()
 
     def put(self, data: bytes):
