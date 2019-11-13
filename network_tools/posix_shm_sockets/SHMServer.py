@@ -57,21 +57,24 @@ class SHMServer(RPCServerBase):
         Process RPC calls forever.
         """
         while True:
-            data = self.to_server_socket.get()
+            data = self.to_server_socket.get(use_timeout=False)
             client_id = int_struct.unpack(data[0:int_struct.size])[0]
             to_client_socket = self.__get_client_socket(client_id)
 
             cmd, params = data[int_struct.size:].split(b' ', 1)
-            fn = self.DCmds[cmd]
-
-            if hasattr(fn, 'is_json_method'):
-                to_client_socket.put(self.DCmds[cmd](
-                    *json.loads(params.decode('utf-8'))
-                ))
+            if cmd == b'heartbeat':
+                to_client_socket.put(params)
             else:
-                to_client_socket.put(
-                    self.DCmds[cmd](params)
-                )
+                fn = self.DCmds[cmd]
+
+                if hasattr(fn, 'is_json_method'):
+                    to_client_socket.put(self.DCmds[cmd](
+                        *json.loads(params.decode('utf-8'))
+                    ))
+                else:
+                    to_client_socket.put(
+                        self.DCmds[cmd](params)
+                    )
 
     def __get_client_socket(self, client_id):
         """

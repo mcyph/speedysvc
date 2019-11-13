@@ -15,11 +15,13 @@ NO_MORE_DATA = -2
 class SHMSocket:
     def __init__(self, socket_name,
                  init_resources=False,
-                 msg_size=MSG_SIZE):
+                 msg_size=MSG_SIZE,
+                 timeout=10):  # 10 seconds timeout
 
         self.socket_name = socket_name
         self.init_resources = init_resources
         self.last_used_time = time.time()
+        self.timeout = timeout
 
         if init_resources:
             # Clean up since last time
@@ -45,6 +47,14 @@ class SHMSocket:
             )
             self.mapfile = mmap.mmap(memory.fd, memory.size)
 
+            # Make it so that the write semaphore is incremented by 1,
+            # so we can initially write to the semaphore
+            # (but don't increment the read semaphore,
+            #  as nothing is in the queue yet!)
+            if not write_semaphore.value:
+                write_semaphore.release()
+            assert not self.read_semaphore.value
+
         else:
             # Same as above, but don't use in "create" mode as we're
             # connecting to a semaphore/shared memory that
@@ -54,15 +64,12 @@ class SHMSocket:
             self.read_semaphore = posix_ipc.Semaphore(socket_name+'_read')
             self.mapfile = mmap.mmap(memory.fd, memory.size)
 
-        # Make it so that the write semaphore is incremented by 1,
-        # so we can initially write to the semaphore
-        # (but don't increment the read semaphore,
-        #  as nothing is in the queue yet!)
-        write_semaphore.release()
-
         # We (apparently) don't need the file
         # descriptor after it's been memory mapped
         memory.close_fd()
+
+    def log(self, *msgs):
+        print(f'{self.socket_name}:', *msgs)
 
     def __del__(self):
         """
@@ -102,10 +109,15 @@ class SHMSocket:
             pass
 
         while True:
-            with self.write_semaphore:
+            self.log("PUT: ACQUIRE WRITE: ", self.write_semaphore.value)
+            self.write_semaphore.acquire(self.timeout)
+            self.log("PUT: ACQUIRED WRITE")
+
+            try:
                 # Something could "put" directly before the write semaphore!
                 # While this should be rare, better safe than sorry
                 if self.read_semaphore.value:
+                    self.log("PUT: WAITING FOR READ SEMAPHORE TO BE 0")
                     time.sleep(0.0001)
                     continue
 
@@ -115,8 +127,10 @@ class SHMSocket:
                 # Let the data be read
                 self.read_semaphore.release()
                 break
+            finally:
+                self.write_semaphore.release()
 
-    def get(self):
+    def get(self, use_timeout=True):
         """
         Get/pop an item from the (single-item) queue
         :return: the item from the queue
@@ -124,16 +138,25 @@ class SHMSocket:
         self.last_used_time = time.time()
 
         # Make sure can't be written to while we're reading!
-        with self.write_semaphore:
+        self.log("GET: ACQUIRE WRITE")
+        self.write_semaphore.acquire(
+            self.timeout if use_timeout else None
+        )
+
+        try:
             # Make it so the data can no longer be read
             # (and also wait for the data to actually become available)
-            self.read_semaphore.acquire()
+            self.log("GET: ACQUIRE READ")
+            self.read_semaphore.acquire(
+                self.timeout if use_timeout else None
+            )
 
             amount = int_struct.unpack(self.mapfile[0:int_struct.size])[0]
             data = self.mapfile[int_struct.size:int_struct.size+amount]
-            self.mapfile[0:int_struct.size] = int_struct.pack(ALL_DATA_RECEIVED)
-
-        return data
+            #self.mapfile[0:int_struct.size] = int_struct.pack(ALL_DATA_RECEIVED)
+            return data
+        finally:
+            self.write_semaphore.release()
 
     def get_last_used_time(self):
         return self.last_used_time
@@ -147,7 +170,7 @@ if __name__ == '__main__':
     DATA = b'my ranadasdmsak data'*20
 
     from_t = time.time()
-    for x in range(500000):
+    for x in range(10000):
         server_socket.put(DATA)
         assert client_socket.get() == DATA
     print(time.time()-from_t)
