@@ -10,9 +10,7 @@ def json_method(fn):
 
 
 class SHMServer(RPCServerBase):
-    def __init__(self, DCmds, port,
-                 init_resources=True,
-                 client_timeout=10):
+    def __init__(self, DCmds, port, init_resources=True, client_timeout=10):
 
         self.port = port
         self.client_timeout = client_timeout

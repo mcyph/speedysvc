@@ -82,25 +82,26 @@ class SHMSocket:
         if hasattr(self, 'mapfile'):
             self.mapfile.close()
 
-        # NOTE: The below was commented out, so as to allow
-        # clients/servers reusing resources, and allow continuation
-        # of sessions in many cases. Though this does leak a bit of
-        # memory, I don't think 64kb blocks will make a big
-        # difference considering how much memory modern systems have.
-        """
         if self.init_resources:
             # Only clear out the memory/
-            # semaphore if in server mode
+            # semaphore if we created them
             self.memory.unlink()
-            self.read_semaphore.unlink()
-            self.write_semaphore.unlink()
-        """
+            self.rtc_semaphore.unlink()
+            self.ntc_semaphore.unlink()
 
     def put(self, data: bytes, timeout=None):
         """
         Put an item into the (single-item) queue
         :param data: the data as a string of bytes
         """
+
+        # It would be possible to make it so that there were lots of
+        # different memory blocks, and the semaphore initially
+        # incremented to the maximum value so as to (potentially)
+        # allow for increased throughput.
+
+        # TODO: Support very large queue items!!! ==============================================================
+
         self.last_used_time = time.time()
         self.ntc_semaphore.acquire(timeout)
 
