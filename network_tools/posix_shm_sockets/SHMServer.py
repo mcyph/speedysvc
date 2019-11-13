@@ -1,6 +1,6 @@
 import json
 import _thread
-import msgpack
+import traceback
 from network_tools.RPCServerBase import RPCServerBase
 from network_tools.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
 
@@ -33,7 +33,6 @@ class SHMServer(RPCServerBase):
         _thread.start_new_thread(
             self.__reap_client_sockets, ()
         )
-
         self.__main()
 
     def __reap_client_sockets(self):
@@ -61,22 +60,33 @@ class SHMServer(RPCServerBase):
             data = self.to_server_socket.get(timeout=None)
             client_id = int_struct.unpack(data[0:int_struct.size])[0]
             to_client_socket = self.__get_client_socket(client_id)
-
             cmd, params = data[int_struct.size:].split(b' ', 1)
-            if cmd == b'heartbeat':
-                to_client_socket.put(params)
-            else:
-                fn = self.DCmds[cmd]
 
-                if hasattr(fn, 'is_json_method'):
-                    to_client_socket.put(self.DCmds[cmd](
-                        *json.loads(params.decode('utf-8'))
-                    ), timeout=10)
-                else:
-                    to_client_socket.put(
-                        self.DCmds[cmd](params),
-                        timeout=10
-                    )
+            if cmd == b'heartbeat':
+                try:
+                    to_client_socket.put(b'+'+params, timeout=10)
+                except:
+                    traceback.print_exc()
+            else:
+                try:
+                    fn = self.DCmds[cmd]
+                    if hasattr(fn, 'is_json_method'):
+                        send_data = b'+'+self.DCmds[cmd](
+                            *json.loads(params.decode('utf-8'))
+                        )
+                    else:
+                        send_data = b'+'+self.DCmds[cmd](params)
+
+                except Exception as exc:
+                    # Just send a basic Exception instance for now, but would be nice
+                    # if could recreate some kinds of exceptions on the other end
+                    send_data = b'-' + repr(exc).encode('utf-8')
+                    traceback.print_exc()
+
+                try:
+                    to_client_socket.put(send_data, timeout=10)
+                except:
+                    traceback.print_exc()
 
     def __get_client_socket(self, client_id):
         """
