@@ -11,7 +11,8 @@ class SHMClient(RPCClientBase):
     def __init__(self, port):
         RPCClientBase.__init__(self, port)
         self.__create_conn_to_server()
-        #_thread.start_new_thread(self.__periodic_heartbeat, ())
+        self.lock = _thread.allocate()
+        _thread.start_new_thread(self.__periodic_heartbeat, ())
 
     def __periodic_heartbeat(self):
         while 1:
@@ -40,12 +41,16 @@ class SHMClient(RPCClientBase):
         )
 
     @copydoc(RPCClientBase.send)
-    def send(self, cmd, data):
-        self.to_server_socket.put(
-            self.client_id_as_bytes+
-            cmd.encode('ascii')+b' '+data
-        )
-        return self.from_server_socket.get()
+    def send(self, cmd, data, timeout=60):
+        with self.lock:
+            self.to_server_socket.put(
+                self.client_id_as_bytes+
+                cmd.encode('ascii')+b' '+data,
+                timeout=10
+            )
+            return self.from_server_socket.get(
+                timeout=timeout
+            )
 
     @copydoc(RPCClientBase.send_json)
     def send_json(self, cmd, data):
@@ -68,19 +73,21 @@ if __name__ == '__main__':
         t = time.time()
         inst = SHMClient(5555)
 
-        for x in range(100000):
+        for x in range(10000000):
             #print('SEND:', i)
             #for inst in LInsts:
             i = str(randint(0, 9999999999999)).encode('ascii')*50
             data = inst.send('echo', i)
             assert data == i, (data, i)
-            print(data)
+
+            if x % 10000 == 0:
+                print(data)
 
         print(time.time()-t)
 
     import multiprocessing
     LProcesses = []
-    for x in range(12):
+    for x in range(1):
         process = multiprocessing.Process(target=run)
         LProcesses.append(process)
         process.start()

@@ -18,6 +18,11 @@ class SHMSocket:
                  msg_size=MSG_SIZE,
                  timeout=10):  # 10 seconds timeout
 
+        # NOTE: ntc stands for "nothing to collect"
+        # and rtc stands for "ready to collect"
+        # having 2 semaphores like this allows for blocking
+        # operations between the put/get operations
+
         self.socket_name = socket_name
         self.init_resources = init_resources
         self.last_used_time = time.time()
@@ -27,9 +32,9 @@ class SHMSocket:
             # Clean up since last time
             try: posix_ipc.unlink_shared_memory(socket_name)
             except: pass
-            try: posix_ipc.unlink_semaphore(socket_name+'_write')
+            try: posix_ipc.unlink_semaphore(socket_name+'_rtc')
             except: pass
-            try: posix_ipc.unlink_semaphore(socket_name+'_read')
+            try: posix_ipc.unlink_semaphore(socket_name+'_ntc')
             except: pass
 
             # Create the shared memory and the semaphore,
@@ -39,11 +44,11 @@ class SHMSocket:
                 posix_ipc.O_CREX,
                 size=msg_size
             )
-            self.write_semaphore = write_semaphore = posix_ipc.Semaphore(
-                socket_name+'_write', posix_ipc.O_CREX
+            self.rtc_semaphore = write_semaphore = posix_ipc.Semaphore(
+                socket_name+'_rtc', posix_ipc.O_CREX
             )
-            self.read_semaphore = posix_ipc.Semaphore(
-                socket_name+'_read', posix_ipc.O_CREX
+            self.ntc_semaphore = posix_ipc.Semaphore(
+                socket_name+'_ntc', posix_ipc.O_CREX
             )
             self.mapfile = mmap.mmap(memory.fd, memory.size)
 
@@ -51,17 +56,16 @@ class SHMSocket:
             # so we can initially write to the semaphore
             # (but don't increment the read semaphore,
             #  as nothing is in the queue yet!)
-            if not write_semaphore.value:
-                write_semaphore.release()
-            assert not self.read_semaphore.value
+            self.ntc_semaphore.release()
+            assert not self.rtc_semaphore.value
 
         else:
             # Same as above, but don't use in "create" mode as we're
             # connecting to a semaphore/shared memory that
             # (should've been) already created.
             self.memory = memory = posix_ipc.SharedMemory(socket_name)
-            self.write_semaphore = write_semaphore = posix_ipc.Semaphore(socket_name+'_write')
-            self.read_semaphore = posix_ipc.Semaphore(socket_name+'_read')
+            self.rtc_semaphore = write_semaphore = posix_ipc.Semaphore(socket_name+'_rtc')
+            self.ntc_semaphore = posix_ipc.Semaphore(socket_name+'_ntc')
             self.mapfile = mmap.mmap(memory.fd, memory.size)
 
         # We (apparently) don't need the file
@@ -92,71 +96,36 @@ class SHMSocket:
             self.write_semaphore.unlink()
         """
 
-    def put(self, data: bytes):
+    def put(self, data: bytes, timeout=None):
         """
         Put an item into the (single-item) queue
         :param data: the data as a string of bytes
         """
         self.last_used_time = time.time()
+        self.ntc_semaphore.acquire(timeout)
 
-        while self.read_semaphore.value:
-            # Don't allow writes if the existing value hasn't
-            # been collected! Hopefully this'll happen rarely enough
-            # (should only happen from multiple processes writing to
-            # the queue at once) that it won't matter performance/
-            # concurrency-wise
-            time.sleep(0.0001)
-            pass
+        self.mapfile[0:int_struct.size] = int_struct.pack(len(data))
+        self.mapfile[int_struct.size:int_struct.size+len(data)] = data
 
-        while True:
-            self.log("PUT: ACQUIRE WRITE: ", self.write_semaphore.value)
-            self.write_semaphore.acquire(self.timeout)
-            self.log("PUT: ACQUIRED WRITE")
+        # Let the data be read, signalling
+        # data is "ready to collect"
+        self.rtc_semaphore.release()
 
-            try:
-                # Something could "put" directly before the write semaphore!
-                # While this should be rare, better safe than sorry
-                if self.read_semaphore.value:
-                    self.log("PUT: WAITING FOR READ SEMAPHORE TO BE 0")
-                    time.sleep(0.0001)
-                    continue
-
-                self.mapfile[0:int_struct.size] = int_struct.pack(len(data))
-                self.mapfile[int_struct.size:int_struct.size+len(data)] = data
-
-                # Let the data be read
-                self.read_semaphore.release()
-                break
-            finally:
-                self.write_semaphore.release()
-
-    def get(self, use_timeout=True):
+    def get(self, timeout=None):
         """
         Get/pop an item from the (single-item) queue
         :return: the item from the queue
         """
         self.last_used_time = time.time()
+        self.rtc_semaphore.acquire(timeout)
 
-        # Make sure can't be written to while we're reading!
-        self.log("GET: ACQUIRE WRITE")
-        self.write_semaphore.acquire(
-            self.timeout if use_timeout else None
-        )
+        amount = int_struct.unpack(self.mapfile[0:int_struct.size])[0]
+        data = self.mapfile[int_struct.size:int_struct.size+amount]
 
-        try:
-            # Make it so the data can no longer be read
-            # (and also wait for the data to actually become available)
-            self.log("GET: ACQUIRE READ")
-            self.read_semaphore.acquire(
-                self.timeout if use_timeout else None
-            )
-
-            amount = int_struct.unpack(self.mapfile[0:int_struct.size])[0]
-            data = self.mapfile[int_struct.size:int_struct.size+amount]
-            #self.mapfile[0:int_struct.size] = int_struct.pack(ALL_DATA_RECEIVED)
-            return data
-        finally:
-            self.write_semaphore.release()
+        # Signal there's "nothing to collect"
+        # to allow future put operations
+        self.ntc_semaphore.release()
+        return data
 
     def get_last_used_time(self):
         return self.last_used_time

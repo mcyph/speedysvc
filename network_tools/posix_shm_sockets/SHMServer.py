@@ -48,6 +48,7 @@ class SHMServer(RPCServerBase):
                     L.append(client_id)
 
             for client_id in L:
+                print("Reaping socket to client: %s" % client_id)
                 del self.DToClientSockets[client_id]
 
             time.sleep(self.client_timeout/2)
@@ -57,7 +58,7 @@ class SHMServer(RPCServerBase):
         Process RPC calls forever.
         """
         while True:
-            data = self.to_server_socket.get(use_timeout=False)
+            data = self.to_server_socket.get(timeout=None)
             client_id = int_struct.unpack(data[0:int_struct.size])[0]
             to_client_socket = self.__get_client_socket(client_id)
 
@@ -70,10 +71,11 @@ class SHMServer(RPCServerBase):
                 if hasattr(fn, 'is_json_method'):
                     to_client_socket.put(self.DCmds[cmd](
                         *json.loads(params.decode('utf-8'))
-                    ))
+                    ), timeout=10)
                 else:
                     to_client_socket.put(
-                        self.DCmds[cmd](params)
+                        self.DCmds[cmd](params),
+                        timeout=10
                     )
 
     def __get_client_socket(self, client_id):
