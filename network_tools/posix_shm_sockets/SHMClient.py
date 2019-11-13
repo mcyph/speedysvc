@@ -1,6 +1,7 @@
 import json
 import struct
 import msgpack
+from toolkit.documentation.copydoc import copydoc
 from network_tools.RPCClientBase import RPCClientBase
 from network_tools.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
 
@@ -9,26 +10,21 @@ class SHMClient(RPCClientBase):
     def __init__(self, port):
         RPCClientBase.__init__(self, port)
 
+        # Create a connection to the server(s)
         self.to_server_socket = SHMSocket(
             socket_name='to_server_%s' % port,
-            clean_up=False
+            init_resources=False
         )
 
         self.client_id = client_id = self._acquire_lock()
-        self.client_id_as_bytes = int_struct.pack(
-            self.client_id
-        )
+        self.client_id_as_bytes = int_struct.pack(self.client_id)
+
         self.from_server_socket = SHMSocket(
             socket_name='from_server_%s_%s' % (port, client_id),
-            clean_up=True
+            init_resources=True
         )
 
-    def __del__(self):
-        """
-        TODO: Send some kind of a message to the
-              server that I'm no longer alive!
-        """
-
+    @copydoc(RPCClientBase.send)
     def send(self, cmd, data):
         self.to_server_socket.put(
             self.client_id_as_bytes+
@@ -36,26 +32,17 @@ class SHMClient(RPCClientBase):
         )
         return self.from_server_socket.get()
 
+    @copydoc(RPCClientBase.send_json)
     def send_json(self, cmd, data):
-        self.to_server_socket.put(
-            self.client_id_as_bytes+
-            cmd.encode('ascii')+b' '+
-            json.dumps(data).encode('utf-8')
-        )
-        return json.loads(
-            self.from_server_socket.get().decode('utf-8')
-        )
+        return json.loads(self.send(
+            cmd, json.dumps(data).encode('utf-8')
+        ))
 
+    @copydoc(RPCClientBase.send_msgpack)
     def send_msgpack(self, cmd, data):
-        self.to_server_socket.put(
-            self.client_id_as_bytes+
-            cmd.encode('ascii')+b' '+
-            msgpack.dumps(data)
-        )
-        return msgpack.loads(
-            self.from_server_socket.get(),
-            encoding='utf-8'
-        )
+        return msgpack.loads(self.send(
+            cmd, msgpack.dumps(data).encode('utf-8')
+        ))
 
 
 if __name__ == '__main__':
@@ -63,17 +50,19 @@ if __name__ == '__main__':
     from random import randint
 
     LInsts = []
-    for x in range(10):
+    for x in range(2):
         inst = SHMClient(5555)
         LInsts.append(inst)
 
     t = time.time()
 
     for x in range(100000):
-        i = b'blah dsfhsjdkfhjk fkshdfjksdhfjksd'#bytes([randint(0, 255)])*500
-        #print('SEND:', i)
-        #for inst in LInsts:
-        data = LInsts[0].send('echo', i)
-        assert data == i, (data, i)
+        for inst in LInsts:
+            #print('SEND:', i)
+            #for inst in LInsts:
+            i = str(randint(0, 9999999999999)).encode('ascii')*50
+            data = inst.send('echo', i)
+            assert data == i, (data, i)
+            #print(data)
 
     print(time.time()-t)
