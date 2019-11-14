@@ -1,4 +1,5 @@
 import json
+import time
 import _thread
 import traceback
 from network_tools.RPCServerBase import RPCServerBase
@@ -7,11 +8,12 @@ from network_tools.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
 
 def json_method(fn):
     fn.is_json_method = True
+    return fn
 
 
 class SHMServer(RPCServerBase):
     def __init__(self, DCmds, port, init_resources=True, client_timeout=10):
-
+        print('Starting new SHMServer on port:', port)
         self.port = port
         self.client_timeout = client_timeout
 
@@ -21,6 +23,7 @@ class SHMServer(RPCServerBase):
         for k, v in DCmds.items():
             new_DCmds[k.encode('ascii')] = v
         self.DCmds = new_DCmds
+        print("COMMANDS:", self.DCmds)
 
         self.to_server_socket = SHMSocket(
             socket_name='to_server_%s' % port,
@@ -31,7 +34,7 @@ class SHMServer(RPCServerBase):
         _thread.start_new_thread(
             self.__reap_client_sockets, ()
         )
-        self.__main()
+        _thread.start_new_thread(self.__main, ())
 
     def __reap_client_sockets(self):
         """
@@ -69,11 +72,11 @@ class SHMServer(RPCServerBase):
                 try:
                     fn = self.DCmds[cmd]
                     if hasattr(fn, 'is_json_method'):
-                        send_data = b'+'+self.DCmds[cmd](
-                            *json.loads(params.decode('utf-8'))
-                        )
+                        send_data = b'+'+json.dumps(
+                            fn(*json.loads(params.decode('utf-8')))
+                        ).encode('utf-8')
                     else:
-                        send_data = b'+'+self.DCmds[cmd](params)
+                        send_data = b'+'+fn(params)
 
                 except Exception as exc:
                     # Just send a basic Exception instance for now, but would be nice

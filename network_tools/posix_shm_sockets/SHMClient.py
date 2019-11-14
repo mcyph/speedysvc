@@ -1,5 +1,5 @@
 import json
-import struct
+import time
 import _thread
 import msgpack
 from toolkit.documentation.copydoc import copydoc
