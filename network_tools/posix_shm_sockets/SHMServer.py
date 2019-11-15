@@ -103,10 +103,12 @@ class SHMServer(RPCServerBase):
         :return: a SHMSocket object
         """
         if not client_id in self.DToClientSockets:
+            socket_name = 'from_server_%s_%s' % (self.port, client_id)
             self.DToClientSockets[client_id] = SHMSocket(
-                socket_name='from_server_%s_%s' % (self.port, client_id),
+                socket_name=socket_name,
                 init_resources=False
             )
+            print(f"__get_client_socket: {socket_name}")
         return self.DToClientSockets[client_id]
 
 

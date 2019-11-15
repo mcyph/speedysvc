@@ -60,6 +60,14 @@ shared_mutex_t shared_mutex_init(const char *name, mode_t mode) {
       perror("pthread_mutexattr_init");
       return mutex;
     }
+    // Below makes Linux threads busy wait, so as
+    // to not go into blocking mode immediately
+    // Perhaps it would be better to do this
+    // manually in python?
+    if (pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ADAPTIVE_NP)) {
+      perror("pthread_mutexattr_settype");
+      return mutex;
+    }
     if (pthread_mutexattr_setpshared(&attr, PTHREAD_PROCESS_SHARED)) {
       perror("pthread_mutexattr_setpshared");
       return mutex;
@@ -92,8 +100,11 @@ int shared_mutex_close(shared_mutex_t mutex) {
 
 int shared_mutex_destroy(shared_mutex_t mutex) {
   if ((errno = pthread_mutex_destroy(mutex.ptr))) {
-    perror("pthread_mutex_destroy");
-    return -1;
+    // Commented out, as the way I'm using this, it's not just
+    // possible but always will be the case that one of the
+    // mutexes will be locked and won't be possible to destroy it
+    //perror("pthread_mutex_destroy");
+    //return -1;
   }
   if (munmap((void *)mutex.ptr, sizeof(pthread_mutex_t))) {
     perror("munmap");

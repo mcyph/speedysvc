@@ -1,6 +1,7 @@
 import mmap
 import time
 import struct
+import shared_mutex_wrap
 import posix_ipc
 from network_tools.posix_shm_sockets.shared_params import MSG_SIZE
 
@@ -13,10 +14,9 @@ NO_MORE_DATA = -2
 
 
 class SHMSocket:
-    def __init__(self, socket_name,
-                 init_resources=False,
-                 msg_size=MSG_SIZE,
-                 timeout=10):  # 10 seconds timeout
+    def __init__(self,
+                 socket_name, init_resources=False,
+                 msg_size=MSG_SIZE, timeout=10):  # 10 seconds timeout
 
         # NOTE: ntc stands for "nothing to collect"
         # and rtc stands for "ready to collect"
@@ -28,27 +28,25 @@ class SHMSocket:
         self.last_used_time = time.time()
         self.timeout = timeout
 
+        rtc_bytes = (socket_name + '_rtc').encode('ascii')
+        ntc_bytes = (socket_name + '_ntc').encode('ascii')
+
+        if init_resources:
+            shared_mutex_wrap.cleanup(rtc_bytes)
+            shared_mutex_wrap.cleanup(ntc_bytes)
+
+        self.rtc_mutex = shared_mutex_wrap.SharedMutex(rtc_bytes)
+        self.ntc_mutex = shared_mutex_wrap.SharedMutex(ntc_bytes)
+
         if init_resources:
             # Clean up since last time
             try: posix_ipc.unlink_shared_memory(socket_name)
-            except: pass
-            try: posix_ipc.unlink_semaphore(socket_name+'_rtc')
-            except: pass
-            try: posix_ipc.unlink_semaphore(socket_name+'_ntc')
             except: pass
 
             # Create the shared memory and the semaphore,
             # and map it with mmap
             self.memory = memory = posix_ipc.SharedMemory(
-                socket_name,
-                posix_ipc.O_CREX,
-                size=msg_size
-            )
-            self.rtc_semaphore = write_semaphore = posix_ipc.Semaphore(
-                socket_name+'_rtc', posix_ipc.O_CREX
-            )
-            self.ntc_semaphore = posix_ipc.Semaphore(
-                socket_name+'_ntc', posix_ipc.O_CREX
+                socket_name, posix_ipc.O_CREX, size=msg_size
             )
             self.mapfile = mmap.mmap(memory.fd, memory.size)
 
@@ -56,16 +54,14 @@ class SHMSocket:
             # so we can initially write to the semaphore
             # (but don't increment the read semaphore,
             #  as nothing is in the queue yet!)
-            self.ntc_semaphore.release()
-            assert not self.rtc_semaphore.value
+            #self.ntc_semaphore.release()
+            self.rtc_mutex.lock()
 
         else:
             # Same as above, but don't use in "create" mode as we're
             # connecting to a semaphore/shared memory that
             # (should've been) already created.
             self.memory = memory = posix_ipc.SharedMemory(socket_name)
-            self.rtc_semaphore = write_semaphore = posix_ipc.Semaphore(socket_name+'_rtc')
-            self.ntc_semaphore = posix_ipc.Semaphore(socket_name+'_ntc')
             self.mapfile = mmap.mmap(memory.fd, memory.size)
 
         # We (apparently) don't need the file
@@ -84,10 +80,14 @@ class SHMSocket:
 
         if self.init_resources:
             # Only clear out the memory/
-            # semaphore if we created them
+            # mutexes if we created them
             self.memory.unlink()
-            self.rtc_semaphore.unlink()
-            self.ntc_semaphore.unlink()
+            self.rtc_mutex.cleanup()
+            self.ntc_mutex.cleanup()
+        else:
+            # Otherwise just close the mutexes
+            self.rtc_mutex.close()
+            self.ntc_mutex.close()
 
     def put(self, data: bytes, timeout=None):
         """
@@ -103,14 +103,14 @@ class SHMSocket:
         # TODO: Support very large queue items!!! ==============================================================
 
         self.last_used_time = time.time()
-        self.ntc_semaphore.acquire(timeout)
+        self.ntc_mutex.lock()
 
         self.mapfile[0:int_struct.size] = int_struct.pack(len(data))
         self.mapfile[int_struct.size:int_struct.size+len(data)] = data
 
         # Let the data be read, signalling
         # data is "ready to collect"
-        self.rtc_semaphore.release()
+        self.rtc_mutex.unlock()
 
     def get(self, timeout=None):
         """
@@ -118,14 +118,14 @@ class SHMSocket:
         :return: the item from the queue
         """
         self.last_used_time = time.time()
-        self.rtc_semaphore.acquire(timeout)
+        self.rtc_mutex.lock()
 
         amount = int_struct.unpack(self.mapfile[0:int_struct.size])[0]
         data = self.mapfile[int_struct.size:int_struct.size+amount]
 
         # Signal there's "nothing to collect"
         # to allow future put operations
-        self.ntc_semaphore.release()
+        self.ntc_mutex.unlock()
         return data
 
     def get_last_used_time(self):
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     DATA = b'my ranadasdmsak data'*20
 
     from_t = time.time()
-    for x in range(10000):
+    for x in range(1000000):
         server_socket.put(DATA)
         assert client_socket.get() == DATA
     print(time.time()-from_t)
