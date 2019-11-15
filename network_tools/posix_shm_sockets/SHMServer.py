@@ -2,6 +2,7 @@ import json
 import time
 import _thread
 import traceback
+#from toolkit.benchmarking.benchmark import benchmark
 from network_tools.RPCServerBase import RPCServerBase
 from network_tools.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
 
@@ -53,10 +54,15 @@ class SHMServer(RPCServerBase):
 
             time.sleep(self.client_timeout/2)
 
+    #@benchmark(restrictions=(30,))
     def __main(self):
         """
         Process RPC calls forever.
         """
+
+        # t_from = time.time()
+        # while time.time()-t_from < 20:
+
         while True:
             data = self.to_server_socket.get(timeout=None)
             client_id = int_struct.unpack(data[0:int_struct.size])[0]

@@ -5,9 +5,11 @@ https://github.com/pypa/sampleproject
 """
 
 from setuptools import setup, find_packages
+from setuptools import Extension
+from Cython.Build import cythonize
 from codecs import open
 from os import path
-from os.path import join
+from os.path import join, dirname, abspath
 
 here = path.abspath(path.dirname(__file__))
 
@@ -15,6 +17,35 @@ here = path.abspath(path.dirname(__file__))
 with open(join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
+
+extensions = [Extension(
+    'shared_mutex_wrap', [
+        "network_tools/shared_mutex/shared_mutex_wrap.pyx",
+        "network_tools/shared_mutex/shared_mutex.c"
+    ],
+
+    libraries=[
+        "rt",
+        #"shared_mutex",
+        #"errno", # errno, ENOENT
+        #"fcntl", # O_RDWR, O_CREATE
+        #"linux/limits", # NAME_MAX
+        "sys/mman", # shm_open, shm_unlink, mmap, munmap,
+                      # PROT_READ, PROT_WRITE, MAP_SHARED, MAP_FAILED
+        #"unistd", # ftruncate, close
+        #"stdio", # perror
+        #"stdlib", # malloc, free
+        #"string", # strcpy
+    ],
+    library_dirs=[
+        join(
+            dirname(abspath(__file__)),
+            "network_tools/shared_mutex"
+        )
+    ]
+)]
+
+#
 
 setup(
     name='network_tools',
@@ -51,6 +82,10 @@ setup(
 
     keywords='mmap sockets',
     packages=find_packages(),
+    ext_modules=cythonize(
+        extensions,
+        include_path=[join(dirname(abspath(__file__)), "network_tools/shared_mutex")]
+    ),
 
     install_requires=[
         'msgpack',
