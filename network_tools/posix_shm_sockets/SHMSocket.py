@@ -32,16 +32,11 @@ class SHMSocket:
         ntc_bytes = (socket_name + '_ntc').encode('ascii')
 
         if init_resources:
-            shared_mutex_wrap.cleanup(rtc_bytes)
-            shared_mutex_wrap.cleanup(ntc_bytes)
-
-        self.rtc_mutex = shared_mutex_wrap.SharedMutex(rtc_bytes)
-        self.ntc_mutex = shared_mutex_wrap.SharedMutex(ntc_bytes)
-
-        if init_resources:
             # Clean up since last time
             try: posix_ipc.unlink_shared_memory(socket_name)
             except: pass
+            shared_mutex_wrap.destroy(rtc_bytes)
+            shared_mutex_wrap.destroy(ntc_bytes)
 
             # Create the shared memory and the semaphore,
             # and map it with mmap
@@ -54,8 +49,12 @@ class SHMSocket:
             # so we can initially write to the semaphore
             # (but don't increment the read semaphore,
             #  as nothing is in the queue yet!)
-            #self.ntc_semaphore.release()
-            self.rtc_mutex.lock()
+
+            print("INITIAL RTC LOCK!")
+            self.rtc_mutex = shared_mutex_wrap.SharedMutex(rtc_bytes, initial_value=0)
+            self.ntc_mutex = shared_mutex_wrap.SharedMutex(ntc_bytes, initial_value=0)
+            self.ntc_mutex.unlock()
+            print("OK!")
 
         else:
             # Same as above, but don't use in "create" mode as we're
@@ -63,6 +62,9 @@ class SHMSocket:
             # (should've been) already created.
             self.memory = memory = posix_ipc.SharedMemory(socket_name)
             self.mapfile = mmap.mmap(memory.fd, memory.size)
+
+            self.rtc_mutex = shared_mutex_wrap.SharedMutex(rtc_bytes)
+            self.ntc_mutex = shared_mutex_wrap.SharedMutex(ntc_bytes)
 
         # We (apparently) don't need the file
         # descriptor after it's been memory mapped
@@ -82,12 +84,13 @@ class SHMSocket:
             # Only clear out the memory/
             # mutexes if we created them
             self.memory.unlink()
-            self.rtc_mutex.cleanup()
-            self.ntc_mutex.cleanup()
+
+            self.rtc_mutex.destroy()
+            self.ntc_mutex.destroy()
         else:
             # Otherwise just close the mutexes
-            self.rtc_mutex.close()
-            self.ntc_mutex.close()
+            del self.rtc_mutex
+            del self.ntc_mutex
 
     def put(self, data: bytes, timeout=None):
         """
@@ -102,6 +105,7 @@ class SHMSocket:
 
         # TODO: Support very large queue items!!! ==============================================================
 
+        #print(f"{self.socket_name}: put lock ntc_mutex {self.ntc_mutex.get_value()}")
         self.last_used_time = time.time()
         self.ntc_mutex.lock()
 
@@ -110,6 +114,7 @@ class SHMSocket:
 
         # Let the data be read, signalling
         # data is "ready to collect"
+        #print(f"{self.socket_name}: put unlock rtc_mutex {self.rtc_mutex.get_value()}")
         self.rtc_mutex.unlock()
 
     def get(self, timeout=None):
@@ -117,6 +122,7 @@ class SHMSocket:
         Get/pop an item from the (single-item) queue
         :return: the item from the queue
         """
+        #print(f"{self.socket_name}: get lock rtc_mutex {self.rtc_mutex.get_value()}")
         self.last_used_time = time.time()
         self.rtc_mutex.lock()
 
@@ -125,6 +131,7 @@ class SHMSocket:
 
         # Signal there's "nothing to collect"
         # to allow future put operations
+        #print(f"{self.socket_name}: get unlock ntc_mutex {self.ntc_mutex.get_value()}")
         self.ntc_mutex.unlock()
         return data
 

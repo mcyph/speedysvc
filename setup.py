@@ -21,7 +21,6 @@ with open(join(here, 'README.rst'), encoding='utf-8') as f:
 extensions = [Extension(
     'shared_mutex_wrap', [
         "network_tools/shared_mutex/shared_mutex_wrap.pyx",
-        "network_tools/shared_mutex/shared_mutex.c"
     ],
 
     libraries=[
