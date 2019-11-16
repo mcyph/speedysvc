@@ -7,8 +7,6 @@ from network_tools.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
 from network_tools.MsgPack import MsgPack
 
 
-
-
 def json_method(fn):
     fn.is_json_method = True
     return fn

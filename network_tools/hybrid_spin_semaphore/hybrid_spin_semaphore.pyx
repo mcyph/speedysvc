@@ -1,5 +1,5 @@
 cimport cython
-cimport shared_mutex_wrap
+cimport hybrid_spin_semaphore
 
 from posix.time cimport clock_gettime, timespec, CLOCK_REALTIME
 from posix.mman cimport (PROT_READ, PROT_WRITE, MAP_SHARED, MAP_FAILED)
@@ -7,13 +7,15 @@ from posix.mman cimport mmap, shm_open
 from posix.unistd cimport ftruncate, close
 from posix.stat cimport fchmod
 from libc.errno cimport ENOENT, errno
+from libc.stdio cimport printf, perror
+from posix.fcntl cimport O_CREAT, O_EXCL, O_RDWR
 
 
 def destroy(char* sem_loc):
     # TODO: Add error handling!
 
     # Cleans up the mutex only if need be
-    shared_mutex_wrap.printf("Destroying %s\n", sem_loc)
+    printf("Destroying %s\n", sem_loc)
     cdef sem_t* _d_semaphore = sem_open(sem_loc, O_CREAT, 0666, 0)
 
     if _d_semaphore != NULL:
@@ -31,7 +33,7 @@ cdef char UNLOCKED = 0
 
 
 @cython.final
-cdef class SharedMutex:
+cdef class HybridSpinSemaphore:
     cdef sem_t* _semaphore
     cdef int _cleaned_up
     cdef char* _spin_lock_char
@@ -44,11 +46,13 @@ cdef class SharedMutex:
                   int destroy_on_process_exit=1):
 
         self._cleaned_up = 1
+
+        # Initialise shared memory for the "spin lock" char
+        # (which allows basic busy waiting)
         self.init_mmap(sem_loc)
 
-        # initialize semaphores for shared processes
-
-        # Try to connect to a previously created semaphore
+        # Initialize semaphores for shared processes
+        # First try to connect to a previously created semaphore
         self._semaphore = sem_open(sem_loc, O_RDWR, 0666, initial_value) # WARNING!!!
 
         if self._semaphore == NULL:
@@ -57,6 +61,7 @@ cdef class SharedMutex:
                 sem_loc, O_CREAT | O_EXCL,
                 0666, initial_value
             )
+
             # unlink prevents the semaphore existing forever
             # if a crash occurs during the execution
             # i.e. if there are no more processes using it,
@@ -64,11 +69,9 @@ cdef class SharedMutex:
             if destroy_on_process_exit:
                 sem_unlink(sem_loc)
 
-        printf("semaphores initialized.\n\n")
-
         self._cleaned_up = 0
 
-    cdef init_mmap(self, char* sem_loc):
+    cdef int init_mmap(self, char* sem_loc) except -1:
         # Open existing shared memory object, or create one.
         # Two separate calls are needed here, to mark fact of creation
         # for later initialization of pthread mutex.
@@ -82,15 +85,16 @@ cdef class SharedMutex:
             # body can access it. Avoiding the umask of shm_open
             if fchmod(self._shm_fd, 0666) != 0:
                 perror("fchmod")
+                return -1
 
         if self._shm_fd == -1:
             perror("shm_open")
-            return
+            return -1
 
         # Truncate shared memory segment so it would contain char*
         if ftruncate(self._shm_fd, sizeof(char*)) != 0:
             perror("ftruncate")
-            return
+            return -1
 
         # Map pthread mutex into the shared memory.
         cdef void *addr = mmap(
@@ -103,9 +107,10 @@ cdef class SharedMutex:
         )
         if addr == MAP_FAILED:
             perror("mmap")
-            return
+            return -1
 
         self._spin_lock_char = <char *>addr # VOLATILE??? ===========================================
+        return 0
 
     def __del__(self):
         if not self._cleaned_up:
@@ -115,11 +120,11 @@ cdef class SharedMutex:
 
             if close(self._shm_fd):
                 perror("close")
-                return -1
+                raise Exception("Error closing shared memory file descriptor")
 
-            return shared_mutex_wrap.sem_close(self._semaphore)
+            return sem_close(self._semaphore)
 
-    cpdef int destroy(self) nogil:
+    cpdef int destroy(self) nogil except -1:
         # Mutex destruction completely cleans it from system memory.
         self._cleaned_up = 1
 
@@ -127,15 +132,17 @@ cdef class SharedMutex:
             perror("close")
             return -1
 
-        return shared_mutex_wrap.sem_destroy(self._semaphore)
+        return sem_destroy(self._semaphore)
 
-    cpdef int get_value(self) nogil:
+    cpdef int get_value(self) nogil except -10:
         cdef int value;
         cdef int* p_value = &value;
-        cdef int result = sem_getvalue(self._semaphore, p_value) # ERROR CHECKING WARNING!!!! ===============================
+        cdef int result = sem_getvalue(self._semaphore, p_value)
+        if result == -1:
+            return -10
         return p_value[0]
 
-    cpdef int lock(self) nogil:
+    cpdef int lock(self) nogil except -1:
         # Use pthread calls for locking and unlocking.
         cdef int i
         cdef int retval
@@ -151,7 +158,7 @@ cdef class SharedMutex:
                 elif self._spin_lock_char[0] == UNLOCKED:
                     break
 
-            retval = shared_mutex_wrap.sem_wait(self._semaphore)
+            retval = sem_wait(self._semaphore)
             self._spin_lock_char[0] = LOCKED
             return retval
 
@@ -162,11 +169,11 @@ cdef class SharedMutex:
         current = ts.tv_sec + (ts.tv_nsec / 1000000000.)
         return current
         
-    cpdef int unlock(self) nogil:
+    cpdef int unlock(self) nogil except -1:
         cdef int i
         cdef int retval
 
         with nogil:
             self._spin_lock_char[0] = UNLOCKED
-            retval = shared_mutex_wrap.sem_post(self._semaphore)
+            retval = sem_post(self._semaphore)
             return retval

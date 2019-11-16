@@ -19,8 +19,8 @@ with open(join(here, 'README.rst'), encoding='utf-8') as f:
 
 
 extensions = [Extension(
-    'shared_mutex_wrap', [
-        "network_tools/shared_mutex/shared_mutex_wrap.pyx",
+    'hybrid_spin_semaphore', [
+        "network_tools/hybrid_spin_semaphore/hybrid_spin_semaphore.pyx",
     ],
 
     libraries=[
@@ -39,7 +39,7 @@ extensions = [Extension(
     library_dirs=[
         join(
             dirname(abspath(__file__)),
-            "network_tools/shared_mutex"
+            "network_tools/hybrid_spin_semaphore"
         )
     ]
 )]
@@ -83,7 +83,7 @@ setup(
     packages=find_packages(),
     ext_modules=cythonize(
         extensions,
-        include_path=[join(dirname(abspath(__file__)), "network_tools/shared_mutex")]
+        include_path=[join(dirname(abspath(__file__)), "network_tools/hybrid_spin_semaphore")]
     ),
 
     install_requires=[

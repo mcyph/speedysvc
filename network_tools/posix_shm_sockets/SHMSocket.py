@@ -1,7 +1,7 @@
 import mmap
 import time
 import struct
-import shared_mutex_wrap
+import hybrid_spin_semaphore
 import posix_ipc
 from network_tools.posix_shm_sockets.shared_params import MSG_SIZE
 
@@ -35,8 +35,8 @@ class SHMSocket:
             # Clean up since last time
             try: posix_ipc.unlink_shared_memory(socket_name)
             except: pass
-            shared_mutex_wrap.destroy(rtc_bytes)
-            shared_mutex_wrap.destroy(ntc_bytes)
+            hybrid_spin_semaphore.destroy(rtc_bytes)
+            hybrid_spin_semaphore.destroy(ntc_bytes)
 
             # Create the shared memory and the semaphore,
             # and map it with mmap
@@ -51,8 +51,12 @@ class SHMSocket:
             #  as nothing is in the queue yet!)
 
             print("INITIAL RTC LOCK!")
-            self.rtc_mutex = shared_mutex_wrap.SharedMutex(rtc_bytes, initial_value=0)
-            self.ntc_mutex = shared_mutex_wrap.SharedMutex(ntc_bytes, initial_value=0)
+            self.rtc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
+                rtc_bytes, initial_value=0
+            )
+            self.ntc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
+                ntc_bytes, initial_value=0
+            )
             self.ntc_mutex.unlock()
             print("OK!")
 
@@ -63,8 +67,8 @@ class SHMSocket:
             self.memory = memory = posix_ipc.SharedMemory(socket_name)
             self.mapfile = mmap.mmap(memory.fd, memory.size)
 
-            self.rtc_mutex = shared_mutex_wrap.SharedMutex(rtc_bytes)
-            self.ntc_mutex = shared_mutex_wrap.SharedMutex(ntc_bytes)
+            self.rtc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(rtc_bytes)
+            self.ntc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(ntc_bytes)
 
         # We (apparently) don't need the file
         # descriptor after it's been memory mapped
