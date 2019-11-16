@@ -19,6 +19,10 @@ typedef struct shared_mutex_t {
                         // of a new shared mutex.
                         // Equals 0 (false) if this mutex was
                         // just retrieved from shared memory.
+  volatile char* spin_lock_char;
+                        // The char* for allowing faster
+                        // busy-waiting checks before
+                        // deferring to the mutex
 } shared_mutex_t;
 
 // Initialize a new shared mutex with given `name`. If a mutex

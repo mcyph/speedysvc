@@ -1,10 +1,12 @@
-import json
 import time
 import _thread
 import traceback
 #from toolkit.benchmarking.benchmark import benchmark
 from network_tools.RPCServerBase import RPCServerBase
 from network_tools.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
+from network_tools.MsgPack import MsgPack
+
+
 
 
 def json_method(fn):
@@ -78,9 +80,9 @@ class SHMServer(RPCServerBase):
                 try:
                     fn = self.DCmds[cmd]
                     if hasattr(fn, 'is_json_method'):
-                        send_data = b'+'+json.dumps(
-                            fn(*json.loads(params.decode('utf-8')))
-                        ).encode('utf-8')
+                        send_data = b'+'+MsgPack.dumps(
+                            fn(*MsgPack.loads(params))
+                        )
                     else:
                         send_data = b'+'+fn(params)
 

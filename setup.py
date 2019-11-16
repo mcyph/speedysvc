@@ -25,7 +25,7 @@ extensions = [Extension(
     ],
 
     libraries=[
-        "rt",
+        "rt", # POSIX functions might require this?
         #"shared_mutex",
         #"errno", # errno, ENOENT
         #"fcntl", # O_RDWR, O_CREATE

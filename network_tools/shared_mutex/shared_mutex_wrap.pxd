@@ -44,6 +44,7 @@ cdef extern from "shared_mutex.h" nogil:
         int shm_fd
         char* name
         int created
+        char* spin_lock_char
 
     shared_mutex_t shared_mutex_init(const char *name, mode_t mode)
     int shared_mutex_close(shared_mutex_t mutex)

@@ -5,6 +5,7 @@ import msgpack
 from toolkit.documentation.copydoc import copydoc
 from network_tools.RPCClientBase import RPCClientBase
 from network_tools.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
+from network_tools.MsgPack import MsgPack
 
 
 class SHMClient(RPCClientBase):
@@ -60,14 +61,14 @@ class SHMClient(RPCClientBase):
 
     @copydoc(RPCClientBase.send_json)
     def send_json(self, cmd, data):
-        return json.loads(self.send(
-            cmd, json.dumps(data).encode('utf-8')
+        return MsgPack.loads(self.send(
+            cmd, MsgPack.dumps(data)
         ))
 
     @copydoc(RPCClientBase.send_msgpack)
     def send_msgpack(self, cmd, data):
-        return msgpack.loads(self.send(
-            cmd, msgpack.dumps(data).encode('utf-8')
+        return MsgPack.loads(self.send(
+            cmd, MsgPack.dumps(data)
         ))
 
 
