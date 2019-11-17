@@ -50,16 +50,15 @@ class SHMSocket:
             # (but don't increment the read semaphore,
             #  as nothing is in the queue yet!)
 
-            print("INITIAL RTC LOCK!")
             self.rtc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
                 rtc_bytes, initial_value=0
             )
             self.ntc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
-                ntc_bytes, initial_value=0
+                ntc_bytes, initial_value=1
             )
-            self.ntc_mutex.unlock()
-            print("OK!")
 
+            assert self.rtc_mutex.get_value() == 0, self.rtc_mutex.get_value()
+            assert self.ntc_mutex.get_value() == 1, self.ntc_mutex.get_value()
         else:
             # Same as above, but don't use in "create" mode as we're
             # connecting to a semaphore/shared memory that
@@ -67,8 +66,25 @@ class SHMSocket:
             self.memory = memory = posix_ipc.SharedMemory(socket_name)
             self.mapfile = mmap.mmap(memory.fd, memory.size)
 
-            self.rtc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(rtc_bytes)
-            self.ntc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(ntc_bytes)
+            self.rtc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
+                rtc_bytes, initial_value=0
+            )
+            self.ntc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
+                ntc_bytes, initial_value=1
+            )
+
+        if False:
+            if self.rtc_mutex.get_value() > 0 or self.ntc_mutex.get_value() > 0:
+                while self.rtc_mutex.get_value() > 0:
+                    self.rtc_mutex.lock()
+                while self.ntc_mutex.get_value() > 0:
+                    self.ntc_mutex.lock()
+
+            if self.rtc_mutex.get_value() == 0 and self.ntc_mutex.get_value() == 0:
+                print("UNLOCKEEE!")
+                self.ntc_mutex.unlock() # HACK!
+
+        print("RTC:", self.rtc_mutex.get_value(), "NTC:", self.ntc_mutex.get_value())
 
         # We (apparently) don't need the file
         # descriptor after it's been memory mapped

@@ -1,35 +1,29 @@
 cimport cython
 cimport hybrid_spin_semaphore
 
+from libc.errno cimport ENOENT, errno
+from libc.stdio cimport printf, perror
+
+from posix.stat cimport fchmod
+from posix.unistd cimport ftruncate, close
+from posix.fcntl cimport O_CREAT, O_EXCL, O_RDWR
 from posix.time cimport clock_gettime, timespec, CLOCK_REALTIME
 from posix.mman cimport (PROT_READ, PROT_WRITE, MAP_SHARED, MAP_FAILED)
 from posix.mman cimport mmap, shm_open
-from posix.unistd cimport ftruncate, close
-from posix.stat cimport fchmod
-from libc.errno cimport ENOENT, errno
-from libc.stdio cimport printf, perror
-from posix.fcntl cimport O_CREAT, O_EXCL, O_RDWR
 
 
 def destroy(char* sem_loc):
     # TODO: Add error handling!
-
-    # Cleans up the mutex only if need be
-    printf("Destroying %s\n", sem_loc)
-    cdef sem_t* _d_semaphore = sem_open(sem_loc, O_CREAT, 0666, 0)
-
-    if _d_semaphore != NULL:
-        # NOTE: Destroying semaphores created by other processes
-        # can produce undefined behaviour..although I'm willing
-        # to take that risk here, as if we're starting a new server
-        # process I probably want to take over from the last one.
-        sem_destroy(_d_semaphore)
-
-    return 0
+    # NOTE: Destroying semaphores created by other processes
+    # can produce undefined behaviour..although I'm willing
+    # to take that risk here, as if we're starting a new server
+    # process I probably want to take over from the last one.
+    return sem_unlink(sem_loc)
 
 
-cdef char LOCKED = 1
 cdef char UNLOCKED = 0
+cdef char LOCKED = 1
+cdef char DESTROYED = 2
 
 
 @cython.final
@@ -38,6 +32,11 @@ cdef class HybridSpinSemaphore:
     cdef int _cleaned_up
     cdef char* _spin_lock_char
     cdef int _shm_fd
+    cdef char* _sem_loc
+
+    #===========================================================#
+    #                  Init Semaphore/Spinlock                  #
+    #===========================================================#
 
     def __cinit__(self,
                   char* sem_loc,
@@ -46,6 +45,7 @@ cdef class HybridSpinSemaphore:
                   int destroy_on_process_exit=1):
 
         self._cleaned_up = 1
+        self._sem_loc = sem_loc
 
         # Initialise shared memory for the "spin lock" char
         # (which allows basic busy waiting)
@@ -61,14 +61,6 @@ cdef class HybridSpinSemaphore:
                 sem_loc, O_CREAT | O_EXCL,
                 0666, initial_value
             )
-
-            # unlink prevents the semaphore existing forever
-            # if a crash occurs during the execution
-            # i.e. if there are no more processes using it,
-            # it will cease to exist.
-            if destroy_on_process_exit:
-                sem_unlink(sem_loc)
-
         self._cleaned_up = 0
 
     cdef int init_mmap(self, char* sem_loc) except -1:
@@ -112,6 +104,10 @@ cdef class HybridSpinSemaphore:
         self._spin_lock_char = <char *>addr # VOLATILE??? ===========================================
         return 0
 
+    #===========================================================#
+    #                      Destroy/Close                        #
+    #===========================================================#
+
     def __del__(self):
         if not self._cleaned_up:
             # Closing is used to release local resources, used by a mutex.
@@ -120,19 +116,33 @@ cdef class HybridSpinSemaphore:
 
             if close(self._shm_fd):
                 perror("close")
-                raise Exception("Error closing shared memory file descriptor")
-
+                raise Exception(
+                    "Error closing shared memory file descriptor"
+                )
             return sem_close(self._semaphore)
 
     cpdef int destroy(self) nogil except -1:
         # Mutex destruction completely cleans it from system memory.
+        if self._cleaned_up:
+            raise Exception(
+                "destroy called on semaphore that no longer exists"
+            )
+            return -1
         self._cleaned_up = 1
 
         if close(self._shm_fd):
             perror("close")
             return -1
 
-        return sem_destroy(self._semaphore)
+        # after calling sem_unlink, if there are no more
+        # processes using it, it will cease to exist.
+        if sem_unlink(self._sem_loc) == -1:
+            return -1
+        return sem_close(self._semaphore)
+
+    #===========================================================#
+    #                    Get Semaphore Value                    #
+    #===========================================================#
 
     cpdef int get_value(self) nogil except -10:
         cdef int value;
@@ -141,6 +151,10 @@ cdef class HybridSpinSemaphore:
         if result == -1:
             return -10
         return p_value[0]
+
+    #===========================================================#
+    #                        Lock/Unlock                        #
+    #===========================================================#
 
     cpdef int lock(self) nogil except -1:
         # Use pthread calls for locking and unlocking.
@@ -162,13 +176,6 @@ cdef class HybridSpinSemaphore:
             self._spin_lock_char[0] = LOCKED
             return retval
 
-    cdef double get_current_time(self) nogil:
-        cdef timespec ts
-        cdef double current
-        clock_gettime(CLOCK_REALTIME, &ts)
-        current = ts.tv_sec + (ts.tv_nsec / 1000000000.)
-        return current
-        
     cpdef int unlock(self) nogil except -1:
         cdef int i
         cdef int retval
@@ -177,3 +184,14 @@ cdef class HybridSpinSemaphore:
             self._spin_lock_char[0] = UNLOCKED
             retval = sem_post(self._semaphore)
             return retval
+
+    #===========================================================#
+    #                       Miscellaneous                       #
+    #===========================================================#
+
+    cdef double get_current_time(self) nogil:
+        cdef timespec ts
+        cdef double current
+        clock_gettime(CLOCK_REALTIME, &ts)
+        current = ts.tv_sec + (ts.tv_nsec / 1000000000.)
+        return current
