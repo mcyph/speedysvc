@@ -17,13 +17,22 @@ class SHMClient(RPCClientBase):
 
     def __periodic_heartbeat(self):
         while 1:
-            try:
-                self.send('heartbeat', str(time.time()).encode('ascii'))
-            except:
-                print("Heartbeat failed; attempting to recreate connection")
+            if self.to_server_socket.get_sockets_destroyed():
+                print("To server socket destroyed; attempting to recreate")
                 self.__create_conn_to_server()
 
-            time.sleep(10)
+            if self.from_server_socket.get_sockets_destroyed():
+                # Should never get here, I think(?)
+                print("From server socket destroyed; attempting to recreate")
+                self.__create_conn_to_server()
+
+            #try:
+            #    self.send('heartbeat', str(time.time()).encode('ascii'))
+            #except:
+            #    print("Heartbeat failed; attempting to recreate connection")
+            #    self.__create_conn_to_server()
+
+            time.sleep(3)
 
     def __create_conn_to_server(self):
         # Acquire a lock to the server(s)

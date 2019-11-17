@@ -47,6 +47,8 @@ class SHMServer(RPCServerBase):
             for client_id, client_socket in list(self.DToClientSockets.items()):
                 if time.time()-client_socket.get_last_used_time() > self.client_timeout:
                     L.append(client_id)
+                elif client_socket.get_sockets_destroyed():
+                    L.append(client_id)
 
             for client_id in L:
                 print("Reaping socket to client: %s" % client_id)
@@ -64,6 +66,10 @@ class SHMServer(RPCServerBase):
         # while time.time()-t_from < 20:
 
         while True:
+            # TODO: Should there be better error handling here?
+            # The trouble is, nothing should ever be allowed to
+            # go wrong here - if it does, perhaps the server
+            # should die anyway(?)
             data = self.to_server_socket.get(timeout=None)
             client_id = int_struct.unpack(data[0:int_struct.size])[0]
             to_client_socket = self.__get_client_socket(client_id)
@@ -102,13 +108,22 @@ class SHMServer(RPCServerBase):
         :param client_id: the integer ID of the client
         :return: a SHMSocket object
         """
+        if client_id in self.DToClientSockets:
+            # Can only send to client if the socket hasn't
+            # been destroyed on the client end!
+            client_socket = self.DToClientSockets[client_id]
+            if client_socket.get_sockets_destroyed():
+                del self.DToClientSockets[client_id]
+
         if not client_id in self.DToClientSockets:
+            # Create the connection to the client
             socket_name = 'from_server_%s_%s' % (self.port, client_id)
             self.DToClientSockets[client_id] = SHMSocket(
                 socket_name=socket_name,
                 init_resources=False
             )
             print(f"__get_client_socket: {socket_name}")
+
         return self.DToClientSockets[client_id]
 
 

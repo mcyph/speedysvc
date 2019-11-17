@@ -1,7 +1,8 @@
 import mmap
 import time
 import struct
-import hybrid_spin_semaphore
+from hybrid_spin_semaphore import HybridSpinSemaphore, \
+    CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE
 import posix_ipc
 from network_tools.posix_shm_sockets.shared_params import MSG_SIZE
 
@@ -35,8 +36,6 @@ class SHMSocket:
             # Clean up since last time
             try: posix_ipc.unlink_shared_memory(socket_name)
             except: pass
-            hybrid_spin_semaphore.destroy(rtc_bytes)
-            hybrid_spin_semaphore.destroy(ntc_bytes)
 
             # Create the shared memory and the semaphore,
             # and map it with mmap
@@ -50,11 +49,13 @@ class SHMSocket:
             # (but don't increment the read semaphore,
             #  as nothing is in the queue yet!)
 
-            self.rtc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
-                rtc_bytes, initial_value=0
+            self.rtc_mutex = HybridSpinSemaphore(
+                rtc_bytes, CREATE_NEW_OVERWRITE,
+                initial_value=0
             )
-            self.ntc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
-                ntc_bytes, initial_value=1
+            self.ntc_mutex = HybridSpinSemaphore(
+                ntc_bytes, CREATE_NEW_OVERWRITE,
+                initial_value=1
             )
 
             assert self.rtc_mutex.get_value() == 0, self.rtc_mutex.get_value()
@@ -66,23 +67,14 @@ class SHMSocket:
             self.memory = memory = posix_ipc.SharedMemory(socket_name)
             self.mapfile = mmap.mmap(memory.fd, memory.size)
 
-            self.rtc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
-                rtc_bytes, initial_value=0
+            self.rtc_mutex = HybridSpinSemaphore(
+                rtc_bytes, CONNECT_TO_EXISTING,
+                initial_value=0
             )
-            self.ntc_mutex = hybrid_spin_semaphore.HybridSpinSemaphore(
-                ntc_bytes, initial_value=1
+            self.ntc_mutex = HybridSpinSemaphore(
+                ntc_bytes, CONNECT_TO_EXISTING,
+                initial_value=1
             )
-
-        if False:
-            if self.rtc_mutex.get_value() > 0 or self.ntc_mutex.get_value() > 0:
-                while self.rtc_mutex.get_value() > 0:
-                    self.rtc_mutex.lock()
-                while self.ntc_mutex.get_value() > 0:
-                    self.ntc_mutex.lock()
-
-            if self.rtc_mutex.get_value() == 0 and self.ntc_mutex.get_value() == 0:
-                print("UNLOCKEEE!")
-                self.ntc_mutex.unlock() # HACK!
 
         print("RTC:", self.rtc_mutex.get_value(), "NTC:", self.ntc_mutex.get_value())
 
@@ -154,6 +146,10 @@ class SHMSocket:
         #print(f"{self.socket_name}: get unlock ntc_mutex {self.ntc_mutex.get_value()}")
         self.ntc_mutex.unlock()
         return data
+
+    def get_sockets_destroyed(self):
+        return self.rtc_mutex.get_destroyed() or \
+               self.ntc_mutex.get_destroyed()
 
     def get_last_used_time(self):
         return self.last_used_time
