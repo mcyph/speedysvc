@@ -2,18 +2,35 @@ import json
 import time
 import _thread
 import msgpack
+import warnings
+from collections import Counter
 from toolkit.documentation.copydoc import copydoc
 from network_tools.RPCClientBase import RPCClientBase
 from network_tools.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
 from network_tools.MsgPack import MsgPack
 
 
+DPortCounter = Counter()
+
+
 class SHMClient(RPCClientBase):
     def __init__(self, port):
+        self.port = port
         RPCClientBase.__init__(self, port)
         self.__create_conn_to_server()
         self.lock = _thread.allocate()
         _thread.start_new_thread(self.__periodic_heartbeat, ())
+
+        if DPortCounter.get(port):
+            import warnings
+            warnings.warn(
+                f"Client started more than once for port {port}: "
+                f"is this necessary?"
+            )
+        DPortCounter[port] += 1
+
+    def __del__(self):
+        DPortCounter[self.port] -= 1
 
     def __periodic_heartbeat(self):
         while 1:

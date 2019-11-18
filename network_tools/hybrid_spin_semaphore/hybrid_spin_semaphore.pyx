@@ -242,7 +242,7 @@ cdef class HybridSpinSemaphore:
         return sem_close(self._semaphore)
 
     #===========================================================#
-    #                    Get Semaphore Value                    #
+    #           Get Semaphore Value/Whether Destroyed           #
     #===========================================================#
 
     cpdef int get_destroyed(self) nogil except -1:
@@ -297,7 +297,8 @@ cdef class HybridSpinSemaphore:
 
         with nogil:
             self._spin_lock_char[0] = UNLOCKED
-            retval = sem_post(self._semaphore)
+            if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore!
+                retval = sem_post(self._semaphore)
             return retval
 
     #===========================================================#

@@ -90,6 +90,8 @@ setup(
         'msgpack',
         'setproctitle',
         'dataclasses',
+
+        'matplotlib',
     ],
 
     zip_safe=True
