@@ -29,7 +29,6 @@ cdef char LOCKED = 0
 cdef char UNLOCKED = 1
 # Just to make sure we can't ever have trouble with
 # incrementing semaphores beyond 1 (which should never happen!)
-# TODO: Add checks to make sure of this!!! =================================================
 cdef char DESTROYED = 127
 
 
@@ -203,17 +202,16 @@ cdef class HybridSpinSemaphore:
 
             if close(self._shm_fd):
                 perror("close")
-                raise Exception(
-                    "Error closing shared memory file descriptor"
-                )
-            return sem_close(self._semaphore)
+                return
+
+            if sem_close(self._semaphore) == -1:
+                perror("sem_close")
+                return -1
+            return 0
 
     cpdef int destroy(self) nogil except -1:
         # Mutex destruction completely cleans it from system memory.
         if self._cleaned_up:
-            raise Exception(
-                "destroy called on semaphore that no longer exists"
-            )
             return -1
         self._cleaned_up = 1
 
@@ -226,7 +224,9 @@ cdef class HybridSpinSemaphore:
         # accessible by name, but will still remain accessible
         # for processes currently using it.
         if shm_unlink(self._sem_loc) == -1:
-            return -1
+            # If already unlinked, just ignore?? =======================
+            perror("shm_unlink")
+            #return -1
 
         # Close the shared memory
         if close(self._shm_fd):
@@ -236,10 +236,15 @@ cdef class HybridSpinSemaphore:
         # after calling sem_unlink, if there are no more
         # processes using it, it will cease to exist.
         if sem_unlink(self._sem_loc) == -1:
-            return -1
+            # If already unlinked, just ignore?? =======================
+            perror("sem_unlink")
+            #return -1
 
         # Finally close the semaphore
-        return sem_close(self._semaphore)
+        if sem_close(self._semaphore) == -1:
+            perror("sem_close")
+            return -1
+        return 0
 
     #===========================================================#
     #           Get Semaphore Value/Whether Destroyed           #
