@@ -29,7 +29,7 @@ extensions = [Extension(
         #"errno", # errno, ENOENT
         #"fcntl", # O_RDWR, O_CREATE
         #"linux/limits", # NAME_MAX
-        "sys/mman", # shm_open, shm_unlink, mmap, munmap,
+        #"sys/mman", # shm_open, shm_unlink, mmap, munmap,
                       # PROT_READ, PROT_WRITE, MAP_SHARED, MAP_FAILED
         #"unistd", # ftruncate, close
         #"stdio", # perror
@@ -83,7 +83,8 @@ setup(
     packages=find_packages(),
     ext_modules=cythonize(
         extensions,
-        include_path=[join(dirname(abspath(__file__)), "network_tools/hybrid_spin_semaphore")]
+        include_path=[join(dirname(abspath(__file__)), "network_tools/hybrid_spin_semaphore")],
+        language_level=3
     ),
 
     install_requires=[

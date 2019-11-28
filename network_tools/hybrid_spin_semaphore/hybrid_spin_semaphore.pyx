@@ -3,6 +3,8 @@ cimport hybrid_spin_semaphore
 
 from libc.errno cimport ENOENT, errno
 from libc.stdio cimport printf, perror
+from libc.stdlib cimport malloc, free
+from libc.string cimport strcpy, strlen
 
 from posix.stat cimport fchmod
 from posix.unistd cimport ftruncate, close
@@ -50,7 +52,16 @@ cdef class HybridSpinSemaphore:
                   int permissions=0666):
 
         self._cleaned_up = 1
-        self._sem_loc = sem_loc
+
+        # I was sometimes getting garbage in self._sem_loc -
+        # not sure how cython/python/the GIL might be interacting,
+        # so probably best to manage memory manually here.
+        self._sem_loc = <char *> malloc(strlen(sem_loc)+1)
+        if self._sem_loc == NULL:
+            raise Exception("Error allocating memory")
+
+        if strcpy(self._sem_loc, sem_loc) == NULL: # dest, src
+            raise Exception("Error copying memory")
 
         if mode == CONNECT_OR_CREATE:
             # Initialize semaphores for shared processes
@@ -158,7 +169,7 @@ cdef class HybridSpinSemaphore:
 
             # Change permissions of shared memory, so every
             # body can access it. Avoiding the umask of shm_open
-            if fchmod(self._shm_fd, permissions) != 0:
+            if fchmod(self._shm_fd, permissions) == -1:
                 perror("fchmod")
                 return -1
 
@@ -167,7 +178,7 @@ cdef class HybridSpinSemaphore:
             return -1
 
         # Truncate shared memory segment so it would contain char*
-        if ftruncate(self._shm_fd, sizeof(char*)) != 0:
+        if ftruncate(self._shm_fd, sizeof(char*)) == -1:
             perror("ftruncate")
             return -1
 
@@ -200,45 +211,60 @@ cdef class HybridSpinSemaphore:
             # a mutex. It'll still be available to other processes
             self._cleaned_up = 1
 
-            if close(self._shm_fd):
+            # Clean up
+            free(self._sem_loc)
+
+            if close(self._shm_fd) == -1:
                 perror("close")
-                return
+                return -1
 
             if sem_close(self._semaphore) == -1:
                 perror("sem_close")
                 return -1
             return 0
 
-    cpdef int destroy(self) nogil except -1:
+    cpdef int destroy(self) except -1:
         # Mutex destruction completely cleans it from system memory.
         if self._cleaned_up:
+            printf("WARNING: Already cleaned up in HybridSpinSemaphore.destroy()!\n")
             return -1
         self._cleaned_up = 1
 
-        # Set the spinlock char to indicate to other processes
-        # that this semaphore should not be used any more
-        self._spin_lock_char[0] = DESTROYED
+        #printf("Destroying semaphore %s\n", self._sem_loc)
 
         # After calling shm_unlink, I believe the behaviour is
         # similar to sem_unlink - that it will cease to be
         # accessible by name, but will still remain accessible
         # for processes currently using it.
-        if shm_unlink(self._sem_loc) == -1:
-            # If already unlinked, just ignore?? =======================
-            perror("shm_unlink")
-            #return -1
+        if shm_unlink(self._sem_loc) == -1 and \
+           self._spin_lock_char[0] != DESTROYED:
 
-        # Close the shared memory
-        if close(self._shm_fd):
-            perror("close")
-            return -1
+            if errno != ENOENT:
+                # If already unlinked, just ignore
+                perror("shm_unlink")
+                return -1
 
         # after calling sem_unlink, if there are no more
         # processes using it, it will cease to exist.
-        if sem_unlink(self._sem_loc) == -1:
-            # If already unlinked, just ignore?? =======================
-            perror("sem_unlink")
-            #return -1
+        if sem_unlink(self._sem_loc) == -1 and \
+           self._spin_lock_char[0] != DESTROYED:
+
+            if errno != ENOENT:
+                # If already unlinked, just ignore
+                perror("sem_unlink")
+                return -1
+
+        # Clean up - no need to keep _sem_loc any more
+        free(self._sem_loc)
+
+        # Set the spinlock char to indicate to other processes
+        # that this semaphore should not be used any more
+        self._spin_lock_char[0] = DESTROYED
+
+        # Close the shared memory
+        if close(self._shm_fd) == -1:
+            perror("close")
+            return -1
 
         # Finally close the semaphore
         if sem_close(self._semaphore) == -1:
@@ -276,7 +302,7 @@ cdef class HybridSpinSemaphore:
 
         # Use pthread calls for locking and unlocking.
         cdef int i
-        cdef int retval
+        cdef int retval = -1
         cdef double from_t = self.get_current_time()
 
         with nogil:
@@ -298,7 +324,7 @@ cdef class HybridSpinSemaphore:
             return -1
 
         cdef int i
-        cdef int retval
+        cdef int retval = -1
 
         with nogil:
             self._spin_lock_char[0] = UNLOCKED
