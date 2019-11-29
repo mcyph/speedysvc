@@ -3,13 +3,16 @@ import socket
 import _thread
 from json import loads, dumps
 
+from network_tools.rpc.abstract_base_classes import \
+    RPCServerBase
+
 
 def json_method(fn):
     fn.is_json = True
     return fn
 
 
-class NetworkServer:
+class NetworkServer(RPCServerBase):
     def __init__(self, DCmds, port, host='127.0.0.1'):
         self.DCmds = DCmds
 

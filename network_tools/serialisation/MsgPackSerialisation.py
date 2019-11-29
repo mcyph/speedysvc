@@ -1,6 +1,13 @@
 import msgpack
 
-class MsgPack:
+
+class MsgPackSerialisation:
+    """
+    Very similar to JSONSerialisation in terms of the
+    types it supports, but is a binary format and often
+    faster.
+    """
+
     @staticmethod
     def dumps(o):
         return msgpack.packb(o, encoding='utf-8')

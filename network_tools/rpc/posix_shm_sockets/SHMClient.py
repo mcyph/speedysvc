@@ -1,13 +1,9 @@
-import json
-import time
 import _thread
-import msgpack
-import warnings
 from collections import Counter
 from toolkit.documentation.copydoc import copydoc
-from network_tools.RPCClientBase import RPCClientBase
-from network_tools.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
-from network_tools.MsgPack import MsgPack
+from network_tools.rpc.abstract_base_classes.RPCClientBase import RPCClientBase
+from network_tools.rpc.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
+from network_tools.serialisation.MsgPackSerialisation import MsgPackSerialisation
 
 
 DPortCounter = Counter()
@@ -87,14 +83,14 @@ class SHMClient(RPCClientBase):
 
     @copydoc(RPCClientBase.send_json)
     def send_json(self, cmd, data):
-        return MsgPack.loads(self.send(
-            cmd, MsgPack.dumps(data)
+        return MsgPackSerialisation.loads(self.send(
+            cmd, MsgPackSerialisation.dumps(data)
         ))
 
     @copydoc(RPCClientBase.send_msgpack)
     def send_msgpack(self, cmd, data):
-        return MsgPack.loads(self.send(
-            cmd, MsgPack.dumps(data)
+        return MsgPackSerialisation.loads(self.send(
+            cmd, MsgPackSerialisation.dumps(data)
         ))
 
 

@@ -2,9 +2,13 @@ import time
 import socket
 import msgpack
 from json import dumps, loads
+from toolkit.documentation.copydoc import copydoc
+
+from network_tools.rpc.abstract_base_classes.RPCClientBase import \
+    RPCClientBase
 
 
-class NetworkClient:
+class NetworkClient(RPCClientBase):
     def __init__(self, port, host='127.0.0.1'):
         self.conn_to_server = conn_to_server = \
             socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -14,6 +18,7 @@ class NetworkClient:
     def __del__(self):
         self.conn_to_server.close()
 
+    @copydoc(RPCClientBase.send)
     def send(self, cmd, data):
         self.conn_to_server.send(
             cmd.encode('ascii') + b' ' +
@@ -51,6 +56,7 @@ class NetworkClient:
         else:
             raise Exception(b''.join(LData).decode('utf-8'))
 
+    @copydoc(RPCClientBase.send_json)
     def send_json(self, cmd, data):
         """
         The same as send(), but sends and receives as JSON
@@ -58,6 +64,7 @@ class NetworkClient:
         data = dumps(data).encode('utf-8')
         return loads(self.send(cmd, data), encoding='utf-8')
 
+    @copydoc(RPCClientBase.send_msgpack)
     def send_msgpack(self, cmd, data):
         """
         The same as send(), but sends and receives as msgpack,
@@ -73,7 +80,6 @@ class NetworkClient:
 
 
 if __name__ == '__main__':
-    from random import randint
 
     inst = NetworkClient(5555)
     t = time.time()

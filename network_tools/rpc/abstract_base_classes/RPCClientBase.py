@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
 
 
-class RPCClientBase:
+class RPCClientBase(ABC):
     def __init__(self, port):
         self.port = port
 
