@@ -1,3 +1,4 @@
+import time
 import _thread
 from collections import Counter
 from toolkit.documentation.copydoc import copydoc

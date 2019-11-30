@@ -1,7 +1,6 @@
 import time
 import socket
 import _thread
-from json import loads, dumps
 
 from network_tools.rpc.abstract_base_classes.ServerProviderBase import \
     ServerProviderBase
@@ -65,17 +64,10 @@ class NetworkServer(ServerProviderBase):
                 if append:
                     LData.append(append)
                     data_amount -= len(append)
-            data = b''.join(LData)
+            args = b''.join(LData)
 
             try:
-                fn = getattr(self.server_methods, cmd)
-
-                # Use the serialiser to decode the arguments,
-                # before encoding the return value of the RPC call
-                data = fn.serialiser.loads(data)
-                send_data = fn(data)
-                send_data = fn.serialiser.dumps(send_data)
-
+                send_data = self.handle_fn(cmd, args)
                 send_data = (
                     str(len(send_data)).encode('ascii') + b'+' +
                     send_data

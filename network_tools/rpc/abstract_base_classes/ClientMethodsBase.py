@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from network_tools.serialisation.RawSerialisation import \
+    RawSerialisation
 
 
 def rpc_call(fn):
@@ -7,6 +9,19 @@ def rpc_call(fn):
     a corresponding server function
     """
     fn.is_rpc_call = True
+    return fn
+
+
+def from_server_fn(server_fn):
+    """
+    A lot of methods are identical from client/
+    server and shouldn't require extra coding.
+
+    :param server_fn:
+    :return:
+    """
+    def fn(self, *args):
+        return self.send(server_fn, args)
     return fn
 
 

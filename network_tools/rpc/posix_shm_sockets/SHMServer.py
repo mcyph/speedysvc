@@ -2,7 +2,8 @@ import time
 import _thread
 import traceback
 #from toolkit.benchmarking.benchmark import benchmark
-from network_tools.rpc.abstract_base_classes.ServerProviderBase import ServerProviderBase
+from network_tools.rpc.abstract_base_classes.ServerProviderBase import \
+    ServerProviderBase
 from network_tools.rpc.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
 
 
@@ -65,22 +66,16 @@ class SHMServer(ServerProviderBase):
             data = self.to_server_socket.get(timeout=None)
             client_id = int_struct.unpack(data[0:int_struct.size])[0]
             to_client_socket = self.__get_client_socket(client_id)
-            cmd, params = data[int_struct.size:].split(b' ', 1)
+            cmd, args = data[int_struct.size:].split(b' ', 1)
 
             if cmd == b'heartbeat':
                 try:
-                    to_client_socket.put(b'+'+params, timeout=10)
+                    to_client_socket.put(b'+'+args, timeout=10)
                 except:
                     traceback.print_exc()
             else:
                 try:
-                    fn = getattr(self.server_methods, cmd.decode('ascii'))
-
-                    # Use the serialiser to decode the arguments,
-                    # before encoding the return value of the RPC call
-                    params = fn.serialiser.loads(params)
-                    result = fn(params)
-                    result = fn.serialiser.dumps(result)
+                    result = self.handle_fn(cmd, args)
                     send_data = b'+'+result
 
                 except Exception as exc:
