@@ -15,7 +15,6 @@ class ServerProviderBase:
         self.port = server_methods.port
         self.name = server_methods.name
 
-
     def handle_fn(self, cmd, args):
         fn = getattr(self.server_methods, cmd.decode('ascii'))
 

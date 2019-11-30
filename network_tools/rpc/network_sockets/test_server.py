@@ -1,6 +1,6 @@
 from network_tools.rpc.abstract_base_classes.ServerMethodsBase import \
     ServerMethodsBase
-from network_tools.serialisers import \
+from network_tools.rpc_decorators import \
     json_method, raw_method, pickle_method, msgpack_method
 
 
