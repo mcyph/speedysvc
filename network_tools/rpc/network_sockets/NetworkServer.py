@@ -3,24 +3,19 @@ import socket
 import _thread
 from json import loads, dumps
 
-from network_tools.rpc.abstract_base_classes import \
-    RPCServerBase
+from network_tools.rpc.abstract_base_classes.ServerProviderBase import \
+    ServerProviderBase
 
 
-def json_method(fn):
-    fn.is_json = True
-    return fn
-
-
-class NetworkServer(RPCServerBase):
-    def __init__(self, DCmds, port, host='127.0.0.1'):
-        self.DCmds = DCmds
+class NetworkServer(ServerProviderBase):
+    def __init__(self, server_methods, host='127.0.0.1'):
+        ServerProviderBase.__init__(self, server_methods)
 
         self.server = server = socket.socket(
             socket.AF_INET, socket.SOCK_STREAM
         )
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind((host, port))
+        server.bind((host, server_methods.port))
         self.__listen_for_conns_loop()
 
     def __listen_for_conns_loop(self):
@@ -73,24 +68,18 @@ class NetworkServer(RPCServerBase):
             data = b''.join(LData)
 
             try:
-                fn = self.DCmds[cmd]
+                fn = getattr(self.server_methods, cmd)
 
-                if hasattr(fn, 'is_json'):
-                    # Use JSON if method defined using @json_method
-                    send_data = dumps(fn(
-                        **loads(data.decode('utf-8'))
-                    )).encode('utf-8')
-                    send_data = (
-                        str(len(send_data)).encode('ascii') + b'+' +
-                        send_data
-                    )
-                else:
-                    # Otherwise use raw data
-                    send_data = fn(data)
-                    send_data = (
-                        str(len(send_data)).encode('ascii') + b'+' +
-                        send_data
-                    )
+                # Use the serialiser to decode the arguments,
+                # before encoding the return value of the RPC call
+                data = fn.serialiser.loads(data)
+                send_data = fn(data)
+                send_data = fn.serialiser.dumps(send_data)
+
+                send_data = (
+                    str(len(send_data)).encode('ascii') + b'+' +
+                    send_data
+                )
 
             except Exception as exc:
                 # Just send a basic Exception instance for now, but would be nice

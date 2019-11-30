@@ -1,27 +1,36 @@
 import time
 import socket
-import msgpack
-from json import dumps, loads
 from toolkit.documentation.copydoc import copydoc
 
-from network_tools.rpc.abstract_base_classes.RPCClientBase import \
-    RPCClientBase
+from network_tools.rpc.abstract_base_classes.ClientProviderBase import \
+    ClientProviderBase
 
 
-class NetworkClient(RPCClientBase):
-    def __init__(self, port, host='127.0.0.1'):
-        self.conn_to_server = conn_to_server = \
-            socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        conn_to_server.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-        conn_to_server.connect((host, port))
+class NetworkClient(ClientProviderBase):
+    def __init__(self, server_methods, host='127.0.0.1'):
+        """
+
+        :param server_methods:
+        :param host:
+        """
+        self.conn_to_server = conn_to_server = socket.socket(
+            socket.AF_INET, socket.SOCK_STREAM
+        )
+        conn_to_server.setsockopt(
+            socket.SOL_TCP, socket.TCP_NODELAY, 1
+        )
+        conn_to_server.connect((host, server_methods.port))
+        ClientProviderBase.__init__(self, server_methods)
 
     def __del__(self):
         self.conn_to_server.close()
 
-    @copydoc(RPCClientBase.send)
-    def send(self, cmd, data):
+    @copydoc(ClientProviderBase.send)
+    def send(self, fn, data):
+        data = fn.serialiser.dumps(data)
+
         self.conn_to_server.send(
-            cmd.encode('ascii') + b' ' +
+            fn.__name__.encode('ascii') + b' ' +
             str(len(data)).encode('ascii') + b' '
         )
         self.conn_to_server.send(data)
@@ -52,35 +61,12 @@ class NetworkClient(RPCClientBase):
         #print(data_amount, LData)
 
         if status == b'+':
-            return b''.join(LData)
+            return fn.serialiser.loads(b''.join(LData))
         else:
             raise Exception(b''.join(LData).decode('utf-8'))
 
-    @copydoc(RPCClientBase.send_json)
-    def send_json(self, cmd, data):
-        """
-        The same as send(), but sends and receives as JSON
-        """
-        data = dumps(data).encode('utf-8')
-        return loads(self.send(cmd, data), encoding='utf-8')
-
-    @copydoc(RPCClientBase.send_msgpack)
-    def send_msgpack(self, cmd, data):
-        """
-        The same as send(), but sends and receives as msgpack,
-        although I doubt performance will be the primary consideration for NetworkClient.
-        note lists will be output as tuples here for performance.
-        """
-        data = msgpack.dumps(data)
-        return msgpack.loads(
-            self.send(cmd, data),
-            encoding='utf-8',
-            use_bin_type=True
-        )
-
 
 if __name__ == '__main__':
-
     inst = NetworkClient(5555)
     t = time.time()
     for x in range(500000):

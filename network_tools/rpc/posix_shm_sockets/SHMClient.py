@@ -1,18 +1,18 @@
 import _thread
 from collections import Counter
 from toolkit.documentation.copydoc import copydoc
-from network_tools.rpc.abstract_base_classes.RPCClientBase import RPCClientBase
+from network_tools.rpc.abstract_base_classes.ClientProviderBase import ClientProviderBase
 from network_tools.rpc.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
-from network_tools.serialisation.MsgPackSerialisation import MsgPackSerialisation
 
 
 DPortCounter = Counter()
 
 
-class SHMClient(RPCClientBase):
-    def __init__(self, port):
-        self.port = port
-        RPCClientBase.__init__(self, port)
+class SHMClient(ClientProviderBase):
+    def __init__(self, server_methods):
+        ClientProviderBase.__init__(self, server_methods)
+        self.port = port = server_methods.port
+
         self.__create_conn_to_server()
         self.lock = _thread.allocate()
         _thread.start_new_thread(self.__periodic_heartbeat, ())
@@ -63,35 +63,26 @@ class SHMClient(RPCClientBase):
             init_resources=True
         )
 
-    @copydoc(RPCClientBase.send)
-    def send(self, cmd, data, timeout=60):
+    @copydoc(ClientProviderBase.send)
+    def send(self, fn, data, timeout=60):
         with self.lock:
+            data = fn.serialiser.dumps(data)
             self.to_server_socket.put(
                 self.client_id_as_bytes+
-                cmd.encode('ascii')+b' '+data,
+                fn.__name__.encode('ascii')+b' '+data,
                 timeout=10
             )
             data = self.from_server_socket.get(timeout=timeout)
+
             if data[0] == b'+'[0]:
                 # An "ok" response
-                return data[1:]
+                data = fn.serialiser.loads(data[1:])
+                return data
             elif data[0] == b'-'[0]:
                 # An exception occurred
                 raise Exception(data[1:])
             else:
                 raise Exception("Invalid response code: %s" % data[0])
-
-    @copydoc(RPCClientBase.send_json)
-    def send_json(self, cmd, data):
-        return MsgPackSerialisation.loads(self.send(
-            cmd, MsgPackSerialisation.dumps(data)
-        ))
-
-    @copydoc(RPCClientBase.send_msgpack)
-    def send_msgpack(self, cmd, data):
-        return MsgPackSerialisation.loads(self.send(
-            cmd, MsgPackSerialisation.dumps(data)
-        ))
 
 
 if __name__ == '__main__':

@@ -13,12 +13,8 @@ def __network_method(fn, serialiser):
     """
     assert not hasattr(fn, 'serialiser'), \
         f"Serialiser has already been set for {fn}"
-
-    def new_fn(*args):
-        args = serialiser.loads(args)
-        r = fn(*args)
-        return serialiser.dumps(r)
-    return new_fn
+    fn.serialiser = serialiser
+    return fn
 
 
 def raw_method(fn):

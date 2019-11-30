@@ -4,12 +4,10 @@ import multiprocessing
 
 def start_rpc_server(
     server_factory,
+    worker_processes=1,
 
-    serve_using_shared_memory=False,
-    shared_memory_processes=1,
-
-    serve_using_rest=False,
-    rest_bind_on_ip=None,
+    start_network_server=False,
+    network_bind_on_ip='0.0.0.0',
 
     blocking=True
 ):
@@ -23,33 +21,32 @@ def start_rpc_server(
     :return:
     """
 
-    assert shared_memory_processes >= 1
-    if shared_memory_processes > 1:
-        assert shared_memory_processes
+    assert worker_processes >= 1
+    if worker_processes > 1:
+        assert worker_processes
 
-        for x in range(shared_memory_processes-1):
+        for x in range(worker_processes-1):
             multiprocessing.Process(
                 target=start_rpc_server,
                 kwargs=dict(
                     server_factory=server_factory,
+                    worker_processes=1,
 
-                    serve_using_shared_memory=serve_using_shared_memory,
-                    shared_memory_processes=1,
-
-                    serve_using_rest=False,
-                    rest_bind_on_ip=rest_bind_on_ip,
+                    start_network_server=False,
+                    network_bind_on_ip=network_bind_on_ip,
 
                     blocking=True
                 )
             )
 
     server = server_factory()
+    shm = SHMServer(server=server)
 
-    if serve_using_shared_memory:
-        shm = SHMServer(server=server)
-
-    if serve_using_rest:
-        rest = NetworkServer(server=server)
+    if start_network_server:
+        rest = NetworkServer(
+            server=server,
+            network_bind_on_ip=network_bind_on_ip
+        )
 
     if blocking:
         while 1:

@@ -1,9 +1,9 @@
+import time
 import _thread
 import traceback
 #from toolkit.benchmarking.benchmark import benchmark
-from network_tools.rpc.abstract_base_classes import RPCServerBase
+from network_tools.rpc.abstract_base_classes.ServerProviderBase import ServerProviderBase
 from network_tools.rpc.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
-from network_tools.serialisation.MsgPack import MsgPackSerialisation
 
 
 def json_method(fn):
@@ -11,19 +11,12 @@ def json_method(fn):
     return fn
 
 
-class SHMServer(RPCServerBase):
-    def __init__(self, DCmds, port, init_resources=True, client_timeout=10):
-        print('Starting new SHMServer on port:', port)
-        self.port = port
+class SHMServer(ServerProviderBase):
+    def __init__(self, server_methods, init_resources=True, client_timeout=10):
+        print('Starting new SHMServer on port:', server_methods.port)
+        port = self.port = server_methods.port
         self.client_timeout = client_timeout
-
-        # Make it so that keys are indexed by byte values to
-        # prevent having to decode the command each time
-        new_DCmds = {}
-        for k, v in DCmds.items():
-            new_DCmds[k.encode('ascii')] = v
-        self.DCmds = new_DCmds
-        print("COMMANDS:", self.DCmds)
+        ServerProviderBase.__init__(self, server_methods)
 
         self.to_server_socket = SHMSocket(
             socket_name='to_server_%s' % port,
@@ -81,13 +74,14 @@ class SHMServer(RPCServerBase):
                     traceback.print_exc()
             else:
                 try:
-                    fn = self.DCmds[cmd]
-                    if hasattr(fn, 'is_json_method'):
-                        send_data = b'+' + MsgPackSerialisation.dumps(
-                            fn(*MsgPackSerialisation.loads(params))
-                        )
-                    else:
-                        send_data = b'+'+fn(params)
+                    fn = getattr(self.server_methods, cmd.decode('ascii'))
+
+                    # Use the serialiser to decode the arguments,
+                    # before encoding the return value of the RPC call
+                    params = fn.serialiser.loads(params)
+                    result = fn(params)
+                    result = fn.serialiser.dumps(result)
+                    send_data = b'+'+result
 
                 except Exception as exc:
                     # Just send a basic Exception instance for now, but would be nice

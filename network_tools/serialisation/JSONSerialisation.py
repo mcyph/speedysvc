@@ -21,4 +21,4 @@ class JSONSerialisation:
 
     @staticmethod
     def loads(o):
-        return json.dumps(o.decode('utf-8'))
+        return json.loads(o.decode('utf-8'))

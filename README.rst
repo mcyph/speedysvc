@@ -15,25 +15,63 @@ high throughput, at a cost of some wasted CPU cycles
 Memory Mapped Sockets
 ==============================
 
-TODO!
+Examples
+-----------------------
+
+.. code-block:: python
+
+    def
 
 ====================================
 POSIX Memory Mapped Sockets
 ====================================
 
-CONNECT_OR_CREATE
-
-CONNECT_TO_EXISTING
-
-CREATE_NEW_OVERWRITE
-
-CREATE_NEW_EXCLUSIVE
+Examples
+-----------------------
 
 ==============================
 Hybrid Spin Semaphore
 ==============================
 
-TODO!
+To create a hybrid spin semaphore, you need to use the
+HybridSpinSemaphore constructor:
+
+.. code-block:: python
+
+    HybridSpinSemaphore(sem_loc, mode, initial_value, permissions)
+
+where mode is one of:
+
+* ``CONNECT_OR_CREATE``: Connect to an existing semaphore if
+  it exists, otherwise create one.
+* ``CONNECT_TO_EXISTING``: Try to connect to an existing
+  semaphore, raising an ``NoSuchSemaphore`` if one couldn't
+  be found by that name.
+* ``CREATE_NEW_OVERWRITE`` Create a new semaphore, destroying
+  the existing one (if one does exist).
+* ``CREATE_NEW_EXCLUSIVE`` Create a new semaphore, raising a
+  ``SemaphoreExists`` exception if one already does.
+
+``initial_value`` is the initial value of the semaphore
+(1 or 0 are the only values possible). Note that this is
+only set if creating a new semaphore, this value is
+otherwise ignored.
+
+``permissions`` is who should be able to access the semaphore.
+For example, 0666 allows anyone to access the semaphore,
+whereas 0600 only allows the user who created it (and root)
+to access it.
+
+Examples
+-----------------------
+
+.. code-block:: python
+
+    sem = HybridSpinSemaphore(
+        'test_location', CREATE_NEW_OVERWRITE, 1, 0666
+    )
+    sem.lock()
+    sem.unlock()
 
 Why not use...? Or Why?
 -----------------------
@@ -41,7 +79,10 @@ Why not use...? Or Why?
 It's a common situation in the c implementation of python
 where one is limited by the `Global Interpreter Lock (GIL)`_,
 and you can't use more than a single CPU core at once for a
-single process.
+single process. I wanted to separate certain aspects of my
+software into different processes, and call them as if they
+were local, with as little difference in performance
+(latency and throughput) as possible.
 
 There are a few solutions to this:
 
@@ -65,7 +106,7 @@ There are a few solutions to this:
 * Still have multiple processes, but move modules into external
   processes or "microservices", and use inter-process
   communication, or IPC to reduce wastage of RAM and
-  other resources.
+  other resources. This is the approach I decided on.
 
 There are a number of different kinds of IPC on Linux/Unix:
 
@@ -85,18 +126,19 @@ A spinlock_ as the title suggests "spins", or keeps looping
 asking "are you done yet?" until the task is complete. In a
 single-processor system, this will slow things down, but in a
 multi-processor system that uses `pre-emptive multitasking`_
-this can be faster, if the task can be completed in less than the
+this can be faster if the task can be completed in less than the
 `process time slice`_, which often is `between 0.75ms and 6ms`_
 on Linux.
 
-By contrast, using mutexes, or using binary
+By contrast, using mutexes or using binary
 named semaphores can prevent wasting CPU cycles, but this can
 run the risk of blocking a process while waiting for a task
 that takes a fraction of a millisecond. This can increase
 latency by orders of magnitude for non-cpu/io-bound calls.
 
 Currently, this module is hardcoded to spin for up
-to 1ms before leaving it up to named semaphores to block.
+to 1ms, and thereafter leaves it up to named semaphores
+to block.
 
 ===========================
 TODO
