@@ -6,6 +6,7 @@ class TestClientMethods(ClientMethodsBase):
     def __init__(self, client_provider):
         ClientMethodsBase.__init__(self, client_provider)
 
+    test_defaults = from_server_fn(srv.test_defaults)
     test_json_echo = from_server_fn(srv.test_json_echo)
     test_raw_echo = from_server_fn(srv.test_raw_echo)
     test_pickle_echo = from_server_fn(srv.test_pickle_echo)
@@ -30,6 +31,11 @@ if __name__ == '__main__':
     from network_tools.rpc.posix_shm_sockets.SHMClient import SHMClient
 
     client = TestClientMethods(SHMClient(srv))
+    print(client.test_defaults("blah"))
+    print(client.test_defaults("blah", default="blah2"))
+    print(client.test_defaults("blah", "blah2"))
+    #print(client.test_defaults("blah", default2="blah2"))
+
     print(client.test_json_echo("blah"))
     print(client.test_raw_echo(b"blah"))
     print(client.test_pickle_echo("blah"))

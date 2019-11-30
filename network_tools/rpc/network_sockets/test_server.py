@@ -12,6 +12,10 @@ class TestServerMethods(ServerMethodsBase):
         ServerMethodsBase.__init__(self)
 
     @json_method
+    def test_defaults(self, data, default='test'):
+        return (data, default)
+
+    @json_method
     def test_json_echo(self, data):
         return data
 
