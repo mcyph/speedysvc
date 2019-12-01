@@ -2,7 +2,7 @@ import time
 import _thread
 import traceback
 #from toolkit.benchmarking.benchmark import benchmark
-from network_tools.rpc.abstract_base_classes.ServerProviderBase import \
+from network_tools.rpc.base_classes.ServerProviderBase import \
     ServerProviderBase
 from network_tools.rpc.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
 

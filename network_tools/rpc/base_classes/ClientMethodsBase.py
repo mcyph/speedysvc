@@ -1,3 +1,6 @@
+from network_tools.rpc.posix_shm_sockets.SHMClient import SHMClient
+
+
 class ClientMethodsBase:
     def __init__(self, client_provider):
         """

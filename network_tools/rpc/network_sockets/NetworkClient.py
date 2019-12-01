@@ -2,7 +2,7 @@ import time
 import socket
 from toolkit.documentation.copydoc import copydoc
 
-from network_tools.rpc.abstract_base_classes.ClientProviderBase import \
+from network_tools.rpc.base_classes.ClientProviderBase import \
     ClientProviderBase
 
 

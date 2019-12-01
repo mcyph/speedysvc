@@ -2,7 +2,7 @@ import time
 import _thread
 from collections import Counter
 from toolkit.documentation.copydoc import copydoc
-from network_tools.rpc.abstract_base_classes.ClientProviderBase import ClientProviderBase
+from network_tools.rpc.base_classes.ClientProviderBase import ClientProviderBase
 from network_tools.rpc.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
 
 

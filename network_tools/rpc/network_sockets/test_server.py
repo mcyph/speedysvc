@@ -1,7 +1,8 @@
-from network_tools.rpc.abstract_base_classes.ServerMethodsBase import \
+from network_tools.rpc.base_classes.ServerMethodsBase import \
     ServerMethodsBase
 from network_tools.rpc_decorators import \
-    json_method, raw_method, pickle_method, msgpack_method
+    json_method, raw_method, pickle_method, \
+    msgpack_method, marshal_method
 
 
 class TestServerMethods(ServerMethodsBase):
@@ -25,6 +26,10 @@ class TestServerMethods(ServerMethodsBase):
 
     @pickle_method
     def test_pickle_echo(self, data):
+        return data
+
+    @marshal_method
+    def test_marshal_echo(self, data):
         return data
 
     @msgpack_method

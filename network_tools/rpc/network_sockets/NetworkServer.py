@@ -2,7 +2,7 @@ import time
 import socket
 import _thread
 
-from network_tools.rpc.abstract_base_classes.ServerProviderBase import \
+from network_tools.rpc.base_classes.ServerProviderBase import \
     ServerProviderBase
 
 
@@ -40,7 +40,7 @@ class NetworkServer(ServerProviderBase):
                 #print(cmd)
                 if cmd and cmd[-1] == ord(b' '):
                     break
-            cmd = cmd[:-1].decode('ascii')
+            cmd = cmd[:-1]
 
             # Get the amount of data to receive
             data_amount = b''

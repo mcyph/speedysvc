@@ -3,9 +3,10 @@ from .serialisation.JSONSerialisation import JSONSerialisation
 from .serialisation.MsgPackSerialisation import MsgPackSerialisation
 from .serialisation.PickleSerialisation import PickleSerialisation
 from .serialisation.RawSerialisation import RawSerialisation
+from .serialisation.MarshalSerialisation import MarshalSerialisation
 
 
-def from_server_method(server_fn):
+def __from_server_method(server_fn):
     """
     A lot of methods are identical from client/
     server and shouldn't require extra coding.
@@ -13,10 +14,17 @@ def from_server_method(server_fn):
     :param server_fn:
     :return:
     """
+
+    # OPEN ISSUE: Should docstrings be copied??? =================================================================
+
     argspec = inspect.getfullargspec(server_fn)
     base_args_no_self = [
         i for i in argspec.args if i != 'self'
     ]
+    default_args_offset = (
+        len(base_args_no_self) -
+        len(argspec.defaults or ())
+    )
 
     assert not argspec.kwonlyargs, \
         "Server function cannot have any keyword only arguments"
@@ -24,11 +32,11 @@ def from_server_method(server_fn):
         "Server function cannot have any keyword only defaults"
 
     def fn(self, *args, **kw):
-        if not kw and not argspec.defaults:
+        if not kw:
             return self.send(server_fn, args)
         else:
             for k in kw:
-                if not k in base_args_no_self:
+                if k not in base_args_no_self:
                     raise TypeError(
                         f"Keyword argument {k} given, "
                         f"but that wasn't an argument in "
@@ -39,10 +47,6 @@ def from_server_method(server_fn):
             # (if there are any)
             LArgs = []
             LArgs.extend(args)
-            default_args_offset = (
-                len(base_args_no_self) -
-                len(argspec.defaults)
-            )
 
             for x in range(len(args), len(base_args_no_self)):
                 if base_args_no_self[x] in kw:
@@ -71,7 +75,7 @@ def __network_method(fn, serialiser):
     assert not hasattr(fn, 'serialiser'), \
         f"Serialiser has already been set for {fn}"
     fn.serialiser = serialiser
-    fn.as_rpc = lambda: from_server_method(fn)
+    fn.as_rpc = lambda: __from_server_method(fn)
     return fn
 
 
@@ -109,3 +113,14 @@ def pickle_method(fn):
     :return:
     """
     return __network_method(fn, PickleSerialisation)
+
+
+def marshal_method(fn):
+    """
+
+    :param fn:
+    :return:
+    """
+    return __network_method(fn, MarshalSerialisation)
+
+
