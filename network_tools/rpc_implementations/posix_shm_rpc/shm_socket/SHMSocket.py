@@ -4,7 +4,7 @@ import struct
 from hybrid_spin_semaphore import HybridSpinSemaphore, \
     CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE
 import posix_ipc
-from network_tools.rpc.posix_shm_sockets.shared_params import MSG_SIZE
+from network_tools.rpc_implementations.posix_shm_rpc.shared_params import MSG_SIZE
 
 # Create an int encoder to allow encoding length
 # and return client ID

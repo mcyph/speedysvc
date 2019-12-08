@@ -1,6 +1,6 @@
-from network_tools.rpc.base_classes.ClientMethodsBase import \
+from network_tools.rpc_implementations.base_classes.ClientMethodsBase import \
     ClientMethodsBase
-from network_tools.rpc.network_sockets.test_server import \
+from network_tools.rpc_implementations.network_rpc.test_server import \
     TestServerMethods as srv
 
 
@@ -28,9 +28,9 @@ import numpy
 
 
 if __name__ == '__main__':
-    from network_tools.rpc.network_sockets.NetworkClient import \
+    from network_tools.rpc_implementations.network_rpc.NetworkClient import \
         NetworkClient
-    from network_tools.rpc.posix_shm_sockets.SHMClient import SHMClient
+    from network_tools.rpc_implementations.posix_shm_rpc.SHMClient import SHMClient
     from time import time
 
     client = TestClientMethods(NetworkClient(srv))

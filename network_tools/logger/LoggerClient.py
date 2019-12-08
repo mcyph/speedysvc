@@ -1,6 +1,6 @@
 import sys
 from network_tools.logger.Logger import LoggerServer
-from network_tools.rpc.posix_shm_sockets.SHMClient import SHMClient
+from network_tools.rpc_implementations.posix_shm_rpc.SHMClient import SHMClient
 
 
 class LoggerClient:

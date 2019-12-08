@@ -4,9 +4,9 @@ import socket
 from struct import Struct
 from toolkit.documentation.copydoc import copydoc
 
-from network_tools.rpc.base_classes.ClientProviderBase import \
+from network_tools.rpc_implementations.base_classes.ClientProviderBase import \
     ClientProviderBase
-from network_tools.rpc.network_sockets.consts import \
+from network_tools.rpc_implementations.network_rpc.consts import \
     len_packer, response_packer
 
 

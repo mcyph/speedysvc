@@ -2,9 +2,9 @@ import time
 import _thread
 import traceback
 #from toolkit.benchmarking.benchmark import benchmark
-from network_tools.rpc.base_classes.ServerProviderBase import \
+from network_tools.rpc_implementations.base_classes.ServerProviderBase import \
     ServerProviderBase
-from network_tools.rpc.posix_shm_sockets.shm_socket.SHMSocket import SHMSocket, int_struct
+from network_tools.rpc_implementations.posix_shm_rpc.shm_socket.SHMSocket import SHMSocket, int_struct
 
 
 def json_method(fn):

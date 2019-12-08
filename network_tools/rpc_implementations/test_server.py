@@ -1,4 +1,4 @@
-from network_tools.rpc.base_classes.ServerMethodsBase import \
+from network_tools.rpc_implementations.base_classes.ServerMethodsBase import \
     ServerMethodsBase
 from network_tools.rpc_decorators import \
     json_method, raw_method, pickle_method, \
@@ -43,9 +43,9 @@ class TestServerMethods(ServerMethodsBase):
 
 if __name__ == '__main__':
     from time import sleep
-    from network_tools.rpc.network_sockets.NetworkServer import \
+    from network_tools.rpc_implementations.network_rpc.NetworkServer import \
         NetworkServer
-    from network_tools.rpc.posix_shm_sockets.SHMServer import SHMServer
+    from network_tools.rpc_implementations.posix_shm_rpc.SHMServer import SHMServer
 
     methods = TestServerMethods()
     provider1 = SHMServer(methods)
