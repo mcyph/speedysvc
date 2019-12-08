@@ -15,6 +15,8 @@ class JSONSerialisation:
     can be used in other languages than just python.
     """
 
+    mimetype = 'application/json'
+
     @staticmethod
     def dumps(o):
         return json.dumps(o).encode('utf-8')

@@ -7,6 +7,7 @@ class MsgPackSerialisation:
     types it supports, but is a binary format and often
     faster.
     """
+    mimetype = 'application/msgpack'
 
     @staticmethod
     def dumps(o):

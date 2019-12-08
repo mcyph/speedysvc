@@ -1,9 +1,13 @@
 import time
+import snappy
 import socket
+from struct import Struct
 from toolkit.documentation.copydoc import copydoc
 
 from network_tools.rpc.base_classes.ClientProviderBase import \
     ClientProviderBase
+from network_tools.rpc.network_sockets.consts import \
+    len_packer, response_packer
 
 
 class NetworkClient(ClientProviderBase):
@@ -27,43 +31,32 @@ class NetworkClient(ClientProviderBase):
 
     @copydoc(ClientProviderBase.send)
     def send(self, fn, data):
-        data = fn.serialiser.dumps(data)
+        data = snappy.compress(fn.serialiser.dumps(data))
+        cmd = fn.__name__.encode('ascii')
+        prefix = len_packer.pack(len(data), len(cmd))
 
         self.conn_to_server.send(
-            fn.__name__.encode('ascii') + b' ' +
-            str(len(data)).encode('ascii') + b' '
+            prefix + cmd + data
         )
-        self.conn_to_server.send(data)
 
-        # Get number of bytes
-        data_amount = b''
-        while 1:
-            append = self.conn_to_server.recv(1)
-            if append in b'+-':
-                status = append
-                break
-            elif append:
-                data_amount += append
-        data_amount = int(data_amount)
+        def recv(amount):
+            # Note string concatenation is slower in earlier versions
+            # of python, but should be faster than list concat in later
+            # versions after 3.
+            r = b''
+            while len(r) != amount:
+                r += self.conn_to_server.recv(amount)
+            return r
 
-        # Get the server's response
-        LData = []
-        while data_amount > 0:
-            get_amount = (
-                1024 if data_amount > 1024
-                else data_amount
-            )
-            append = self.conn_to_server.recv(get_amount)
-            if append:
-                LData.append(append)
-                data_amount -= len(append)
-
-        #print(data_amount, LData)
+        data_len, status = response_packer.unpack(
+            recv(response_packer.size)
+        )
+        data = snappy.uncompress(recv(data_len))
 
         if status == b'+':
-            return fn.serialiser.loads(b''.join(LData))
+            return fn.serialiser.loads(data)
         else:
-            raise Exception(b''.join(LData).decode('utf-8'))
+            raise Exception(data.decode('utf-8'))
 
 
 if __name__ == '__main__':

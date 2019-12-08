@@ -14,6 +14,7 @@ class TestClientMethods(ClientMethodsBase):
     test_pickle_echo = srv.test_pickle_echo.as_rpc()
     test_marshal_echo = srv.test_marshal_echo.as_rpc()
     test_msgpack_method = srv.test_msgpack_method.as_rpc()
+    test_arrow_method = srv.test_arrow_method.as_rpc()
 
 
 NUM_ITERATIONS = 100000
@@ -21,6 +22,9 @@ SERIALISE_ME = {
     'a': [1, 2, 3, 'b', 5.0],
     'dsadsadasdas': 'gfhsdjkfdshjkf'
 }
+#SERIALISE_ME = (1, 2, 3)
+import numpy
+
 
 
 if __name__ == '__main__':
@@ -29,7 +33,7 @@ if __name__ == '__main__':
     from network_tools.rpc.posix_shm_sockets.SHMClient import SHMClient
     from time import time
 
-    client = TestClientMethods(SHMClient(srv))
+    client = TestClientMethods(NetworkClient(srv))
 
     t_from = time()
     for x in range(NUM_ITERATIONS):
@@ -72,3 +76,9 @@ if __name__ == '__main__':
     for x in range(NUM_ITERATIONS):
         client.test_msgpack_method(SERIALISE_ME)
     print("msgpack:", time() - t_from)
+
+    SERIALISE_ME = numpy.ndarray(SERIALISE_ME)
+    t_from = time()
+    for x in range(NUM_ITERATIONS):
+        client.test_arrow_method(SERIALISE_ME)
+    print("arrow:", time() - t_from)

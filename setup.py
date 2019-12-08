@@ -93,6 +93,8 @@ setup(
         'dataclasses',
 
         'matplotlib',
+        'pyarrow',
+        'python-snappy',
     ],
 
     zip_safe=True

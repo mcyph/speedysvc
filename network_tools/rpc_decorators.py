@@ -4,6 +4,7 @@ from .serialisation.MsgPackSerialisation import MsgPackSerialisation
 from .serialisation.PickleSerialisation import PickleSerialisation
 from .serialisation.RawSerialisation import RawSerialisation
 from .serialisation.MarshalSerialisation import MarshalSerialisation
+from .serialisation.ArrowSerialisation import ArrowSerialisation
 
 
 def __from_server_method(server_fn):
@@ -123,4 +124,12 @@ def marshal_method(fn):
     """
     return __network_method(fn, MarshalSerialisation)
 
+
+def arrow_method(fn):
+    """
+
+    :param fn:
+    :return:
+    """
+    return __network_method(fn, ArrowSerialisation)
 

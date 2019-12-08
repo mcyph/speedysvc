@@ -12,6 +12,7 @@ class PickleSerialisation:
     interopability with other languages than python,
     so I generally don't use this.
     """
+    mimetype = 'application/octet-stream'
 
     @staticmethod
     def dumps(o):

@@ -3,7 +3,7 @@ import _thread
 from collections import Counter
 from toolkit.documentation.copydoc import copydoc
 from network_tools.rpc.base_classes.ClientProviderBase import ClientProviderBase
-from network_tools.rpc.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
+from network_tools.rpc.posix_shm_sockets.shm_socket.SHMSocket import SHMSocket, int_struct
 
 
 DPortCounter = Counter()
@@ -11,6 +11,10 @@ DPortCounter = Counter()
 
 class SHMClient(ClientProviderBase):
     def __init__(self, server_methods):
+        """
+
+        :param server_methods:
+        """
         ClientProviderBase.__init__(self, server_methods)
         self.port = port = server_methods.port
 

@@ -1,13 +1,21 @@
 import time
 import socket
+import snappy
 import _thread
 
 from network_tools.rpc.base_classes.ServerProviderBase import \
     ServerProviderBase
+from network_tools.rpc.network_sockets.consts import \
+    len_packer, response_packer
 
 
 class NetworkServer(ServerProviderBase):
     def __init__(self, server_methods, host='127.0.0.1'):
+        """
+
+        :param server_methods:
+        :param host:
+        """
         ServerProviderBase.__init__(self, server_methods)
 
         self.server = server = socket.socket(
@@ -29,47 +37,31 @@ class NetworkServer(ServerProviderBase):
         conn.setblocking(True)
         conn.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
 
+        def recv(amount):
+            # Note string concatenation is slower in earlier versions
+            # of python, but should be faster than list concat in later
+            # versions after 3.
+            r = b''
+            while len(r) != amount:
+                r += conn.recv(amount)
+            return r
+
         while True:
-            # Get the command name
-            cmd = b''
-            while 1:
-                append = conn.recv(1)
-                if not append:
-                    return  # Connection closed
-                cmd += append
-                #print(cmd)
-                if cmd and cmd[-1] == ord(b' '):
-                    break
-            cmd = cmd[:-1]
-
-            # Get the amount of data to receive
-            data_amount = b''
-            while 1:
-                append = conn.recv(1)
-                if not append:
-                    return
-                data_amount += append
-                if data_amount and data_amount[-1] == ord(b' '):
-                    break
-            data_amount = int(data_amount[:-1])
-
-            # Get the data
-            LData = []
-            while data_amount > 0:
-                get_amount = (
-                    1024 if data_amount > 1024
-                    else data_amount
-                )
-                append = conn.recv(get_amount)
-                if append:
-                    LData.append(append)
-                    data_amount -= len(append)
-            args = b''.join(LData)
+            data_len, cmd_len = len_packer.unpack(
+                recv(len_packer.size)
+            )
+            cmd = recv(cmd_len)
+            args = snappy.uncompress(
+                recv(data_len)
+            )
+            #print(data_len, cmd_len, cmd, args)
 
             try:
-                send_data = self.handle_fn(cmd, args)
+                send_data = snappy.compress(
+                    self.handle_fn(cmd, args)
+                )
                 send_data = (
-                    str(len(send_data)).encode('ascii') + b'+' +
+                    response_packer.pack(len(send_data), b'+') +
                     send_data
                 )
 
@@ -80,10 +72,11 @@ class NetworkServer(ServerProviderBase):
                 traceback.print_exc()
                 send_data = repr(exc).encode('utf-8')
                 send_data = (
-                    str(len(send_data)).encode('ascii') + b'-' +
+                    response_packer.pack(len(send_data), b'-') +
                     send_data
                 )
 
+            #print("SEND:", send_data)
             conn.send(send_data)
 
 

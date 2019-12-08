@@ -5,6 +5,7 @@ class RawSerialisation:
     (and making sure that bytes is indeed
     the type that is being sent/received).
     """
+    mimetype = 'application/octet-stream'
 
     @staticmethod
     def dumps(o):

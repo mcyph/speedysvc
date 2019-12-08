@@ -4,7 +4,7 @@ import traceback
 #from toolkit.benchmarking.benchmark import benchmark
 from network_tools.rpc.base_classes.ServerProviderBase import \
     ServerProviderBase
-from network_tools.rpc.posix_shm_sockets.SHMSocket import SHMSocket, int_struct
+from network_tools.rpc.posix_shm_sockets.shm_socket.SHMSocket import SHMSocket, int_struct
 
 
 def json_method(fn):
@@ -14,6 +14,12 @@ def json_method(fn):
 
 class SHMServer(ServerProviderBase):
     def __init__(self, server_methods, init_resources=True, client_timeout=10):
+        """
+
+        :param server_methods:
+        :param init_resources:
+        :param client_timeout:
+        """
         print('Starting new SHMServer on port:', server_methods.port)
         port = self.port = server_methods.port
         self.client_timeout = client_timeout

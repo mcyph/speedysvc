@@ -18,6 +18,25 @@ class SHMSocket:
     def __init__(self,
                  socket_name, init_resources=False,
                  msg_size=MSG_SIZE, timeout=10):  # 10 seconds timeout
+        """
+        A single-directional "socket"-like object, which provides
+        sequential shared memory-based "pipes", synchronised
+        by a hybrid spinlocks/named semaphores.
+
+        This provides extremely high throughput, extremely
+        low latency IPC, which should largely be
+        limited by the speed of serialisation/deserialisation,
+        and the python interpreter.
+
+        Note that after a process which initialised the resources
+        has exited abnormally (e.g. due to a segfault), the shared
+        memory and semaphore can still exist on the OS.
+
+        :param socket_name:
+        :param init_resources:
+        :param msg_size:
+        :param timeout:
+        """
 
         # NOTE: ntc stands for "nothing to collect"
         # and rtc stands for "ready to collect"
@@ -148,10 +167,18 @@ class SHMSocket:
         return data
 
     def get_sockets_destroyed(self):
+        """
+
+        :return:
+        """
         return self.rtc_mutex.get_destroyed() or \
                self.ntc_mutex.get_destroyed()
 
     def get_last_used_time(self):
+        """
+
+        :return:
+        """
         return self.last_used_time
 
 

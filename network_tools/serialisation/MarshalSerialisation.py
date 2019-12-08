@@ -17,6 +17,8 @@ class MarshalSerialisation:
     issue where python versions are the same.
     """
 
+    mimetype = 'application/octet-stream'
+
     @staticmethod
     def dumps(o):
         return marshal.dumps(o)
