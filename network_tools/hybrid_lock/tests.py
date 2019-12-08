@@ -1,4 +1,4 @@
-from hybrid_spin_semaphore import HybridSpinSemaphore, \
+from hybrid_lock import HybridSpinSemaphore, \
     CONNECT_OR_CREATE, \
     CONNECT_TO_EXISTING, \
     CREATE_NEW_OVERWRITE, \

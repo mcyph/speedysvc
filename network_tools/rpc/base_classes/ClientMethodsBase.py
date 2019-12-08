@@ -1,4 +1,4 @@
-from network_tools.rpc_implementations.posix_shm_rpc.SHMClient import SHMClient
+from network_tools.rpc.shared_memory.SHMClient import SHMClient
 
 
 class ClientMethodsBase:

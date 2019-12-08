@@ -1,5 +1,5 @@
 from time import time
-from network_tools.rpc_implementations.posix_shm_rpc.shm_socket.SHMSocket import SHMSocket
+from network_tools.rpc.shared_memory.shm_socket.SHMSocket import SHMSocket
 
 recv_q = SHMSocket('serv_q', clean_up=False)
 send_q = SHMSocket('client_q', clean_up=False)

@@ -1,5 +1,5 @@
 cimport cython
-cimport hybrid_spin_semaphore
+cimport hybrid_lock
 
 from libc.errno cimport ENOENT, errno
 from libc.stdio cimport printf, perror

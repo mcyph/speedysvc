@@ -1,5 +1,5 @@
 from _thread import allocate_lock
-from network_tools.rpc_implementations.posix_shm_rpc.SHMServer import SHMServer
+from network_tools.rpc.shared_memory.SHMServer import SHMServer
 from network_tools.rpc_decorators import raw_method, json_method
 
 

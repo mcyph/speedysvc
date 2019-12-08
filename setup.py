@@ -19,8 +19,8 @@ with open(join(here, 'README.rst'), encoding='utf-8') as f:
 
 
 extensions = [Extension(
-    'hybrid_spin_semaphore', [
-        "network_tools/hybrid_spin_semaphore/hybrid_spin_semaphore.pyx",
+    'hybrid_lock', [
+        "network_tools/hybrid_lock/hybrid_lock.pyx",
     ],
 
     libraries=[
@@ -39,7 +39,7 @@ extensions = [Extension(
     library_dirs=[
         join(
             dirname(abspath(__file__)),
-            "network_tools/hybrid_spin_semaphore"
+            "network_tools/hybrid_lock"
         )
     ]
 )]
@@ -83,7 +83,7 @@ setup(
     packages=find_packages(),
     ext_modules=cythonize(
         extensions,
-        include_path=[join(dirname(abspath(__file__)), "network_tools/hybrid_spin_semaphore")],
+        include_path=[join(dirname(abspath(__file__)), "network_tools/hybrid_lock")],
         language_level=3
     ),
 

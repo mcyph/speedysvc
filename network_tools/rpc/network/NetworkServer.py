@@ -3,9 +3,9 @@ import socket
 import snappy
 import _thread
 
-from network_tools.rpc_implementations.base_classes.ServerProviderBase import \
+from network_tools.rpc.base_classes.ServerProviderBase import \
     ServerProviderBase
-from network_tools.rpc_implementations.network_rpc.consts import \
+from network_tools.rpc.network.consts import \
     len_packer, response_packer
 
 
