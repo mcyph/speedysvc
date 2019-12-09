@@ -3,7 +3,9 @@ from network_tools.serialisation.RawSerialisation import \
 
 
 class ServerProviderBase:
-    def __init__(self, server_methods):
+    ___init = False
+
+    def __call__(self, server_methods):
         """
         TODO!!!! ===========================================================
 
@@ -14,6 +16,10 @@ class ServerProviderBase:
         self.server_methods = server_methods
         self.port = server_methods.port
         self.name = server_methods.name
+
+        assert not self.___init, \
+            f"{self.__class__} has already been started!"
+        self.___init = True
 
     def handle_fn(self, cmd, args):
         fn = getattr(self.server_methods, cmd.decode('ascii'))

@@ -4,14 +4,16 @@ import socket
 from struct import Struct
 from toolkit.documentation.copydoc import copydoc
 
-from network_tools.rpc.base_classes.ClientProviderBase import \
-    ClientProviderBase
-from network_tools.rpc.network.consts import \
-    len_packer, response_packer
+from network_tools.rpc.base_classes.ClientProviderBase import ClientProviderBase
+from network_tools.rpc.network.consts import len_packer, response_packer
+from network_tools.compression.NullCompression import NullCompression
 
 
 class NetworkClient(ClientProviderBase):
-    def __init__(self, server_methods, host='127.0.0.1'):
+    def __init__(self,
+                 server_methods,
+                 host='127.0.0.1',
+                 compression_inst=None):
         """
 
         :param server_methods:
@@ -25,6 +27,11 @@ class NetworkClient(ClientProviderBase):
         )
         conn_to_server.connect((host, server_methods.port))
         ClientProviderBase.__init__(self, server_methods)
+
+        if compression_inst is None:
+            # TODO: Make it so that compression is actually specified by the server!!!! ===============================
+            compression_inst = NullCompression()
+        self.compression_inst = compression_inst
 
     def __del__(self):
         self.conn_to_server.close()

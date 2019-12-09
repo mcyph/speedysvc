@@ -1,5 +1,6 @@
 import time
 import _thread
+import signal
 import traceback
 #from toolkit.benchmarking.benchmark import benchmark
 from network_tools.rpc.base_classes.ServerProviderBase import \
@@ -13,28 +14,37 @@ def json_method(fn):
 
 
 class SHMServer(ServerProviderBase):
-    def __init__(self, server_methods, init_resources=True, client_timeout=10):
+    def __init__(self, init_resources=True, client_timeout=10):
         """
-
-        :param server_methods:
         :param init_resources:
         :param client_timeout:
         """
+        self.client_timeout = client_timeout
+        self.init_resources = init_resources
+
+    def __call__(self, server_methods):
+        ServerProviderBase.__call__(self, server_methods)
+
         print('Starting new SHMServer on port:', server_methods.port)
         port = self.port = server_methods.port
-        self.client_timeout = client_timeout
         ServerProviderBase.__init__(self, server_methods)
 
         self.to_server_socket = SHMSocket(
             socket_name='to_server_%s' % port,
-            init_resources=init_resources
+            init_resources=self.init_resources
         )
+
+        self.shut_me_down = False
 
         self.DToClientSockets = {}
         _thread.start_new_thread(
             self.__reap_client_sockets, ()
         )
         _thread.start_new_thread(self.__main, ())
+        signal.signal(signal.SIGINT, self.__on_sigint)
+
+    def __on_sigint(self):
+        self.shut_me_down = True
 
     def __reap_client_sockets(self):
         """
@@ -69,7 +79,10 @@ class SHMServer(ServerProviderBase):
             # The trouble is, nothing should ever be allowed to
             # go wrong here - if it does, perhaps the server
             # should die anyway(?)
+            self.waiting_for_client = True
             data = self.to_server_socket.get(timeout=None)
+            self.waiting_for_client = False
+
             client_id = int_struct.unpack(data[0:int_struct.size])[0]
             to_client_socket = self.__get_client_socket(client_id)
             cmd, args = data[int_struct.size:].split(b' ', 1)
@@ -94,6 +107,9 @@ class SHMServer(ServerProviderBase):
                     to_client_socket.put(send_data, timeout=10)
                 except:
                     traceback.print_exc()
+
+            if self.shut_me_down:
+                raise SystemExit("Shutdown requested via SIGINT")
 
     def __get_client_socket(self, client_id):
         """

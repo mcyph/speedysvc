@@ -10,10 +10,14 @@ class LoggerClient:
         self.stderr_logger = _StdErrLogger(self)
 
     def stderr_write(self, s):
-        pass
+        if isinstance(s, str):
+            s = s.encode('utf-8')
+        self.shm_server.send('stderr_write', s)
 
     def stderr_read(self, s):
-        pass
+        if isinstance(s, str):
+            s = s.encode('utf-8')
+        self.shm_server.send('stderr_read', s)
 
 
 class _StdOutLogger:
@@ -30,4 +34,3 @@ class _StdErrLogger:
 
     def write(self, s):
         self.logger_client.stderr_write(s)
-
