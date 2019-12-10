@@ -3,6 +3,9 @@ from network_tools.compression.CompressionBase import CompressionBase
 
 
 class ZlibCompression(CompressionBase):
+    """
+
+    """
     def __init__(self, compression_level=7):
         self.compression_level = compression_level
 

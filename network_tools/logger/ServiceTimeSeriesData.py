@@ -44,6 +44,9 @@ class ServiceTimeSeriesData(TimeSeriesData):
         )
 
     def sample_data(self):
+        if not self.SPIDs:
+            return None
+
         D = Counter()
         D['num_processes'] = len(self.SPIDs)
         for proc in self.iter_processes():
@@ -86,7 +89,7 @@ class ServiceTimeSeriesData(TimeSeriesData):
 
     def __get_cpu_info(self, proc):
         return {
-            'cpu_usage_pc': proc.cpu_percent()
+            'cpu_usage_pc': int(proc.cpu_percent())
         }
 
     def __get_mem_info(self, proc):

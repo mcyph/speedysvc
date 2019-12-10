@@ -298,6 +298,7 @@ cdef class HybridSpinSemaphore:
 
     cpdef int lock(self) nogil except -1:
         if self._spin_lock_char[0] == DESTROYED:
+            printf("lock called on destroyed HybridSpinSemaphore!")
             return -1
 
         # Use pthread calls for locking and unlocking.
@@ -316,7 +317,10 @@ cdef class HybridSpinSemaphore:
                     break
 
             retval = sem_wait(self._semaphore)
-            self._spin_lock_char[0] = LOCKED
+            if retval != -1:
+                self._spin_lock_char[0] = LOCKED
+            else:
+                perror("sem_wait")
             return retval
 
     cpdef int unlock(self) nogil except -1:

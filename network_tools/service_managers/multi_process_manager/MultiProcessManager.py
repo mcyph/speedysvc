@@ -8,6 +8,10 @@ from multiprocessing import cpu_count
 
 from network_tools.logger.LoggerClient import LoggerClient
 from network_tools.rpc.network.NetworkServer import NetworkServer
+from network_tools.rpc.shared_memory.SHMServer import SHMServer
+
+
+MONITOR_PROCESS_EVERY_SECS = 5
 
 
 class MultiProcessServer:
@@ -16,8 +20,6 @@ class MultiProcessServer:
                  logger_server,
                  server_methods,
                  *server_providers,
-
-                 tcp_bind_address=None,
 
                  min_proc_num=1,
                  max_proc_num=cpu_count(),
@@ -33,10 +35,10 @@ class MultiProcessServer:
 
         self.service_time_series_data = service_time_series_data
         self.logger_server = logger_server
-        self.server_methods = server_methods # This should probably always be callable directly, so as to be able to create them in the child processes
+        # This should probably always be callable directly,
+        # so as to be able to create them in the child processes
+        self.server_methods = server_methods
         self.server_providers = server_providers
-
-        self.tcp_bind_address = tcp_bind_address
 
         self.min_proc_num = min_proc_num
         self.max_proc_num = max_proc_num
@@ -50,39 +52,6 @@ class MultiProcessServer:
             "The overall percentage CPU usage before starting a new " \
             "process should be between 0.0 and 1.0 non-inclusive"
 
-        # Make sure tcp_bind_address has been provided as needed
-        # The reason for binding here in the parent process,
-        # is to make it so that the child processes can listen
-        # on the same socket, eliminating the need to use other
-        # forms of IPC.
-        tcp_needed = False
-
-        for provider in server_providers:
-            if isinstance(provider, NetworkServer):
-                tcp_needed = True
-
-        if not tcp_needed and tcp_bind_address:
-            raise Exception(
-                f"TCP specified as being bound to address "
-                f"{tcp_bind_address}, but no TCP server class "
-                f"provided to implementations!"
-            )
-        elif tcp_needed and not tcp_bind_address:
-            raise Exception(
-                f"TCP not specified as being bound to an address "
-                f"while a TCP server class was provided to "
-                f"implementations!"
-            )
-
-        if tcp_bind_address:
-            sock = self.sock = socket.socket(
-                socket.AF_INET, socket.SOCK_STREAM
-                # TODO: FIX LATENCY PARAMS!!!! ========================================================================
-            )
-            sock.bind((tcp_bind_address, server_methods.port))
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.listen(0)
-
         # Collect data periodically
         self.LPIDs = []
         self.last_proc_op_time = 0
@@ -90,53 +59,82 @@ class MultiProcessServer:
 
     def __monitor_process_loop(self):
         """
-        # TODO:
-        # * Spawn new worker processes which exceed
-        #   process time over a given time period
-        # * Kill worker processes when they aren't needed?
-        #   TODO: How to make sure all requests are processed before the process shuts down??
-        #         Possibly add a signal handler for SIGKILL that tells the handler
-        #         "shut down after this next call is finished, (potentially) without
-        #         freeing some resources"?
-        # * Respawn in case of crashes
+        * Spawn new worker processes which exceed
+          process time over a given time period
+        * Kill worker processes when they aren't needed?
+          TODO: How to make sure all requests are processed before
+                the process shuts down??
+                Possibly add a signal handler for SIGKILL that tells
+                the handler "shut down after this next call is
+                finished, (potentially) without freeing some
+                resources"? -> DONE, NEEDS TO BE TESTED!
+        * Respawn in case of crashes
         """
 
         while True:
             for pid in self.LPIDs[:]:
                 if not psutil.pid_exists(pid):
-                    self.remove_proc(pid) # NOT IDIOMATIC!!!!!
+                    self.remove_proc(pid)
 
             if len(self.LPIDs) < self.min_proc_num:
                 # Maybe best to start a new thread, so this loop
                 # doesn't run in the child process? ==========================================================
                 _thread.start_new_thread(self.new_proc, ())
 
-            DAverages = self.service_time_series_data.FIXME()
+            DNewProcAvg = self.service_time_series_data.get_average_over(
+                time.time() - self.new_proc_avg_over_secs, time.time()
+            )
+            DRemoveProcAvg = self.service_time_series_data.get_average_over(
+                time.time() - self.kill_proc_avg_over_secs, time.time()
+            )
             time_since_last_op = time.time()-self.last_proc_op_time
+            print("DNEWPROCAVG:", DNewProcAvg)
+
+            if not DNewProcAvg or not DRemoveProcAvg:
+                time.sleep(MONITOR_PROCESS_EVERY_SECS)
+                continue
 
             if (
                 self.max_proc_mem_bytes is not None and
-                DAverages[FIXME] > self.max_proc_mem_bytes
+                DRemoveProcAvg['physical_mem'] > self.max_proc_mem_bytes # What about virtual memory?? ==============
             ):
                 # Reap processes until we don't exceed
                 # the maximum amount of memory
+                print(f"Removing process due to memory exceeded")
                 self.remove_proc()
             elif (
-                time_since_last_op < self.new_proc_avg_over_secs and
-                DAverages[FIXME] > self.new_proc_cpu_pc and
+                len(self.LPIDs) <= self.min_proc_num
+            ):
+                # Start a new worker process if there aren't enough
+                print(f"Adding worker process due to "
+                      f"minimum processes not satisfied")
+                self.new_proc()
+            elif (
+                time_since_last_op > self.new_proc_avg_over_secs and
+                (DNewProcAvg['cpu_usage_pc'] / DNewProcAvg['num_processes']) >
+                    self.new_proc_cpu_pc and
                 len(self.LPIDs) <= self.max_proc_num
             ):
                 # Start a new worker process if the CPU usage is higher
                 # than a certain amount over the provided period
                 # new_proc_avg_over_secs
+                print(f"Adding worker process due to CPU higher than "
+                      f"{int(self.new_proc_cpu_pc*100)}% over "
+                      f"{self.new_proc_avg_over_secs} seconds")
                 self.new_proc()
             elif (
-                time_since_last_op < self.kill_proc_avg_over_secs and
-                DAverages[FIXME] < self.new_proc_cpu_pc
+                time_since_last_op > self.kill_proc_avg_over_secs and
+                DRemoveProcAvg['cpu_usage_pc'] < self.new_proc_cpu_pc and
+                len(self.LPIDs) >= self.min_proc_num
             ):
                 # Reduce the number of workers if they aren't being
                 # used over an extended period
+                print(f"Removing process due to CPU lower than "
+                      f"{int(self.new_proc_cpu_pc * 100)}% over "
+                      f"{self.kill_proc_avg_over_secs} seconds")
                 self.remove_proc()
+
+            time.sleep(MONITOR_PROCESS_EVERY_SECS)
 
     #========================================================#
     #                  Start/Stop Processes                  #
@@ -144,35 +142,48 @@ class MultiProcessServer:
 
     def new_proc(self):
         """
-
+        Create a new worker process
         """
         pid = os.fork()
 
         if pid == 0:
             # In child process
-            logger_client = LoggerClient() # TODO: FINISH IMPLEMENTING ME!!! ========================================
+            logger_client = LoggerClient(self.server_methods)
+            smi = self.server_methods()
 
             L = []
             for provider in self.server_providers:
                 if isinstance(provider, NetworkServer):
-                    L.append(provider(server=self.sock))
+                    L.append(provider(
+                        server_methods=smi
+                    ))
+                elif isinstance(provider, SHMServer):
+                    L.append(provider(
+                        server_methods=smi,
+                        init_resources=not bool(len(self.LPIDs))
+                    ))
                 else:
-                    L.append(provider()) # Should this be __call__()??? =================================================
+                    L.append(provider(
+                        server_methods=smi
+                    ))
 
             while 1:
                 time.sleep(10)
         else:
             # In parent - pid of child returned
+            self.last_proc_op_time = time.time()
             self.LPIDs.append(pid)
             self.service_time_series_data.add_pid(pid)
 
     def remove_proc(self, pid=None):
         """
-
+        Remove process with `pid` if specified;
+        otherwise remove the most recently-created process
         """
         if pid is None:
             pid = self.LPIDs[-1]
 
+        self.last_proc_op_time = time.time()
         self.LPIDs.remove(pid)
         self.service_time_series_data.remove_pid(pid)
 
@@ -197,3 +208,11 @@ class MultiProcessServer:
             if psutil.pid_exists(pid):
                 # Kill it good if it doesn't respond
                 os.kill(pid, signal.SIGKILL)
+
+            # Clean up potential zombie in OS process table
+            try:
+                os.waitpid(pid, 0)
+            except:
+                import traceback
+                traceback.print_exc()
+

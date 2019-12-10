@@ -82,54 +82,61 @@ def __network_method(fn, serialiser):
 
 def raw_method(fn):
     """
-
-    :param fn:
-    :return:
+    Define a method which sends/receives data
+    using the python raw `bytes` type
     """
     return __network_method(fn, RawSerialisation)
 
 
 def json_method(fn):
     """
-
-    :param fn:
-    :return:
+    Define a method sends/receives data using
+    the built-in json module. Tested the most, and quite
+    interoperable: I generally use this, unless there's a
+    good reason not to.
     """
     return __network_method(fn, JSONSerialisation)
 
 
 def msgpack_method(fn):
     """
-
-    :param fn:
-    :return:
+    Define a method that sends/receives data using the
+    msgpack module. Supports most/all the types supported
+    by json, but typically is 2x+ faster, at the expense
+    of (potentially) losing interoperability.
     """
+    # OPEN ISSUE: Return json always here, if in REST mode??
     return __network_method(fn, MsgPackSerialisation)
 
 
 def pickle_method(fn):
     """
-
-    :param fn:
-    :return:
+    Define a method that sends/receives data using the
+    `pickle` module. **Potentially insecure** as arbitrary
+    code could be sent, but is very fast, and supports many
+    python types. Supports int/tuple etc keys in dicts,
+    which json/msgpack don't.
     """
     return __network_method(fn, PickleSerialisation)
 
 
 def marshal_method(fn):
     """
-
-    :param fn:
-    :return:
+    Define a method that sends/receives data using the
+    `pickle` module. **Potentially insecure** as there
+    could be potential buffer overrun vulnerabilities,
+    but is very fast.
     """
     return __network_method(fn, MarshalSerialisation)
 
 
 def arrow_method(fn):
     """
-
-    :param fn:
-    :return:
+    Define a method that sends/receives data using the
+    `pyarrow` module. Reported to be very fast for numpy
+    `ndarray` types, and support for many of the types that
+    json does, but seemed to be orders of magnitude slower
+    for many other datatypes when I tested it.
     """
     return __network_method(fn, ArrowSerialisation)
 

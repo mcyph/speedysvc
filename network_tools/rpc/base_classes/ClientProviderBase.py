@@ -3,8 +3,11 @@ from toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
 
 
 class ClientProviderBase(ABC):
-    def __init__(self, server_methods=None):
+    def __init__(self, server_methods=None, port=None):
         #assert isinstance(server_methods, ServerMethodsBase)
+        if port is None:
+            port = server_methods.port
+        self.port = port
         self.server_methods = server_methods
 
     def get_server_methods(self):
@@ -24,8 +27,7 @@ class ClientProviderBase(ABC):
         x = 0
         while 1:
             lock_file_path = self.lock_file_path = self.PATH % (
-                self.server_methods.port,
-                str(x) + '.clientlock'
+                self.port, str(x) + '.clientlock'
             )
             lock_file = open(lock_file_path, "a+")
 

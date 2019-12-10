@@ -14,24 +14,24 @@ def json_method(fn):
 
 
 class SHMServer(ServerProviderBase):
-    def __init__(self, init_resources=True, client_timeout=10):
+    def __init__(self, client_timeout=10):
         """
         :param init_resources:
         :param client_timeout:
         """
         self.client_timeout = client_timeout
-        self.init_resources = init_resources
 
-    def __call__(self, server_methods):
+    def __call__(self, server_methods, init_resources=True):
+        # NOTE: init_resources should only be called if creating from scratch -
+        # if connecting to an existing socket, init_resources should be False!
         ServerProviderBase.__call__(self, server_methods)
 
         print('Starting new SHMServer on port:', server_methods.port)
         port = self.port = server_methods.port
-        ServerProviderBase.__init__(self, server_methods)
 
         self.to_server_socket = SHMSocket(
             socket_name='to_server_%s' % port,
-            init_resources=self.init_resources
+            init_resources=init_resources
         )
 
         self.shut_me_down = False
@@ -43,7 +43,7 @@ class SHMServer(ServerProviderBase):
         _thread.start_new_thread(self.__main, ())
         signal.signal(signal.SIGINT, self.__on_sigint)
 
-    def __on_sigint(self):
+    def __on_sigint(self, *args):
         self.shut_me_down = True
 
     def __reap_client_sockets(self):

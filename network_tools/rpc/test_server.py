@@ -48,8 +48,8 @@ if __name__ == '__main__':
     from network_tools.rpc.shared_memory.SHMServer import SHMServer
 
     methods = TestServerMethods()
-    provider1 = SHMServer(methods)
-    provider2 = NetworkServer(methods)
+    provider1 = SHMServer()(methods)
+    #provider2 = NetworkServer()(methods)
 
     while 1:
         sleep(10)

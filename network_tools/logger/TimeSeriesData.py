@@ -1,6 +1,6 @@
 from struct import Struct
 from time import time, sleep
-from collections import deque
+from collections import deque, Counter
 from abc import ABC, abstractmethod
 from os.path import getsize, exists
 from _thread import allocate_lock, start_new_thread
@@ -38,6 +38,9 @@ class TimeSeriesData(ABC):
         self.fifo_cache_len = fifo_cache_len
         self.sample_interval_secs = sample_interval_secs
 
+        self.lock = allocate_lock()
+        self.f = open(path, 'ab+')
+
         # Start off with a timestamp, down to the second
         # (4 bytes as in Unix seconds since epoch)
         LOut = ['!I']
@@ -49,9 +52,9 @@ class TimeSeriesData(ABC):
         self.deque = deque(maxlen=fifo_cache_len)
         if exists(path):
             assert getsize(path) % self.struct.size == 0
-            self.__size = getsize(path)/self.struct.size
+            self.__size = int(getsize(path)/self.struct.size)
 
-            for x, DProperties in self.iterate_backwards():
+            for x, DProperties in enumerate(self.iterate_backwards()):
                 self.deque.appendleft(DProperties)
                 if x >= fifo_cache_len:
                     break
@@ -60,13 +63,13 @@ class TimeSeriesData(ABC):
 
         # Fill the rest of the FIFO cache with blank values
         for i in range(fifo_cache_len - len(self.deque)):
+            # CHECK ME!!! ===========================================================================================
+            # This might throw off the averages!!
             self.deque.appendleft({
                 property: 0
-                for _, property in LFormat
+                for _, property in [(None, 'timestamp')]+list(LFormat)
             })
 
-        self.lock = allocate_lock()
-        self.f = open(path, 'ab+')
         start_new_thread(self.__sample_data_loop, ())
 
     #=========================================================================#
@@ -77,7 +80,8 @@ class TimeSeriesData(ABC):
         while True:
             try:
                 DSample = self.sample_data()
-                self.__add_sample(**DSample)
+                if DSample: # WARNING!!! ======================================
+                    self.__add_sample(**DSample)
             except:
                 import traceback
                 traceback.print_exc()
@@ -101,12 +105,13 @@ class TimeSeriesData(ABC):
         for key in items:
             assert key in [i[1] for i in self.LFormat], key
 
+        items = items.copy()
+        items['timestamp'] = int(time())
         encoded = self.struct.pack(*(
-            [time()] +
+            [items['timestamp']] +
             [items[name] for _, name in self.LFormat]
         ))
-
-        self.deque.appendleft(items.copy())
+        self.deque.appendleft(items)
 
         with self.lock:
             self.f.seek(0, 2) # Seek to end of file
@@ -127,7 +132,8 @@ class TimeSeriesData(ABC):
     def __getitem__(self, item):
         """
         Get a specific time series data item
-        :param item: the index (not the timestamp) relative to the first item
+        :param item: the index (not the timestamp)
+                     relative to the first item
         :return: a dict
         """
         # OPEN ISSUE: Should this support slices??? =================================================================
@@ -138,7 +144,8 @@ class TimeSeriesData(ABC):
         data = self.struct.unpack(encoded)
 
         return dict(zip(
-            data, ['timestamp']+[i[1] for i in self.LFormat]
+            ['timestamp'] + [i[1] for i in self.LFormat],
+            data
         ))
 
     def __iter__(self):
@@ -174,34 +181,64 @@ class TimeSeriesData(ABC):
 
     def select_range(self, from_time, to_time):
         """
-
-        :param from_time:
-        :param to_time:
-        :return:
+        Get statistics over a specified time range.
+        :param from_time: the number of seconds since
+                          the epoch, as in unix timestamps
+        :param to_time: the number of seconds since
+                        the epoch, as in unix timestamps
         """
 
-        # TODO: Use a bisect algorithm!!! ===========================================================================
+        # TODO: Use a bisect algorithm/store seek positions for certain
+        # timestamps to prevent having to go thru every single record!!! ===========================================================================
 
         for DRecord in self:
             if from_time <= DRecord['timestamp'] <= to_time:
                 yield DRecord
 
-    def get_average_over(self, from_time, to_time, property):
+    def get_average_over(self, from_time, to_time):
         """
         Get an average of all recent values - a single value.
         May not make sense for all kinds of data.
-        NOTE: This raises a DivideByZeroError if there isn't any values collected!
+        NOTE: This raises a DivideByZeroError if
+              there aren't any values collected!
 
-        :param from_time: the number of seconds since the epoch, as in unix timestamps
-        :param to_time: the number of seconds since the epoch, as in unix timestamps
-        :param property: The name of the property, as in LFormat
+        :param from_time: the number of seconds since
+                          the epoch, as in unix timestamps
+        :param to_time: the number of seconds since the epoch,
+                        as in unix timestamps
         :return: an integer
         """
-        val = 0
+        DVals = Counter()
         num_vals = 0
-        for DRecord in self.select_range(from_time, to_time):
-            val += DRecord[property]
-        return val / num_vals
+
+        if self.deque[0]['timestamp'] >= from_time:
+            # Use the recent values cache if range in memory
+            for DRecord in self.deque:
+                if from_time <= DRecord['timestamp'] <= to_time:
+                    for property in DRecord:
+                        if property == 'timestamp':
+                            continue
+                        DVals[property] += DRecord[property]
+                    num_vals += 1
+        else:
+            # Otherwise grab from disk (**very slow**)
+            import warnings
+            warnings.warn(
+                f"TimeSeriesData averaging from disk data: "
+                f"{from_time}->{to_time}"
+            )
+            for DRecord in self.select_range(from_time, to_time):
+                for property in DRecord:
+                    if property == 'timestamp':
+                        continue
+                    DVals[property] += DRecord[property]
+                num_vals += 1
+
+        return {
+            key: val / num_vals
+            for key, val
+            in DVals.items()
+        }
 
     #=========================================================================#
     #                  Short-term In-Memory Data Processing                   #
@@ -209,11 +246,13 @@ class TimeSeriesData(ABC):
 
     def get_recent_values(self, reversed=True):
         """
-        Get a list of the most recent values. By default in reversed order,
-        so as to allow for graphs displayed from right to left.
+        Get a list of the most recent values.
+        By default in reversed order, so as to allow
+        for graphs displayed from right to left.
 
         :param reversed: True/False
-        :return: a list of the most recent values, of length self.fifo_cache_len
+        :return: a list of the most recent values,
+                 of length self.fifo_cache_len
         """
         if reversed:
             return list(self.deque)[::-1]
@@ -222,11 +261,14 @@ class TimeSeriesData(ABC):
 
     def get_recent_average(self, property):
         """
-        Get an average of all recent values - a single value.
+        Get an average of all recent values -
+        a single value.
         May not make sense for all kinds of data.
-        NOTE: This raises a DivideByZeroError if there isn't any values collected!
+        NOTE: This raises a DivideByZeroError if
+              there aren't any values collected!
 
-        :param property: The name of the property, as in LFormat
+        :param property: The name of the property,
+                         as in LFormat
         :return: an integer
         """
         val = 0

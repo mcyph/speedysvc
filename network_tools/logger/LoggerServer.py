@@ -16,7 +16,7 @@ class LoggerServer:
         #          used by the original server.
         self.port = f'{server_methods.port}_log'
         self.name = f'{server_methods.name}_log'
-        self.shm_server = SHMServer(self)
+        self.shm_server = SHMServer()
 
         # Store the single value stats
         # (e.g. how long each individual call takes,
@@ -27,14 +27,22 @@ class LoggerServer:
         # Open the stdout/stderr files
         self.stdout_lock = allocate_lock()
         self.f_stdout = open(
-            f'{log_dir}/{self.name}.stdout', 'a+',
-            errors='replace', encoding='utf-8'
+            f'{log_dir}/{self.name}.stdout', 'ab+'
         ) # binary??
         self.stderr_lock = allocate_lock()
         self.f_stderr = open(
-            f'{log_dir}/{self.name}.stderr', 'a+',
-            errors='replace', encoding='utf-8'
+            f'{log_dir}/{self.name}.stderr', 'ab+'
         )
+
+        # Start the server
+        self.shm_server(
+            server_methods=self,
+            init_resources=True
+        )
+
+    #=========================================================#
+    #                 Write to stdout/stderr                  #
+    #=========================================================#
 
     @raw_method
     def stderr_write(self, s):
@@ -43,8 +51,9 @@ class LoggerServer:
         :param s:
         :return:
         """
-        with self.stdout_lock:
-            self.f_stdout.write(s)
+        with self.stderr_lock:
+            self.f_stderr.write(s)
+        return b'ok'
 
     @raw_method
     def stdout_write(self, s):
@@ -53,9 +62,15 @@ class LoggerServer:
         :param s:
         :return:
         """
-        with self.stderr_lock:
-            self.f_stderr.write(s)
+        with self.stdout_lock:
+            self.f_stdout.write(s)
+        return b'ok'
 
+    #=========================================================#
+    #                     Average Values                      #
+    #=========================================================#
+
+    '''
     @json_method
     def get_averages(self, process_id):
         """
@@ -94,19 +109,4 @@ class LoggerServer:
             pass
 
         self.DAveragesByProcessID[process_id] = DAverages
-
-    @json_method
-    def log_stats(self, DStats):
-        """
-        TODO: Allow logging of:
-
-        Across all processes:
-        * Current number of processes
-        * Memory usage
-        * CPU usage (pc CPU/num processes - will always be out of 100)
-        * IO usage
-
-        :param DStats:
-        :return:
-        """
-        pass
+    '''

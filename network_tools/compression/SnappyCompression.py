@@ -3,6 +3,9 @@ from network_tools.compression.CompressionBase import CompressionBase
 
 
 class SnappyCompression(CompressionBase):
+    """
+
+    """
     def decompress(self, o):
         return snappy.decompress(o)
 

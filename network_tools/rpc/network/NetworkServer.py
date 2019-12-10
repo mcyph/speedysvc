@@ -8,23 +8,30 @@ from network_tools.compression.NullCompression import NullCompression
 
 
 class NetworkServer(ServerProviderBase):
-    def __init__(self, compression_inst=None):
+    def __init__(self,
+                 server_methods,
+                 tcp_bind_address='127.0.0.1',
+                 compression_inst=None):
         """
         Create a network TCP/IP server which can be used in
         combination with a ServerMethods subclass, and one
         of MultiProcessManager/InProcessManager
         """
+        sock = self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind((tcp_bind_address, server_methods.port))
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.listen(0)
+
         if compression_inst is None:
             compression_inst = NullCompression()
         self.compression_inst = compression_inst
 
-    def __call__(self, server_methods, server):
-        self.server = server
+    def __call__(self, server_methods):
         ServerProviderBase.__call__(self, server_methods)
         start_new_thread(self.__listen_for_conns_loop, ())
 
     def __listen_for_conns_loop(self):
-        server = self.server
+        server = self.sock
         while True:
             server.listen(4)
             print("Multithreaded server: waiting for connections...")

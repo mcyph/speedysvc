@@ -10,13 +10,16 @@ DPortCounter = Counter()
 
 
 class SHMClient(ClientProviderBase):
-    def __init__(self, server_methods):
+    def __init__(self, server_methods, port=None):
         """
 
         :param server_methods:
         """
-        ClientProviderBase.__init__(self, server_methods)
-        self.port = port = server_methods.port
+        if port is None:
+            port = server_methods.port
+        self.port = port
+
+        ClientProviderBase.__init__(self, server_methods, port)
 
         self.__create_conn_to_server()
         self.lock = _thread.allocate()
