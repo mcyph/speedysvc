@@ -8,7 +8,8 @@ class ServiceTimeSeriesData(TimeSeriesData):
 
     def __init__(self, path,
                  fifo_cache_len=100,
-                 sample_interval_secs=5):
+                 sample_interval_secs=5,
+                 start_collecting_immediately=False):
         """
         A logger for (generic) information to do with processes.
 
@@ -40,7 +41,8 @@ class ServiceTimeSeriesData(TimeSeriesData):
         )
         TimeSeriesData.__init__(
             self, path, LFormat,
-            fifo_cache_len, sample_interval_secs
+            fifo_cache_len, sample_interval_secs,
+            start_collecting_immediately
         )
 
     def sample_data(self):
@@ -78,10 +80,12 @@ class ServiceTimeSeriesData(TimeSeriesData):
 
             try:
                 p = self.get_process(pid)
-                yield p
             except:
                 import traceback
                 traceback.print_exc()
+                continue
+
+            yield p
 
     #===========================================================#
     #                    CPU/Mem/Disk Info                      #

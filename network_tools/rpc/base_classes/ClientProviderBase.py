@@ -22,7 +22,7 @@ class ClientProviderBase(ABC):
 
         :return:
         """
-        print('Acquire shm lock:', end=' ')
+        #print('Acquire shm lock:', end=' ')
 
         x = 0
         while 1:

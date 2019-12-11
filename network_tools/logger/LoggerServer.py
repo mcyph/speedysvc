@@ -10,6 +10,7 @@ class LoggerServer:
         :param log_dir:
         :param server_methods:
         """
+        self.loaded_ok = False
 
         # NOTE ME: I'm overriding the port so as to not have a
         #          collision with the existing (integer) port,
@@ -53,6 +54,7 @@ class LoggerServer:
         """
         with self.stderr_lock:
             self.f_stderr.write(s)
+            self.f_stderr.flush()
         return b'ok'
 
     @raw_method
@@ -64,7 +66,13 @@ class LoggerServer:
         """
         with self.stdout_lock:
             self.f_stdout.write(s)
+            self.f_stdout.flush()
         return b'ok'
+
+    @json_method
+    def loaded_ok_signal(self):
+        self.loaded_ok = True
+        return None
 
     #=========================================================#
     #                     Average Values                      #

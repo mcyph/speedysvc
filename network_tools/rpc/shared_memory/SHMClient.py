@@ -18,11 +18,11 @@ class SHMClient(ClientProviderBase):
         if port is None:
             port = server_methods.port
         self.port = port
+        self.lock = _thread.allocate()
 
         ClientProviderBase.__init__(self, server_methods, port)
 
         self.__create_conn_to_server()
-        self.lock = _thread.allocate()
         _thread.start_new_thread(self.__periodic_heartbeat, ())
 
         if DPortCounter.get(port):
@@ -71,20 +71,31 @@ class SHMClient(ClientProviderBase):
             init_resources=True
         )
 
+        t = str(time.time()).encode('ascii')
+        assert self.send(b'heartbeat', t) == t
+
     @copydoc(ClientProviderBase.send)
     def send(self, fn, data, timeout=60):
         with self.lock:
-            data = fn.serialiser.dumps(data)
+            try:
+                fn_name = fn.__name__.encode('ascii')
+                serialiser = fn.serialiser
+            except AttributeError:
+                from network_tools.serialisation.RawSerialisation import RawSerialisation
+                fn_name = fn
+                serialiser = RawSerialisation
+
+            data = serialiser.dumps(data)
             self.to_server_socket.put(
                 self.client_id_as_bytes+
-                fn.__name__.encode('ascii')+b' '+data,
+                fn_name+b' '+data,
                 timeout=10
             )
             data = self.from_server_socket.get(timeout=timeout)
 
             if data[0] == b'+'[0]:
                 # An "ok" response
-                data = fn.serialiser.loads(data[1:])
+                data = serialiser.loads(data[1:])
                 return data
             elif data[0] == b'-'[0]:
                 # An exception occurred

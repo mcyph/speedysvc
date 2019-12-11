@@ -199,6 +199,11 @@ cdef class HybridSpinSemaphore:
         self._spin_lock_char = <char *>addr # VOLATILE??? ===========================================
         if set_value != -1:
             self._spin_lock_char[0] = set_value
+
+        if self._spin_lock_char[0] == DESTROYED:
+            printf("Semaphore at %s already destroyed: shouldn't get here!\n", sem_loc)
+            return -1
+
         return 0
 
     #===========================================================#

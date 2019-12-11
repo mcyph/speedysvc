@@ -27,7 +27,9 @@ class MultiProcessServer:
 
                  new_proc_cpu_pc=0.3,
                  new_proc_avg_over_secs=20,
-                 kill_proc_avg_over_secs=240
+                 kill_proc_avg_over_secs=240,
+
+                 wait_until_completed=True
                  ):
         """
 
@@ -48,6 +50,8 @@ class MultiProcessServer:
         self.new_proc_avg_over_secs = new_proc_avg_over_secs
         self.kill_proc_avg_over_secs = kill_proc_avg_over_secs
 
+        self.wait_until_completed = wait_until_completed
+
         assert 0.0 < new_proc_cpu_pc < 1.0, \
             "The overall percentage CPU usage before starting a new " \
             "process should be between 0.0 and 1.0 non-inclusive"
@@ -55,6 +59,15 @@ class MultiProcessServer:
         # Collect data periodically
         self.LPIDs = []
         self.last_proc_op_time = 0
+        self.started_collecting_data = False
+
+        if wait_until_completed:
+            for x in range(min_proc_num):
+                # Make sure the initial processes have booted up
+                # from the main thread, so it can block as necessary
+                # (assuming wait_until_completed is set)
+                self.new_proc()
+
         _thread.start_new_thread(self.__monitor_process_loop, ())
 
     def __monitor_process_loop(self):
@@ -70,16 +83,23 @@ class MultiProcessServer:
                 resources"? -> DONE, NEEDS TO BE TESTED!
         * Respawn in case of crashes
         """
+        print(f"{self.server_methods.name}: Process monitor started")
 
         while True:
             for pid in self.LPIDs[:]:
                 if not psutil.pid_exists(pid):
                     self.remove_proc(pid)
 
-            if len(self.LPIDs) < self.min_proc_num:
-                # Maybe best to start a new thread, so this loop
-                # doesn't run in the child process? ==========================================================
-                _thread.start_new_thread(self.new_proc, ())
+            if (
+                len(self.LPIDs) < self.min_proc_num
+            ):
+                # Start a new worker process if there aren't enough
+                print(f"{self.server_methods.name}: "
+                      f"Adding worker process due to "
+                      f"minimum processes not satisfied")
+                self.new_proc()
+                time.sleep(MONITOR_PROCESS_EVERY_SECS)
+                continue
 
             DNewProcAvg = self.service_time_series_data.get_average_over(
                 time.time() - self.new_proc_avg_over_secs, time.time()
@@ -88,7 +108,7 @@ class MultiProcessServer:
                 time.time() - self.kill_proc_avg_over_secs, time.time()
             )
             time_since_last_op = time.time()-self.last_proc_op_time
-            print("DNEWPROCAVG:", DNewProcAvg)
+            #print(f"{self.server_methods.name} DNEWPROCAVG:", DNewProcAvg)
 
             if not DNewProcAvg or not DRemoveProcAvg:
                 time.sleep(MONITOR_PROCESS_EVERY_SECS)
@@ -100,36 +120,34 @@ class MultiProcessServer:
             ):
                 # Reap processes until we don't exceed
                 # the maximum amount of memory
-                print(f"Removing process due to memory exceeded")
+                print(f"{self.server_methods.name}: "
+                      f"Removing process due to memory exceeded")
                 self.remove_proc()
-            elif (
-                len(self.LPIDs) <= self.min_proc_num
-            ):
-                # Start a new worker process if there aren't enough
-                print(f"Adding worker process due to "
-                      f"minimum processes not satisfied")
-                self.new_proc()
+
             elif (
                 time_since_last_op > self.new_proc_avg_over_secs and
                 (DNewProcAvg['cpu_usage_pc'] / DNewProcAvg['num_processes']) >
                     self.new_proc_cpu_pc and
-                len(self.LPIDs) <= self.max_proc_num
+                len(self.LPIDs) < self.max_proc_num
             ):
                 # Start a new worker process if the CPU usage is higher
                 # than a certain amount over the provided period
                 # new_proc_avg_over_secs
-                print(f"Adding worker process due to CPU higher than "
+                print(f"{self.server_methods.name}: "
+                      f"Adding worker process due to CPU higher than "
                       f"{int(self.new_proc_cpu_pc*100)}% over "
                       f"{self.new_proc_avg_over_secs} seconds")
                 self.new_proc()
+
             elif (
                 time_since_last_op > self.kill_proc_avg_over_secs and
                 DRemoveProcAvg['cpu_usage_pc'] < self.new_proc_cpu_pc and
-                len(self.LPIDs) >= self.min_proc_num
+                len(self.LPIDs) > self.min_proc_num
             ):
                 # Reduce the number of workers if they aren't being
                 # used over an extended period
-                print(f"Removing process due to CPU lower than "
+                print(f"{self.server_methods.name}: "
+                      f"Removing process due to CPU lower than "
                       f"{int(self.new_proc_cpu_pc * 100)}% over "
                       f"{self.kill_proc_avg_over_secs} seconds")
                 self.remove_proc()
@@ -148,8 +166,14 @@ class MultiProcessServer:
 
         if pid == 0:
             # In child process
-            logger_client = LoggerClient(self.server_methods)
+            print(f"{self.server_methods.name} child: "
+                  f"Creating logger client")
+            self.logger_client = LoggerClient(self.server_methods)
+            print(f"{self.server_methods.name} child: "
+                  f"Creating server methods")
             smi = self.server_methods()
+            print(f"{self.server_methods.name} child: "
+                  f"Server methods created, starting implementations")
 
             L = []
             for provider in self.server_providers:
@@ -160,12 +184,17 @@ class MultiProcessServer:
                 elif isinstance(provider, SHMServer):
                     L.append(provider(
                         server_methods=smi,
-                        init_resources=not bool(len(self.LPIDs))
+                        init_resources=len(self.LPIDs) == 0
                     ))
                 else:
                     L.append(provider(
                         server_methods=smi
                     ))
+
+            # Tell the logger server that a child has properly loaded:
+            # this helps to make sure if processes are loaded properly,
+            # if one depends on another.
+            self.logger_client.loaded_ok_signal()
 
             while 1:
                 time.sleep(10)
@@ -174,6 +203,28 @@ class MultiProcessServer:
             self.last_proc_op_time = time.time()
             self.LPIDs.append(pid)
             self.service_time_series_data.add_pid(pid)
+
+            def start_collecting_data():
+                while not self.logger_server.loaded_ok:
+                    time.sleep(0.05)
+
+                if not self.started_collecting_data:
+                    # The service time series data should only start
+                    # once the process has started up
+                    self.started_collecting_data = True
+                    self.service_time_series_data.start_collecting()
+
+            if self.wait_until_completed:
+                print(f"{self.server_methods.name} parent: "
+                      f"Waiting for child to initialise...")
+                while not self.logger_server.loaded_ok:
+                    time.sleep(0.05)
+                print(f"{self.server_methods.name} parent: "
+                      f"child signaled it has initialised OK")
+
+                start_collecting_data()
+            else:
+                _thread.start_new_thread(start_collecting_data, ())
 
     def remove_proc(self, pid=None):
         """

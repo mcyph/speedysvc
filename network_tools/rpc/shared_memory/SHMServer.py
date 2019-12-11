@@ -22,11 +22,14 @@ class SHMServer(ServerProviderBase):
         self.client_timeout = client_timeout
 
     def __call__(self, server_methods, init_resources=True):
+        print(f"{server_methods.name}:{server_methods.port}: "
+              f"SHMServer __call__; init_resources:", init_resources)
         # NOTE: init_resources should only be called if creating from scratch -
         # if connecting to an existing socket, init_resources should be False!
         ServerProviderBase.__call__(self, server_methods)
 
-        print('Starting new SHMServer on port:', server_methods.port)
+        print('Starting new SHMServer on port:',
+              server_methods.port, init_resources)
         port = self.port = server_methods.port
 
         self.to_server_socket = SHMSocket(
@@ -37,9 +40,7 @@ class SHMServer(ServerProviderBase):
         self.shut_me_down = False
 
         self.DToClientSockets = {}
-        _thread.start_new_thread(
-            self.__reap_client_sockets, ()
-        )
+        _thread.start_new_thread(self.__reap_client_sockets, ())
         _thread.start_new_thread(self.__main, ())
         signal.signal(signal.SIGINT, self.__on_sigint)
 
@@ -60,7 +61,7 @@ class SHMServer(ServerProviderBase):
                     L.append(client_id)
 
             for client_id in L:
-                print("Reaping socket to client: %s" % client_id)
+                #print("Reaping socket to client: %s" % client_id)
                 del self.DToClientSockets[client_id]
 
             time.sleep(self.client_timeout/2)
@@ -79,13 +80,12 @@ class SHMServer(ServerProviderBase):
             # The trouble is, nothing should ever be allowed to
             # go wrong here - if it does, perhaps the server
             # should die anyway(?)
-            self.waiting_for_client = True
+            #print(f"{self.server_methods.name}: Getting from {self.to_server_socket.socket_name}")
             data = self.to_server_socket.get(timeout=None)
-            self.waiting_for_client = False
-
             client_id = int_struct.unpack(data[0:int_struct.size])[0]
             to_client_socket = self.__get_client_socket(client_id)
             cmd, args = data[int_struct.size:].split(b' ', 1)
+            #print(f"{self.server_methods.name}:{self.server_methods.port} Handling command:", cmd, args)
 
             if cmd == b'heartbeat':
                 try:
@@ -102,6 +102,10 @@ class SHMServer(ServerProviderBase):
                     # if could recreate some kinds of exceptions on the other end
                     send_data = b'-' + repr(exc).encode('utf-8')
                     traceback.print_exc()
+
+                #print(f"{self.server_methods.name}:"
+                #      f"{self.server_methods.port}: "
+                #      f"putting {send_data[:20]}")
 
                 try:
                     to_client_socket.put(send_data, timeout=10)
@@ -132,7 +136,7 @@ class SHMServer(ServerProviderBase):
                 socket_name=socket_name,
                 init_resources=False
             )
-            print(f"__get_client_socket: {socket_name}")
+            #print(f"__get_client_socket: {socket_name}")
 
         return self.DToClientSockets[client_id]
 

@@ -14,7 +14,8 @@ from _thread import allocate_lock, start_new_thread
 class TimeSeriesData(ABC):
     def __init__(self, path, LFormat,
                  fifo_cache_len=100,
-                 sample_interval_secs=5):
+                 sample_interval_secs=5,
+                 start_collecting_immediately=False):
         """
         A base class for binary-backed time series data.
         The first item for each "entry" is the unix timestamp
@@ -70,14 +71,37 @@ class TimeSeriesData(ABC):
                 for _, property in [(None, 'timestamp')]+list(LFormat)
             })
 
+        self.collecting_data = False
+        if start_collecting_immediately:
+            self.start_collecting()
+
+    def start_collecting(self):
+        """
+        Start the collection of data
+        """
+        if self.collecting_data:
+            # Can't start collection if already are
+            # Best to raise an exception explicitly here,
+            # as could indicate start_collecting_immediately
+            # was mistakenly set, etc
+            raise Exception("Collection of data already started")
+        self.collecting_data = True
         start_new_thread(self.__sample_data_loop, ())
+
+    def stop_collecting(self):
+        """
+        Pause the collection of data
+        """
+        if not self.collecting_data:
+            raise Exception("Not currently collecting data")
+        self.collecting_data = False
 
     #=========================================================================#
     #                            Recording of Data                            #
     #=========================================================================#
 
     def __sample_data_loop(self):
-        while True:
+        while self.collecting_data:
             try:
                 DSample = self.sample_data()
                 if DSample: # WARNING!!! ======================================
@@ -220,8 +244,9 @@ class TimeSeriesData(ABC):
                             continue
                         DVals[property] += DRecord[property]
                     num_vals += 1
-        else:
+        elif self.deque:
             # Otherwise grab from disk (**very slow**)
+            # only if there actually have been values
             import warnings
             warnings.warn(
                 f"TimeSeriesData averaging from disk data: "

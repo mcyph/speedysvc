@@ -14,9 +14,6 @@ class TestServerMethods(ServerMethodsBase):
     port = 5557
     name = 'multiprocess_echo_serv'
 
-    def __init__(self):
-        ServerMethodsBase.__init__(self)
-
     @json_method
     def cpu_intensive_method(self):
         for x in range(1000000):
@@ -37,16 +34,20 @@ if __name__ == '__main__':
     )
     print("LOGGER SERVER STARTED!")
 
-    MultiProcessServer(
+    n = NetworkServer(
+            TestServerMethods,
+            tcp_bind_address='127.0.0.1'
+        )
+    s =SHMServer()
+    print("CREATING!")
+
+    mps = MultiProcessServer(
         service_time_series_data,
         logger_server,
         TestServerMethods,
-        NetworkServer(
-            TestServerMethods,
-            tcp_bind_address='127.0.0.1'
-        ),
-        SHMServer()
+        n, s
     )
+    print("CREATED")
 
     import time
     while 1:

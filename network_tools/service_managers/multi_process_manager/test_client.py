@@ -19,7 +19,7 @@ if __name__ == '__main__':
     def fn():
         client = TestClientMethods(SHMClient(srv))
         while 1:
-            client.cpu_intensive_method()
+            print(client.cpu_intensive_method())
 
 
     for x in range(10):
