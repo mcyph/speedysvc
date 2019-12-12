@@ -1,3 +1,48 @@
-<div class="service">
+{% macro service(DService) %}
+    <div class="service_cont_div">
+        {{ service_status_table(DService) }}
 
-</div>
+        <div class="slidecontainer">
+            Number values to display:
+            <input id="myRange" class="slider"
+                   type="range"
+                   min="1" max="{ num_time_series_values+1 }"
+                   value="{ num_time_series_values-FIXME }">
+        </div>
+
+        <div class="cpu_chart">
+            <canvas width="900" height="200"></canvas>
+        </div>
+        <div class="ram_chart">
+            <canvas width="900" height="200"></canvas>
+        </div>
+        <div class="io_chart">
+            <canvas width="900" height="200"></canvas>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro service_status_table(DService) %}
+    <div class="status_table_cont_div">
+        <table>
+            <tr>
+                <th>Service: </th>
+                <th>Port: </th>
+                <th>Implementations: </th>
+                <th>Status: </th>
+                <th>RAM: </th>
+                <th>CPU: </th>
+                <th>Workers: </th>
+            </tr>
+            <tr>
+                <td>{ DService['name']|e }</td>
+                <td>{ DService['port']|e }</td>
+                <td>{ DService['implementations']|join(", ")|e }</td>
+                <td>{ DService['status']|e }</td>
+                <td>{ DService['ram']|e }</td>
+                <td>{ DService['cpu']|e }</td>
+                <td>{ DService['workers']|e }</td>
+            </tr>
+        </table>
+    </div>
+{% endmacro %}

@@ -1,5 +1,3 @@
-
-
 class ServerMethodsBase:
     def __init__(self):
         """

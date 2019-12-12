@@ -1,6 +1,3 @@
-from network_tools.rpc.shared_memory.SHMClient import SHMClient
-
-
 class ClientMethodsBase:
     def __init__(self, client_provider):
         """

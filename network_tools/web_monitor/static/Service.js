@@ -33,11 +33,18 @@ class Service {
     //======================================================//
 
     update(o) {
-        this.updateGraphs(o);
+        this.updateStatusTable(o["table_html"]);
+        this.updateGraphs(o["graphs"]);
+
+        if (o["console_text"]) {
+            this.writeConsoleText(o["console_text"]);
+        }
     }
 
-    updateStatus() {
-
+    updateStatusTable(tableHTML) {
+        this.$(
+            ".status_table_cont_div"
+        ).innerHTML = tableHTML;
     }
 
     //======================================================//
@@ -68,7 +75,10 @@ class Service {
     // Console Text
     //======================================================//
 
-    writeConsoleText() {
-
+    writeConsoleText(text) {
+        this.consoleDiv.appendChild(
+            // TODO: Check whitespace is preserved here!! =====================================================
+            document.createTextNode(text)
+        );
     }
 }

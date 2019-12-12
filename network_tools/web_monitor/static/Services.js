@@ -18,7 +18,8 @@ class Services {
     }
 
     pollPeriodically() {
-        const req = new AjaxRequest();
+        const req = new AjaxRequest("poll");
+
         req.send(function(o) {
             for (let port of o) {
                 this.DServices[port].update(o);
