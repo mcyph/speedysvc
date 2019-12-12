@@ -1,0 +1,20 @@
+{% from "service.html" import service %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Tools Service Web Monitor</title>
+
+    <script src="/static/chart.min.js"></script>
+    <script src="/static/AjaxRequest.js"></script>
+    <script src="/static/LineChart.js"></script>
+    <script src="/static/Service.js"></script>
+    <script src="/static/Services.js"></script>
+</head>
+<body>
+
+{% for DService in LServices %}
+    {{ service(DService) }}
+{% endfor %}
+
+</body>
+</html>
