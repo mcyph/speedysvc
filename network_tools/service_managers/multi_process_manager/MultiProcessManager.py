@@ -13,6 +13,18 @@ from network_tools.rpc.shared_memory.SHMServer import SHMServer
 
 MONITOR_PROCESS_EVERY_SECS = 5
 
+STARTED = 0
+STOPPED = 1
+STOPPING = 2
+STARTING = 3
+
+_DStatusStrings = {
+    STARTED: 'started',
+    STOPPED: 'stopped',
+    STOPPING: 'stopping',
+    STARTING: 'starting',
+}
+
 
 class MultiProcessServer:
     def __init__(self,
@@ -32,7 +44,45 @@ class MultiProcessServer:
                  wait_until_completed=True
                  ):
         """
+        Create a manager for a given service, which has child worker processes.
 
+        This monitors children, restarting them if they crash.
+        It also creates new children if the combined CPU usage is above
+        a certain threshold for a given time period. It also removes
+        children if they are below a combined CPU usage amount over
+        a given period.
+        Optionally also removed child processes if combined RAM usage
+        exceeds a certain amount.
+
+        :param service_time_series_data: a ServiceTimeSeriesData instance,
+                                         for logging process information
+                                         like CPU usage
+        :param logger_server: a LoggerServer instance
+        :param server_methods: the server methods class. Should be a class
+                               which has yet to be instantiated, so that
+                               it can be created by child worker processes.
+        :param server_providers: Server implementation instances. Currently
+                                 one of SHMServer or NetworkServer.
+        :param min_proc_num: the minimum number of worker processes.
+                             If the number of children falls below this
+                             number, they will be recreated.
+        :param max_proc_num: the maximum number of worker processes
+        :param max_proc_mem_bytes: The maximum amount of memory all
+                                   worker processes as a whole are
+                                   allowed to occupy in bytes.
+        :param new_proc_cpu_pc: The combined CPU percentage between 0.0 and
+                                1.0, above which to start a new child worker.
+        :param new_proc_avg_over_secs: The time period over which to average
+                                       the combined CPU percentage when
+                                       creating new children.
+        :param kill_proc_avg_over_secs: The time period over which to average
+                                        the combined CPU percentage when
+                                        removing existing children.
+        :param wait_until_completed: Whether to block until at least one
+                                     child worker has been created.
+                                     Useful if other services will depend on
+                                     this one, but can increase service load
+                                     times.
         """
 
         self.service_time_series_data = service_time_series_data
@@ -60,35 +110,39 @@ class MultiProcessServer:
         self.LPIDs = []
         self.last_proc_op_time = 0
         self.started_collecting_data = False
+        self.status = STOPPED
 
-        if wait_until_completed:
-            for x in range(min_proc_num):
-                # Make sure the initial processes have booted up
-                # from the main thread, so it can block as necessary
-                # (assuming wait_until_completed is set)
-                self.new_proc()
-
-        _thread.start_new_thread(self.__monitor_process_loop, ())
+        self.start_service()
 
     def __monitor_process_loop(self):
         """
         * Spawn new worker processes which exceed
           process time over a given time period
         * Kill worker processes when they aren't needed?
-          TODO: How to make sure all requests are processed before
-                the process shuts down??
-                Possibly add a signal handler for SIGKILL that tells
-                the handler "shut down after this next call is
-                finished, (potentially) without freeing some
-                resources"? -> DONE, NEEDS TO BE TESTED!
+          (Note: In order to make sure all requests are processed before
+                 the process shuts down, a signal handler for SIGINT
+                 that tells the handler "shut down after this next call is
+                 finished, (potentially) without freeing some
+                 resources" is set in child SHMServers)
         * Respawn in case of crashes
         """
         print(f"{self.server_methods.name}: Process monitor started")
 
-        while True:
+        while self.status == STARTED:
             for pid in self.LPIDs[:]:
-                if not psutil.pid_exists(pid):
-                    self.remove_proc(pid)
+                try:
+                    if not psutil.pid_exists(pid):
+                        # Stop monitoring child processes that no longer exist.
+                        self.remove_child_process(pid)
+                    else:
+                        proc = psutil.Process(pid)
+                        if proc.status() == psutil.STATUS_ZOMBIE:
+                            # Process no longer exists except on process table.
+                            os.waitpid(pid, 0)
+                            self.remove_child_process(pid)
+                except:
+                    import traceback
+                    traceback.print_exc()
 
             if (
                 len(self.LPIDs) < self.min_proc_num
@@ -97,7 +151,7 @@ class MultiProcessServer:
                 print(f"{self.server_methods.name}: "
                       f"Adding worker process due to "
                       f"minimum processes not satisfied")
-                self.new_proc()
+                self.new_child_process()
                 time.sleep(MONITOR_PROCESS_EVERY_SECS)
                 continue
 
@@ -122,12 +176,12 @@ class MultiProcessServer:
                 # the maximum amount of memory
                 print(f"{self.server_methods.name}: "
                       f"Removing process due to memory exceeded")
-                self.remove_proc()
+                self.remove_child_process()
 
             elif (
                 time_since_last_op > self.new_proc_avg_over_secs and
                 (DNewProcAvg['cpu_usage_pc'] / DNewProcAvg['num_processes']) >
-                    self.new_proc_cpu_pc and
+                    (self.new_proc_cpu_pc * 100.0) and
                 len(self.LPIDs) < self.max_proc_num
             ):
                 # Start a new worker process if the CPU usage is higher
@@ -137,20 +191,20 @@ class MultiProcessServer:
                       f"Adding worker process due to CPU higher than "
                       f"{int(self.new_proc_cpu_pc*100)}% over "
                       f"{self.new_proc_avg_over_secs} seconds")
-                self.new_proc()
+                self.new_child_process()
 
             elif (
                 time_since_last_op > self.kill_proc_avg_over_secs and
-                DRemoveProcAvg['cpu_usage_pc'] < self.new_proc_cpu_pc and
+                DRemoveProcAvg['cpu_usage_pc'] < (self.new_proc_cpu_pc * 100.0) and
                 len(self.LPIDs) > self.min_proc_num
             ):
                 # Reduce the number of workers if they aren't being
                 # used over an extended period
                 print(f"{self.server_methods.name}: "
                       f"Removing process due to CPU lower than "
-                      f"{int(self.new_proc_cpu_pc * 100)}% over "
+                      f"{int(self.new_proc_cpu_pc*100)}% over "
                       f"{self.kill_proc_avg_over_secs} seconds")
-                self.remove_proc()
+                self.remove_child_process()
 
             time.sleep(MONITOR_PROCESS_EVERY_SECS)
 
@@ -158,7 +212,51 @@ class MultiProcessServer:
     #                  Start/Stop Processes                  #
     #========================================================#
 
-    def new_proc(self):
+    def get_status(self):
+        return self.status
+
+    def get_status_as_string(self):
+        return _DStatusStrings[self.status]
+
+    def restart_service(self):
+        """
+        Stop then start a running service.
+        """
+        self.stop_service()
+        self.start_service()
+
+    def start_service(self):
+        """
+        Start a stopped service.
+        """
+        assert self.status == STOPPED, \
+            "Can't start a service that isn't stopped!"
+        self.status = STARTING
+
+        if self.wait_until_completed:
+            for x in range(self.min_proc_num):
+                # Make sure the initial processes have booted up
+                # from the main thread, so it can block as necessary
+                # (assuming wait_until_completed is set)
+                self.new_child_process()
+
+        self.status = STARTED
+        _thread.start_new_thread(self.__monitor_process_loop, ())
+
+    def stop_service(self):
+        """
+        Stop a started service.
+        """
+        assert self.status == STARTED, \
+            "Can't stop a service that isn't started!"
+        self.status = STOPPING
+
+        while self.LPIDs:
+            self.remove_child_process()
+
+        self.status = STOPPED
+
+    def new_child_process(self):
         """
         Create a new worker process
         """
@@ -226,7 +324,7 @@ class MultiProcessServer:
             else:
                 _thread.start_new_thread(start_collecting_data, ())
 
-    def remove_proc(self, pid=None):
+    def remove_child_process(self, pid=None):
         """
         Remove process with `pid` if specified;
         otherwise remove the most recently-created process

@@ -95,6 +95,7 @@ setup(
         'matplotlib',
         'pyarrow',
         'python-snappy',
+        'flask',
     ],
 
     zip_safe=True
