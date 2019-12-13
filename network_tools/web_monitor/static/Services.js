@@ -10,19 +10,24 @@ class Services {
         this.DServices = {};
         this.LServices = [];
         for (let [serviceName, port] of LServices) {
-            const elm = document.getElementById("${port}");
-            this.LServices.push(new Service(serviceName, port, elm));
-            this.DServices[port] = FIXME;
+            const elm = document.getElementById(
+                `service_cont_div_${port}`
+            );
+            var service = new Service(serviceName, port, elm);
+            this.LServices.push(service);
+            this.DServices[port] = service;
         }
+        this.pollPeriodically = this.pollPeriodically.bind(this);
         this.pollPeriodically();
     }
 
     pollPeriodically() {
         const req = new AjaxRequest("poll");
+        const that = this;
 
         req.send(function(o) {
-            for (let port of o) {
-                this.DServices[port].update(o);
+            for (let port in o) {
+                that.DServices[port].update(o[port]);
             }
         }, function() {
 

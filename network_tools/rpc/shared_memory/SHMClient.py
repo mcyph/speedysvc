@@ -18,7 +18,7 @@ class SHMClient(ClientProviderBase):
         if port is None:
             port = server_methods.port
         self.port = port
-        self.lock = _thread.allocate()
+        self.lock = _thread.allocate_lock()
 
         ClientProviderBase.__init__(self, server_methods, port)
 

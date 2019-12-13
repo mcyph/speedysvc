@@ -17,13 +17,12 @@ function listToLineChartDataset(L) {
 }
 
 class LineChart {
-    constructor(elmId, labels, datasets) {
+    constructor(elm, labels, datasets) {
         if (!(datasets instanceof LineChartDataset)) {
             datasets = listToLineChartDataset(datasets);
         }
 
-        var ctx = document.getElementById(elmId)
-                  .getContext("2d");
+        var ctx = elm.getContext("2d");
 
         this.chart = new Chart(ctx, {
             // The type of chart we want to create
@@ -40,7 +39,12 @@ class LineChart {
         });
     }
 
-    setDatasets(datasets) {
+    update(labels, datasets) {
+        if (!(datasets instanceof LineChartDataset)) {
+            datasets = listToLineChartDataset(datasets);
+        }
+
+        this.chart.data.labels = labels;
         this.chart.data.datasets = datasets;
         this.chart.update();
     }

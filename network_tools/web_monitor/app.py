@@ -1,25 +1,37 @@
+import os
 import json
 from datetime import datetime
 from flask import Flask, send_from_directory, render_template, render_template_string
 
 app = Flask(
     __name__,
-    template_folder='network_tools/web_monitor/templates/'
+    template_folder=os.path.join(
+        os.path.dirname(__file__), 'templates'
+    )
 )
 
-_DServices = None
+_DServices = {}
 
 
-def run_server(services, debug=False):
+def run_server(services=(), debug=False):
     """
     Should be called with a list of
     MultiProcessManager's and/or InProcessManager's
     """
-    global _DServices
-    _DServices = {}
     for service in services:
         _DServices[str(service.port)] = service
+
+    app.jinja_env.auto_reload = True
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.run(debug=debug)
+
+
+def add_service(service):
+    _DServices[str(service.port)] = service
+
+
+def remove_service(port):
+    del _DServices[port]
 
 
 #================================================#
@@ -34,7 +46,10 @@ def index():
         LServices=[
             _get_service_info_dict(port)
             for port in _DServices
-        ]
+        ],
+        services_json=(
+            [(service.name, service.port) for service in _DServices.values()]
+        )
     )
 
 
@@ -90,43 +105,77 @@ def _get_service_info_dict(port):
     recent_values = stsd.get_recent_values()
 
     labels = [
-        datetime.utcfromtimestamp(ts).strftime(
-            '%Y-%m-%d %H:%M:%S'
-        ) for ts in recent_values
+        datetime.utcfromtimestamp(D['timestamp']).strftime(
+            '%m/%d %H:%M:%S'
+        ) for D in recent_values
     ]
 
-    return {
+    D = {
         "graphs": {
             "labels": labels,
-            "ram": _get_data_for_keys(recent_values,
-                'shared_mem', 'physical_mem', 'virtual_mem'
+            "ram": _get_data_for_keys(
+                recent_values,
+                'shared_mem', 'physical_mem', 'virtual_mem',
+                divisor=1024*1024
             ),
-            "io": _get_data_for_keys(recent_values,
-                'io_read', 'io_written'
+            "io": _get_data_for_keys(
+                recent_values,
+                'io_read', 'io_written',
+                divisor=1024 * 1024
             ),
-            "cpu": _get_data_for_keys(recent_values,
+            "cpu": _get_data_for_keys(
+                recent_values,
                 'cpu_usage_pc'
             ),
         },
-        "console_text": '',
-        "table_html": _get_table_html(service)
+        "console_text": '',  # FIXME!! =========================================
+        "port": port,
+        "name": service.name,
+        "implementations": [
+            implementation.__class__.__name__
+            for implementation
+            in service.server_providers
+        ],
+        "status": service.get_status_as_string(),
+        'workers': len(service.LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
+        'ram': recent_values[0]['virtual_mem']//1024//1024,  # CHECK ME! =================================
+        'cpu': recent_values[0]['cpu_usage_pc'],
     }
+    D["table_html"] = _get_table_html(D)
+    return D
 
 
-def _get_data_for_keys(values, *keys):
+LColours = [
+    'red',
+    'green',
+    'blue',
+    'purple',
+    'orange',
+    'brown',
+    'pink',
+    'cyan',
+    'magenta',
+    'yellow'
+]
+
+
+def _get_data_for_keys(values, *keys, divisor=None):
     LData = []
-    for key in keys:
+    for x, key in enumerate(keys):
         LOut = []
         for D in values:
-            LOut.append(D[key])
-        LData.append(LOut)
+            i = D[key]
+            if divisor is not None:
+                i //= divisor
+            LOut.append(i)
+        LData.append([key, LOut, LColours[x]])
     return LData
 
 
-def _get_table_html(service):
+def _get_table_html(DService):
     return render_template_string(
         '{% from "service.html" import service_status_table %}\n'
         '{{ service_status_table(DService) }}',
-        DService=service.FIXME
+        DService=DService
     )
 

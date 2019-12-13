@@ -77,8 +77,10 @@ class SHMSocket:
                 initial_value=1
             )
 
-            assert self.rtc_mutex.get_value() == 0, self.rtc_mutex.get_value()
-            assert self.ntc_mutex.get_value() == 1, self.ntc_mutex.get_value()
+            assert self.rtc_mutex.get_value() == 0, \
+                self.rtc_mutex.get_value()
+            assert self.ntc_mutex.get_value() == 1, \
+                self.ntc_mutex.get_value()
         else:
             # Same as above, but don't use in "create" mode as we're
             # connecting to a semaphore/shared memory that
@@ -95,7 +97,18 @@ class SHMSocket:
                 initial_value=1
             )
 
-        print("RTC:", self.rtc_mutex.get_value(), "NTC:", self.ntc_mutex.get_value())
+        # Both
+        #if (
+        #    self.rtc_mutex.get_value() == 0 and
+        #    self.ntc_mutex.get_value() == 0
+        #):
+        #    self.ntc_mutex.unlock()
+
+        #print(
+        #    f"{self.socket_name} - "
+        #    "Ready to collect:", self.rtc_mutex.get_value(),
+        #    "Nothing to collect:", self.ntc_mutex.get_value()
+        #)
 
         # We (apparently) don't need the file
         # descriptor after it's been memory mapped

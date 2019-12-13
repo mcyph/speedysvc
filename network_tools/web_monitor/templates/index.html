@@ -12,9 +12,18 @@
 </head>
 <body>
 
-{% for DService in LServices %}
-    {{ service(DService) }}
-{% endfor %}
+<div style="width: 920px; padding: 10px; margin: 0 auto">
+    <h1>Network Tools Service Web Monitor</h1>
+
+    {% for DService in LServices %}
+        {{ service(DService) }}
+    {% endfor %}
+</div>
+
+<script type="text/javascript">
+    new Services({{ services_json|tojson }});
+</script>
 
 </body>
 </html>
+

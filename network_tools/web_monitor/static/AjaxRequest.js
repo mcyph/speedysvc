@@ -17,13 +17,15 @@ class AjaxRequest {
          */
         if (params) {
             params = encParams(params);
-            url = "${url}?${params}";
+            url = `${url}?${params}`;
         }
         const that = this;
         const xhr = this.xhr = new XMLHttpRequest();
         xhr.onreadystatechange = function() {
             if (xhr.readyState === 4){
-                that.onSuccess(JSON.parse(xhr.responseText));
+                if (that.onSuccess) {
+                    that.onSuccess(JSON.parse(xhr.responseText));
+                }
             }
             else {
                 // TODO!
@@ -31,6 +33,7 @@ class AjaxRequest {
         };
         xhr.open("GET", url);
     }
+
     send(onSuccess, onError) {
         this.onSuccess = onSuccess;
         this.onError = onError;

@@ -147,9 +147,11 @@ if __name__ == '__main__':
     def run(init_resources=True):
         inst = SHMServer({
             'echo': lambda data: data
-        },
-        port=5555,
-        init_resources=init_resources)
+        })
+        inst(
+            port=5555,
+            init_resources=init_resources
+        )
 
         while 1:
             time.sleep(1)

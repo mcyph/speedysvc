@@ -84,6 +84,8 @@ class MultiProcessServer:
                                      this one, but can increase service load
                                      times.
         """
+        self.port = server_methods.port
+        self.name = server_methods.name
 
         self.service_time_series_data = service_time_series_data
         self.logger_server = logger_server

@@ -1,4 +1,6 @@
 import time
+import _thread
+import random
 from network_tools.rpc.base_classes.ClientMethodsBase import ClientMethodsBase
 from network_tools.service_managers.multi_process_manager.test_server import \
     TestServerMethods as srv
@@ -17,9 +19,19 @@ if __name__ == '__main__':
     from _thread import start_new_thread
 
     def fn():
-        client = TestClientMethods(SHMClient(srv))
-        while 1:
-            print(client.cpu_intensive_method())
+        client1 = TestClientMethods(SHMClient(srv))
+        client2 = TestClientMethods(SHMClient(srv))
+
+        def fn2():
+            while 1:
+                r = random.randint(0, 999999999)
+                assert client1.cpu_intensive_method(r) == r, r
+                r = random.randint(0, 999999999)
+                assert client2.cpu_intensive_method(r) == r, r
+
+        for x in range(10):
+            _thread.start_new_thread(fn2, ())
+        fn2()
 
 
     for x in range(10):

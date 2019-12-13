@@ -1,6 +1,10 @@
-from _thread import allocate_lock
+import time
+from _thread import allocate_lock, start_new_thread
 from network_tools.rpc.shared_memory.SHMServer import SHMServer
 from network_tools.rpc_decorators import raw_method, json_method
+
+
+FLUSH_EVERY_SECONDS = 1.0
 
 
 class LoggerServer:
@@ -28,11 +32,13 @@ class LoggerServer:
         # Open the stdout/stderr files
         self.stdout_lock = allocate_lock()
         self.f_stdout = open(
-            f'{log_dir}/{self.name}.stdout', 'ab+'
+            f'{log_dir}/{self.name}.stdout', 'ab+',
+            buffering=8192
         ) # binary??
         self.stderr_lock = allocate_lock()
         self.f_stderr = open(
-            f'{log_dir}/{self.name}.stderr', 'ab+'
+            f'{log_dir}/{self.name}.stderr', 'ab+',
+            buffering=8192 # LINE BUFFERED!
         )
 
         # Start the server
@@ -40,6 +46,22 @@ class LoggerServer:
             server_methods=self,
             init_resources=True
         )
+
+        self.flush_needed = False
+        start_new_thread(self.__flush_loop, ())
+
+    def __flush_loop(self):
+        """
+        Only flush the files periodically, so as to
+        reduce the amount IO affects performance
+        """
+        if self.flush_needed:
+            with self.stderr_lock:
+                self.f_stderr.flush()
+            with self.stdout_lock:
+                self.f_stdout.flush()
+            self.flush_needed = False
+        time.sleep(FLUSH_EVERY_SECONDS)
 
     #=========================================================#
     #                 Write to stdout/stderr                  #
@@ -54,7 +76,8 @@ class LoggerServer:
         """
         with self.stderr_lock:
             self.f_stderr.write(s)
-            self.f_stderr.flush()
+            #self.f_stderr.flush()
+            self.flush_needed = True
         return b'ok'
 
     @raw_method
@@ -66,7 +89,8 @@ class LoggerServer:
         """
         with self.stdout_lock:
             self.f_stdout.write(s)
-            self.f_stdout.flush()
+            #self.f_stdout.flush()
+            self.flush_needed = True
         return b'ok'
 
     @json_method

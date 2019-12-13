@@ -2,11 +2,12 @@
 "use strict";
 
 class Service {
-    constructor(serviceName, elm) {
+    constructor(serviceName, port, elm) {
         /*
-        a class
+        A class representing a kind of server
          */
         this.serviceName = serviceName;
+        this.port = port;
         this.elm = elm;
     }
 
@@ -19,13 +20,19 @@ class Service {
     //======================================================//
 
     stop() {
-        new AjaxRequest("stop_service").send();
+        new AjaxRequest(
+            "stop_service", {port: this.port}
+        ).send();
     }
     start() {
-        new AjaxRequest("start_service").send();
+        new AjaxRequest(
+            "start_service", {port: this.port}
+        ).send();
     }
     restart() {
-        new AjaxRequest("restart_service").send();
+        new AjaxRequest(
+            "restart_service", {port: this.port}
+        ).send();
     }
 
     //======================================================//
@@ -54,13 +61,13 @@ class Service {
     updateGraphs(o) {
         if (!this.graphsInit) {
             this.ramGraph = new LineChart(
-                this.$("ram"), o["labels"], o["ram"]
+                this.$(".ram_chart").firstChild, o["labels"], o["ram"]
             );
             this.cpuGraph = new LineChart(
-                this.$("cpu"), o["labels"], o["cpu"]
+                this.$(".cpu_chart").firstChild, o["labels"], o["cpu"]
             );
             this.ioGraph = new LineChart(
-                this.$("io"), o["labels"], o["io"]
+                this.$(".io_chart").firstChild, o["labels"], o["io"]
             );
             this.graphsInit = true;
         }
