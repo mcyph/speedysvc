@@ -10,6 +10,7 @@ class TestClientMethods(ClientMethodsBase):
     test_defaults = srv.test_defaults.as_rpc()
     test_json_echo = srv.test_json_echo.as_rpc()
     test_raw_echo = srv.test_raw_echo.as_rpc()
+    test_raw_return_len = srv.test_raw_return_len.as_rpc()
     test_pickle_echo = srv.test_pickle_echo.as_rpc()
     test_marshal_echo = srv.test_marshal_echo.as_rpc()
     test_msgpack_method = srv.test_msgpack_method.as_rpc()
@@ -31,6 +32,12 @@ if __name__ == '__main__':
 
     client = TestClientMethods(SHMClient(srv))
     raw_data = repr(SERIALISE_ME).encode('utf-8')
+    for x in range(900000, 1100000):
+        assert client.test_raw_return_len(str(x).encode('ascii')) == b'Z'*x, x
+
+    R = int(1000000 / 20) * b'abcdefghij'
+    print(len(R), len(client.test_raw_echo(R)))
+    raise SystemExit
 
     for text, stmt in (
         ("args1:", "client.test_defaults(SERIALISE_ME)"),
@@ -55,3 +62,5 @@ if __name__ == '__main__':
             },
             number=NUM_ITERATIONS
         ))
+
+

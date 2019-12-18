@@ -1,23 +1,16 @@
 import mmap
 import time
-import struct
+from abc import ABC, abstractmethod
 from hybrid_lock import HybridSpinSemaphore, \
     CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE
 import posix_ipc
 from network_tools.rpc.shared_memory.shared_params import MSG_SIZE
 
-# Create an int encoder to allow encoding length
-# and return client ID
-int_struct = struct.Struct('i')
 
-ALL_DATA_RECEIVED = -1
-NO_MORE_DATA = -2
-
-
-class SHMSocket:
+class SHMSocketBase(ABC):
     def __init__(self,
                  socket_name, init_resources=False,
-                 msg_size=MSG_SIZE, timeout=10):  # 10 seconds timeout
+                 msg_size=MSG_SIZE):
         """
         A single-directional "socket"-like object, which provides
         sequential shared memory-based "pipes", synchronised
@@ -32,10 +25,15 @@ class SHMSocket:
         has exited abnormally (e.g. due to a segfault), the shared
         memory and semaphore can still exist on the OS.
 
-        :param socket_name:
-        :param init_resources:
-        :param msg_size:
-        :param timeout:
+        :param socket_name: a unique identifier. Needs to be of type
+                            `bytes` (not `str`).
+        :param init_resources: whether to overwrite the socket at
+                               identifier `socket_name` if it exists.
+                               Also will clean up this socket when
+                               this process exists.
+        :param msg_size: the maximum message size in bytes
+                         (the amount of shared memory that will
+                          be allocated).
         """
 
         # NOTE: ntc stands for "nothing to collect"
@@ -46,7 +44,6 @@ class SHMSocket:
         self.socket_name = socket_name
         self.init_resources = init_resources
         self.last_used_time = time.time()
-        self.timeout = timeout
 
         rtc_bytes = (socket_name + '_rtc').encode('ascii')
         ntc_bytes = (socket_name + '_ntc').encode('ascii')
@@ -97,13 +94,6 @@ class SHMSocket:
                 initial_value=1
             )
 
-        # Both
-        #if (
-        #    self.rtc_mutex.get_value() == 0 and
-        #    self.ntc_mutex.get_value() == 0
-        #):
-        #    self.ntc_mutex.unlock()
-
         #print(
         #    f"{self.socket_name} - "
         #    "Ready to collect:", self.rtc_mutex.get_value(),
@@ -136,61 +126,47 @@ class SHMSocket:
             del self.rtc_mutex
             del self.ntc_mutex
 
-    def put(self, data: bytes, timeout=None):
+    @abstractmethod
+    def put(self, data, timeout):
         """
-        Put an item into the (single-item) queue
-        :param data: the data as a string of bytes
+        To be implemented in subclasses.
+
+        Note that subclasses may violate Liskov Substitution
+        Principle here slightly, as put has different parameters
+        depending on whether a command request or response is
+        being sent.
+
+        While not 100% desirable, this is the best solution I
+        can come up with.
         """
+        pass
 
-        # It would be possible to make it so that there were lots of
-        # different memory blocks, and the semaphore initially
-        # incremented to the maximum value so as to (potentially)
-        # allow for increased throughput.
-
-        # TODO: Support very large queue items!!! ==============================================================
-
-        #print(f"{self.socket_name}: put lock ntc_mutex {self.ntc_mutex.get_value()}")
-        self.last_used_time = time.time()
-        self.ntc_mutex.lock()
-
-        self.mapfile[0:int_struct.size] = int_struct.pack(len(data))
-        self.mapfile[int_struct.size:int_struct.size+len(data)] = data
-
-        # Let the data be read, signalling
-        # data is "ready to collect"
-        #print(f"{self.socket_name}: put unlock rtc_mutex {self.rtc_mutex.get_value()}")
-        self.rtc_mutex.unlock()
-
-    def get(self, timeout=None):
+    @abstractmethod
+    def get(self, timeout):
         """
-        Get/pop an item from the (single-item) queue
-        :return: the item from the queue
+        To be implemented in subclasses.
         """
-        #print(f"{self.socket_name}: get lock rtc_mutex {self.rtc_mutex.get_value()}")
-        self.last_used_time = time.time()
-        self.rtc_mutex.lock()
-
-        amount = int_struct.unpack(self.mapfile[0:int_struct.size])[0]
-        data = self.mapfile[int_struct.size:int_struct.size+amount]
-
-        # Signal there's "nothing to collect"
-        # to allow future put operations
-        #print(f"{self.socket_name}: get unlock ntc_mutex {self.ntc_mutex.get_value()}")
-        self.ntc_mutex.unlock()
-        return data
+        pass
 
     def get_sockets_destroyed(self):
         """
+        Get whether either the "ready to collect" or
+        "nothing to collect" locks have been destroyed.
 
-        :return:
+        This is the only way to check whether the remote
+        server/client has destroyed one or both the locks.
+
+        :return: True/False
         """
         return self.rtc_mutex.get_destroyed() or \
                self.ntc_mutex.get_destroyed()
 
     def get_last_used_time(self):
         """
+        Get the float unix timestamp when this socket
+        was last used (a get or put operation was performed).
 
-        :return:
+        :return: a float unix timestamp
         """
         return self.last_used_time
 
@@ -198,8 +174,8 @@ class SHMSocket:
 if __name__ == '__main__':
     import time
 
-    server_socket = SHMSocket('q', init_resources=True)
-    client_socket = SHMSocket('q')
+    server_socket = SHMSocketBase('q', init_resources=True)
+    client_socket = SHMSocketBase('q')
     DATA = b'my ranadasdmsak data'*20
 
     from_t = time.time()

@@ -3,7 +3,8 @@ import _thread
 from collections import Counter
 from toolkit.documentation.copydoc import copydoc
 from network_tools.rpc.base_classes.ClientProviderBase import ClientProviderBase
-from network_tools.rpc.shared_memory.shm_socket.SHMSocket import SHMSocket, int_struct
+from network_tools.rpc.shared_memory.shm_socket.RequestSHMSocket import RequestSHMSocket
+from network_tools.rpc.shared_memory.shm_socket.ResponseSHMSocket import ResponseSHMSocket
 
 
 DPortCounter = Counter()
@@ -38,11 +39,11 @@ class SHMClient(ClientProviderBase):
 
     def __periodic_heartbeat(self):
         while 1:
-            if self.to_server_socket.get_sockets_destroyed():
+            if self.request_socket.get_sockets_destroyed():
                 print("To server socket destroyed; attempting to recreate")
                 self.__create_conn_to_server()
 
-            if self.from_server_socket.get_sockets_destroyed():
+            if self.response_socket.get_sockets_destroyed():
                 # Should never get here, I think(?)
                 print("From server socket destroyed; attempting to recreate")
                 self.__create_conn_to_server()
@@ -58,24 +59,23 @@ class SHMClient(ClientProviderBase):
     def __create_conn_to_server(self):
         # Acquire a lock to the server(s)
         self.client_id = self._acquire_lock()
-        self.client_id_as_bytes = int_struct.pack(self.client_id)
 
         # Create a connection to the server(s)
-        self.to_server_socket = SHMSocket(
+        self.request_socket = RequestSHMSocket(
             socket_name='to_server_%s' % self.port,
             init_resources=False
         )
         # Create a connection that the server can use to talk to us
-        self.from_server_socket = SHMSocket(
+        self.response_socket = ResponseSHMSocket(
             socket_name='from_server_%s_%s' % (self.port, self.client_id),
             init_resources=True
         )
 
         t = str(time.time()).encode('ascii')
-        assert self.send(b'heartbeat', t) == t
+        assert self.send(b'heartbeat', t, timeout=-1) == t
 
     @copydoc(ClientProviderBase.send)
-    def send(self, fn, data, timeout=60):
+    def send(self, fn, data, timeout=-1):
         with self.lock:
             try:
                 fn_name = fn.__name__.encode('ascii')
@@ -86,13 +86,14 @@ class SHMClient(ClientProviderBase):
                 serialiser = RawSerialisation
 
             data = serialiser.dumps(data)
-            self.to_server_socket.put(
-                self.client_id_as_bytes+
-                fn_name+b' '+data,
-                timeout=10
+            echo_data = self.request_socket.put(
+                fn_name, data, self.client_id, timeout
             )
-            data = self.from_server_socket.get(timeout=timeout)
+            data = self.response_socket.get(
+                echo_data, timeout=timeout
+            )
 
+            # TODO: REWRITE THIS NEXT SECTION!!!! ==============================================================
             if data[0] == b'+'[0]:
                 # An "ok" response
                 data = serialiser.loads(data[1:])

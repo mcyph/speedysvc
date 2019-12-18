@@ -1,8 +1,8 @@
 from time import time
-from network_tools.rpc.shared_memory.shm_socket.SHMSocket import SHMSocket
+from network_tools.rpc.shared_memory.shm_socket.SHMSocket import SHMSocketBase
 
-recv_q = SHMSocket('serv_q', clean_up=False)
-send_q = SHMSocket('client_q', clean_up=False)
+recv_q = SHMSocketBase('serv_q', clean_up=False)
+send_q = SHMSocketBase('client_q', clean_up=False)
 from_time = time()
 
 for x in range(500000):

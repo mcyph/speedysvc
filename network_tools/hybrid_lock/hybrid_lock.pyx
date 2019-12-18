@@ -301,7 +301,7 @@ cdef class HybridSpinSemaphore:
     #                        Lock/Unlock                        #
     #===========================================================#
 
-    cpdef int lock(self) nogil except -1:
+    cpdef int lock(self, int timeout=-1) nogil except -1:
         if self._spin_lock_char[0] == DESTROYED:
             printf("lock called on destroyed HybridSpinSemaphore!")
             return -1
@@ -310,6 +310,7 @@ cdef class HybridSpinSemaphore:
         cdef int i
         cdef int retval = -1
         cdef double from_t = self.get_current_time()
+        cdef timespec ts
 
         with nogil:
             while 1:
@@ -321,11 +322,22 @@ cdef class HybridSpinSemaphore:
                 elif self._spin_lock_char[0] == UNLOCKED:
                     break
 
-            retval = sem_wait(self._semaphore)
-            if retval != -1:
-                self._spin_lock_char[0] = LOCKED
+            if timeout == -1:
+                retval = sem_wait(self._semaphore)
+                if retval != -1:
+                    self._spin_lock_char[0] = LOCKED
+                else:
+                    perror("sem_wait")
             else:
-                perror("sem_wait")
+                ts.tv_nsec = 0
+                ts.tv_sec = timeout
+
+                retval = sem_timedwait(self._semaphore, &ts)
+                if retval != -1:
+                    self._spin_lock_char[0] = LOCKED
+                else:
+                    printf("TIMEOUT: %d\n", timeout)
+                    perror("sem_timedwait")
             return retval
 
     cpdef int unlock(self) nogil except -1:
