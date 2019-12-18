@@ -112,7 +112,7 @@ class SHMServer(ServerProviderBase):
                 #      f"putting {send_data[:20]}")
 
                 try:
-                    response_socket.put(echo_me, send_data, timeout=-1)
+                    response_socket.put(echo_me, send_data, timeout=3)
                 except:
                     traceback.print_exc()
 

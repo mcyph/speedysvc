@@ -29,10 +29,11 @@ import numpy
 if __name__ == '__main__':
     from network_tools.rpc.network.NetworkClient import NetworkClient
     from network_tools.rpc.shared_memory.SHMClient import SHMClient
+    from network_tools.rpc.shared_memory.shared_params import MSG_SIZE
 
     client = TestClientMethods(SHMClient(srv))
     raw_data = repr(SERIALISE_ME).encode('utf-8')
-    for x in range(900000, 1100000):
+    for x in range(MSG_SIZE-20, MSG_SIZE+20):
         assert client.test_raw_return_len(str(x).encode('ascii')) == b'Z'*x, x
 
     R = int(1000000 / 20) * b'abcdefghij'

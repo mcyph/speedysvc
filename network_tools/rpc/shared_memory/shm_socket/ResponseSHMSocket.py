@@ -47,13 +47,13 @@ class ResponseSHMSocket(SHMSocketBase):
                     (part_num*PART_SIZE)+PART_SIZE
                 ]
             )
-            print(f"extra_parts: {extra_parts}; "
-                  f"response_len: {response_len}; "
-                  f"PART_SIZE: {PART_SIZE}; "
-                  f"part_num: {part_num}; ",
-                  part_num * PART_SIZE,
-                  (part_num * PART_SIZE) + PART_SIZE
-            )
+            #print(f"extra_parts: {extra_parts}; "
+            #      f"response_len: {response_len}; "
+            #      f"PART_SIZE: {PART_SIZE}; "
+            #      f"part_num: {part_num}; ",
+            #      part_num * PART_SIZE,
+            #      (part_num * PART_SIZE) + PART_SIZE
+            #)
             self.last_used_time = time.time()
             self.ntc_mutex.lock(timeout or -1)
             self.mapfile[0:len(send_me)] = send_me

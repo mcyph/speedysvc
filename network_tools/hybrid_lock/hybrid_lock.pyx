@@ -329,8 +329,12 @@ cdef class HybridSpinSemaphore:
                 else:
                     perror("sem_wait")
             else:
-                ts.tv_nsec = 0
-                ts.tv_sec = timeout
+                if clock_gettime(CLOCK_REALTIME, &ts) == -1:
+                    perror("clock_gettime")
+                    return -1
+
+                #ts.tv_nsec += timeout
+                ts.tv_sec += timeout
 
                 retval = sem_timedwait(self._semaphore, &ts)
                 if retval != -1:
