@@ -36,9 +36,14 @@ if __name__ == '__main__':
     for x in range(MSG_SIZE-20, MSG_SIZE+20):
         assert client.test_raw_return_len(str(x).encode('ascii')) == b'Z'*x, x
 
-    R = int(1000000 / 20) * b'abcdefghij'
-    print(len(R), len(client.test_raw_echo(R)))
-    raise SystemExit
+    R = b'abcdefghij' * 10000
+    for x in range(len(R)): # MSG_SIZE*3
+        i = R[:x]
+        assert i == client.test_raw_echo(i)
+        #print(i==client.test_raw_echo(i))
+        #print(i, client.test_raw_echo(i))
+    #print(len(R), len(client.test_raw_echo(R)), R==client.test_raw_echo(R))
+    #raise SystemExit
 
     for text, stmt in (
         ("args1:", "client.test_defaults(SERIALISE_ME)"),

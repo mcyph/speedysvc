@@ -39,38 +39,43 @@ class RequestSHMSocket(SHMSocketBase):
         # Get the data to send
         echo_me = getrandbits(8)
         #print(echo_me, len(cmd), len(args), send_to_client_id)
-        send_me = (
-            to_server_encoder.pack(
-                echo_me,
-                len(cmd),
-                len(args),
-                send_to_client_id
-            ) +
-            cmd +
-            args
-        )
 
-        # Acquire locks, then send the data
-        self.last_used_time = time.time()
-        self.ntc_mutex.lock(timeout or -1)
-        self.mapfile[0:len(send_me)] = send_me
-        self.rtc_mutex.unlock()
+        part_size = len(self.mapfile) - to_server_encoder.size - len(cmd)
+        args_len = len(args)
+        num_parts = self.get_num_parts(part_size, args_len)
+
+        for x in range(num_parts):
+            send_me = (
+                to_server_encoder.pack(
+                    echo_me,
+                    len(cmd),
+                    len(args),
+                    send_to_client_id
+                ) +
+                cmd +
+                args[x*part_size:(x*part_size)+part_size]
+            )
+
+            # Acquire locks, then send the data
+            self.last_used_time = time.time()
+            self.ntc_mutex.lock(timeout or -1)
+            self.mapfile[0:len(send_me)] = send_me
+            self.rtc_mutex.unlock()
         return echo_me
 
-    def get(self, timeout=-1):
+    def get(self, timeout=-1, multi_parts=True, max_len=None):
         """
         Used on the server side to get
         the parameters from the client
         """
-        # TODO: REMOVE LENGTH INFORMATION IN SHMSOCKET!!!!! ==========================================================
-
         self.last_used_time = time.time()
         self.rtc_mutex.lock(timeout or -1)
 
-        echo_me, cmd_len, arg_len, send_to_client_id = \
+        echo_me, cmd_len, args_len, send_to_client_id = \
             to_server_encoder.unpack(
                 self.mapfile[:to_server_encoder.size]
             )
+        max_len = args_len if max_len is None else max_len
 
         cmd = self.mapfile[
             to_server_encoder.size:
@@ -78,8 +83,22 @@ class RequestSHMSocket(SHMSocketBase):
         ]
         args = self.mapfile[
             to_server_encoder.size+cmd_len:
-            to_server_encoder.size+cmd_len+arg_len
+            to_server_encoder.size+cmd_len+min(max_len, args_len)
         ]
-
         self.ntc_mutex.unlock()
+
+        part_size = len(self.mapfile) - to_server_encoder.size - len(cmd)
+        num_parts = self.get_num_parts(part_size, args_len)
+
+        if multi_parts:
+            #print(args)
+            for x in range(num_parts-1):
+                args += self.get(
+                    timeout=timeout, # TODO: Should this decrement?? ===================================
+                    multi_parts=False,
+                    max_len=args_len-len(args)
+                )[2]
+        #else:
+            #print(args)
+
         return echo_me, cmd, args, send_to_client_id

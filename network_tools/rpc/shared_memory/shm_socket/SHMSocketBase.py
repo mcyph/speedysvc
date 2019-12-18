@@ -36,6 +36,14 @@ class SHMSocketBase(ABC):
                           be allocated).
         """
 
+        if msg_size < 400:
+            # We'll set the limit somewhat arbitrarily - it needs to be
+            # around this amount or could be trouble with sending
+            # commands of 255, or just not be that useful as
+            # performance gets lower the lower this number.
+            raise ValueError("Message size (buffer) for shared "
+                             "memory must be more than 400 in length")
+
         # NOTE: ntc stands for "nothing to collect"
         # and rtc stands for "ready to collect"
         # having 2 semaphores like this allows for blocking
@@ -106,6 +114,13 @@ class SHMSocketBase(ABC):
 
     def log(self, *msgs):
         print(f'{self.socket_name}:', *msgs)
+
+    def get_num_parts(self, part_size, response_len):
+        return (
+           (
+                response_len - (response_len % part_size)
+           ) // part_size
+        ) + 1
 
     def __del__(self):
         """

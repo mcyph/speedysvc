@@ -36,9 +36,9 @@ class ResponseSHMSocket(SHMSocketBase):
         # The response_len-1 is so that a socket which can send
         # 10 bytes doesn't try to get from the server more than
         # once if there's exactly 10 bytes to receive.
-        extra_parts = (response_len-(response_len % PART_SIZE)) // PART_SIZE
+        num_parts = self.get_num_parts(PART_SIZE, response_len)
 
-        for part_num in range(extra_parts+1):
+        for part_num in range(num_parts):
             send_me = (
                 from_server_encoder.pack(
                     echo_me, response_len
@@ -75,20 +75,21 @@ class ResponseSHMSocket(SHMSocketBase):
                 self.mapfile[:from_server_encoder.size]
             )
         PART_SIZE = len(self.mapfile)-from_server_encoder.size
-        response_len = response_len or 1
         max_len = response_len if max_len is None else max_len
-        extra_parts = (response_len-(response_len % PART_SIZE)) // PART_SIZE
-
-        assert expected_echo_data == echo_me
+        num_parts = self.get_num_parts(PART_SIZE, response_len)
 
         data = self.mapfile[
             from_server_encoder.size:
             from_server_encoder.size+min(max_len, response_len)
         ]
+        assert expected_echo_data == echo_me, \
+            (expected_echo_data, echo_me, data)
+
         self.ntc_mutex.unlock()
 
         if multi_parts:
-            for x in range(extra_parts):
+            #print(data)
+            for x in range(num_parts-1):
                 expected_echo_data += 1
                 expected_echo_data %= 0b11111111  # Must match value in RequestSHMSocket
 
@@ -98,4 +99,6 @@ class ResponseSHMSocket(SHMSocketBase):
                     multi_parts=False,
                     max_len=response_len-len(data)
                 )
+        #else:
+            #print(data)
         return data

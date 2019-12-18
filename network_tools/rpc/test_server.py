@@ -22,8 +22,8 @@ class TestServerMethods(ServerMethodsBase):
 
     @raw_method
     def test_raw_echo(self, data):
-        print("RAW DATA LEN:", len(data), len(data*2))
-        return data*2
+        print("RAW DATA LEN:", len(data))
+        return data
 
     @raw_method
     def test_raw_return_len(self, data):

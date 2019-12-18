@@ -75,7 +75,7 @@ class SHMClient(ClientProviderBase):
         assert self.send(b'heartbeat', t, timeout=-1) == t
 
     @copydoc(ClientProviderBase.send)
-    def send(self, fn, data, timeout=10):
+    def send(self, fn, data, timeout=-1):
         with self.lock:
             try:
                 fn_name = fn.__name__.encode('ascii')
