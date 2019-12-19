@@ -1,10 +1,10 @@
 cimport cython
 cimport hybrid_lock
 
-from libc.errno cimport ENOENT, errno
+from libc.errno cimport ENOENT, ETIMEDOUT, errno
 from libc.stdio cimport printf, perror
 from libc.stdlib cimport malloc, free
-from libc.string cimport strcpy, strlen
+from libc.string cimport strcpy, strlen, strerror
 
 from posix.stat cimport fchmod
 from posix.unistd cimport ftruncate, close
@@ -150,11 +150,14 @@ cdef class HybridSpinSemaphore:
 
         self._cleaned_up = 0
 
-    cdef int init_mmap(self,
+    def __exception_occurred(self, kind):
+        raise Exception('Error occurred calling '+kind+": "+strerror(errno).decode('utf-8', 'replace'))
+
+    def init_mmap(self,
                        char* sem_loc,
                        int permissions,
                        int set_value=-1
-        ) except -1:
+        ):
 
         # Open existing shared memory object, or create one.
         # Two separate calls are needed here, to mark fact of creation
@@ -170,8 +173,7 @@ cdef class HybridSpinSemaphore:
             # Change permissions of shared memory, so every
             # body can access it. Avoiding the umask of shm_open
             if fchmod(self._shm_fd, permissions) == -1:
-                perror("fchmod")
-                return -1
+                self.__exception_occurred("fchmod")
 
         if self._shm_fd == -1:
             perror("shm_open")
@@ -228,7 +230,7 @@ cdef class HybridSpinSemaphore:
                 return -1
             return 0
 
-    cpdef int destroy(self) except -1:
+    cpdef int destroy(self) nogil except -1:
         # Mutex destruction completely cleans it from system memory.
         if self._cleaned_up:
             printf("WARNING: Already cleaned up in HybridSpinSemaphore.destroy()!\n")
@@ -292,7 +294,11 @@ cdef class HybridSpinSemaphore:
 
         cdef int value;
         cdef int* p_value = &value;
-        cdef int result = sem_getvalue(self._semaphore, p_value)
+        cdef int result
+
+        with nogil:
+            result = sem_getvalue(self._semaphore, p_value)
+
         if result == -1:
             return -10
         return p_value[0]
@@ -323,7 +329,10 @@ cdef class HybridSpinSemaphore:
                     break
 
             if timeout == -1:
+                # NOTE THIS: It seems that semaphore functions need to
+                # have the GIL disabled, or it will result in a deadlock
                 retval = sem_wait(self._semaphore)
+
                 if retval != -1:
                     self._spin_lock_char[0] = LOCKED
                 else:
@@ -337,12 +346,18 @@ cdef class HybridSpinSemaphore:
                 ts.tv_sec += timeout
 
                 retval = sem_timedwait(self._semaphore, &ts)
+
                 if retval != -1:
                     self._spin_lock_char[0] = LOCKED
                 else:
-                    printf("TIMEOUT: %d\n", timeout)
-                    perror("sem_timedwait")
-            return retval
+                    if errno == ETIMEDOUT:
+                        with gil:
+                            raise TimeoutError()
+                            return -1
+                    else:
+                        printf("TIMEOUT: %d\n", timeout)
+                        perror("sem_timedwait")
+        return retval
 
     cpdef int unlock(self) nogil except -1:
         if self._spin_lock_char[0] == DESTROYED:
@@ -351,11 +366,12 @@ cdef class HybridSpinSemaphore:
         cdef int i
         cdef int retval = -1
 
-        with nogil:
-            self._spin_lock_char[0] = UNLOCKED
-            if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore!
+
+        self._spin_lock_char[0] = UNLOCKED
+        if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
+            with nogil:
                 retval = sem_post(self._semaphore)
-            return retval
+        return retval
 
     #===========================================================#
     #                       Miscellaneous                       #
