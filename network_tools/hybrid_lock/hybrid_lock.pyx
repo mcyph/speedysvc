@@ -230,7 +230,7 @@ cdef class HybridSpinSemaphore:
                 return -1
             return 0
 
-    cpdef int destroy(self) nogil except -1:
+    cpdef int destroy(self) except -1:
         # Mutex destruction completely cleans it from system memory.
         if self._cleaned_up:
             printf("WARNING: Already cleaned up in HybridSpinSemaphore.destroy()!\n")
@@ -283,10 +283,10 @@ cdef class HybridSpinSemaphore:
     #           Get Semaphore Value/Whether Destroyed           #
     #===========================================================#
 
-    cpdef int get_destroyed(self) nogil except -1:
+    cpdef int get_destroyed(self) except -1:
         return self._spin_lock_char[0] == DESTROYED
 
-    cpdef int get_value(self) nogil except -10:
+    cpdef int get_value(self) except -10:
         # Just in case the semaphore value is -1,
         # we'll use -10 for the exception
         if self._spin_lock_char[0] == DESTROYED:
@@ -296,8 +296,7 @@ cdef class HybridSpinSemaphore:
         cdef int* p_value = &value;
         cdef int result
 
-        with nogil:
-            result = sem_getvalue(self._semaphore, p_value)
+        result = sem_getvalue(self._semaphore, p_value)
 
         if result == -1:
             return -10
@@ -307,7 +306,7 @@ cdef class HybridSpinSemaphore:
     #                        Lock/Unlock                        #
     #===========================================================#
 
-    cpdef int lock(self, int timeout=-1) nogil except -1:
+    cpdef int lock(self, int timeout=-1, int spin=1) except -1:
         if self._spin_lock_char[0] == DESTROYED:
             printf("lock called on destroyed HybridSpinSemaphore!")
             return -1
@@ -318,59 +317,59 @@ cdef class HybridSpinSemaphore:
         cdef double from_t = self.get_current_time()
         cdef timespec ts
 
-        with nogil:
-            while 1:
-                # The Linux kernel time slice is normally around 6ms max
-                # (minimum 0.5ms) so doesn't (necessarily?) make sense to
-                # consume more time busy waiting
-                if self.get_current_time()-from_t > 1:
-                    break
-                elif self._spin_lock_char[0] == UNLOCKED:
-                    break
+        if spin:
+            with nogil:
+                while 1:
+                    # The Linux kernel time slice is normally around 6ms max
+                    # (minimum 0.5ms) so doesn't (necessarily?) make sense to
+                    # consume more time busy waiting
+                    if self.get_current_time()-from_t > 1:
+                        break
+                    elif self._spin_lock_char[0] == UNLOCKED:
+                        break
 
-            if timeout == -1:
-                # NOTE THIS: It seems that semaphore functions need to
-                # have the GIL disabled, or it will result in a deadlock
+        if timeout == -1:
+            # NOTE THIS: It seems that semaphore functions need to
+            # have the GIL disabled, or it will result in a deadlock
+            with nogil:
                 retval = sem_wait(self._semaphore)
 
-                if retval != -1:
-                    self._spin_lock_char[0] = LOCKED
-                else:
-                    perror("sem_wait")
+            if retval != -1:
+                self._spin_lock_char[0] = LOCKED
             else:
-                if clock_gettime(CLOCK_REALTIME, &ts) == -1:
-                    perror("clock_gettime")
-                    return -1
+                perror("sem_wait")
+        else:
+            if clock_gettime(CLOCK_REALTIME, &ts) == -1:
+                perror("clock_gettime")
+                return -1
 
-                #ts.tv_nsec += timeout
-                ts.tv_sec += timeout
+            #ts.tv_nsec += timeout
+            ts.tv_sec += timeout
 
+            with nogil:
                 retval = sem_timedwait(self._semaphore, &ts)
 
-                if retval != -1:
-                    self._spin_lock_char[0] = LOCKED
+            if retval != -1:
+                self._spin_lock_char[0] = LOCKED
+            else:
+                if errno == ETIMEDOUT:
+                    raise TimeoutError()
+                    return -1
                 else:
-                    if errno == ETIMEDOUT:
-                        with gil:
-                            raise TimeoutError()
-                            return -1
-                    else:
-                        printf("TIMEOUT: %d\n", timeout)
-                        perror("sem_timedwait")
+                    printf("TIMEOUT: %d\n", timeout)
+                    perror("sem_timedwait")
         return retval
 
-    cpdef int unlock(self) nogil except -1:
+    cpdef int unlock(self) except -1:
         if self._spin_lock_char[0] == DESTROYED:
             return -1
 
         cdef int i
         cdef int retval = -1
 
-
         self._spin_lock_char[0] = UNLOCKED
         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
-            with nogil:
-                retval = sem_post(self._semaphore)
+            retval = sem_post(self._semaphore)
         return retval
 
     #===========================================================#

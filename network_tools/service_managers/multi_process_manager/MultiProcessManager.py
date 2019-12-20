@@ -296,8 +296,21 @@ class MultiProcessServer:
             # if one depends on another.
             self.logger_client.loaded_ok_signal()
 
-            while 1:
-                time.sleep(10)
+            try:
+                while 1:
+                    time.sleep(10)
+            except KeyboardInterrupt:
+                from os import getpid
+
+                print(f"Intercepted keyboard interrupt for {self.name} [PID {getpid()}]")
+                for inst in L:
+                    if hasattr(inst, 'shutdown'):
+                        print(f"Calling shutdown for {self.name} [PID {getpid()}]..")
+                        inst.shutdown()
+                        print(f"Shutdown OK for {self.name} [PID {getpid()}]")
+
+                time.sleep(2)
+
         else:
             # In parent - pid of child returned
             self.last_proc_op_time = time.time()
@@ -339,30 +352,44 @@ class MultiProcessServer:
         self.service_time_series_data.remove_pid(pid)
 
         if psutil.pid_exists(pid):
+            MAX_SECS_TO_WAIT_AFTER_SIGINT = 100
+
             # Try to end process cleanly
             # SIGINT -> SIGTERM -> SIGKILL
             os.kill(pid, signal.SIGINT)
 
-            # =1secs to finish current call
-            for x in range(10):
+            # =Xsecs to finish current call
+            for x in range(MAX_SECS_TO_WAIT_AFTER_SIGINT * 10):
                 if not psutil.pid_exists(pid):
                     break
-                time.sleep(0.1)
-            os.kill(pid, signal.SIGTERM)
-
-            # =5secs to finish ending process
-            for x in range(50):
-                if not psutil.pid_exists(pid):
+                try:
+                    proc = psutil.Process(pid)
+                    if proc.status() == psutil.STATUS_ZOMBIE:
+                        break
+                except:
+                    print(f"Can't get pid [{pid}] status - assuming it's exited?")
                     break
                 time.sleep(0.1)
 
             if psutil.pid_exists(pid):
-                # Kill it good if it doesn't respond
-                os.kill(pid, signal.SIGKILL)
+                print(f"Killing PID with SIGTERM [{pid}]")
+                os.kill(pid, signal.SIGTERM)
+
+            # =5secs to finish ending process
+            #for x in range(50):
+            #    if not psutil.pid_exists(pid):
+            #        break
+            #    time.sleep(0.1)
+
+            #if psutil.pid_exists(pid):
+            #    # Kill it good if it doesn't respond
+            #    os.kill(pid, signal.SIGKILL)
 
             # Clean up potential zombie in OS process table
             try:
+                print(f"Waiting for PID {pid} to exit")
                 os.waitpid(pid, 0)
+                print(f"Process {pid} exited OK")
             except:
                 import traceback
                 traceback.print_exc()

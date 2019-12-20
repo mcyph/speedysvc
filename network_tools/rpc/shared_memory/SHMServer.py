@@ -1,6 +1,7 @@
 import time
-import _thread
+import threading
 import signal
+from os import getpid
 import traceback
 from random import getrandbits
 #from toolkit.benchmarking.benchmark import benchmark
@@ -10,6 +11,7 @@ from network_tools.rpc.shared_memory.shm_socket.ResponseSHMSocket import \
     ResponseSHMSocket
 from network_tools.rpc.shared_memory.shm_socket.RequestSHMSocket import \
     RequestSHMSocket
+from network_tools.rpc.shared_memory.kill_thread import kill_thread
 
 
 def json_method(fn):
@@ -42,14 +44,42 @@ class SHMServer(ServerProviderBase):
         )
 
         self.shut_me_down = False
+        self.shutdown_ok = False
 
         self.DResponseSHMSockets = {}
-        _thread.start_new_thread(self.__reap_client_sockets, ())
-        _thread.start_new_thread(self.__main, ())
-        signal.signal(signal.SIGINT, self.__on_sigint)
+        t1 = threading.Thread(target=self.__reap_client_sockets, args=())
+        t1.start()
+        t2 = self.serve_thread_loop = threading.Thread(target=self.__main, args=())
+        t2.start()
+        #_thread.start_new_thread(self.__reap_client_sockets, ())
+        #_thread.start_new_thread(self.__main, ())
+        return self
 
-    def __on_sigint(self, *args):
+    def shutdown(self):
         self.shut_me_down = True
+        t_from = time.time()
+        while not self.shutdown_ok:
+            time.sleep(0.05)
+            if time.time()-t_from > 5:
+                print(f"Trying to send shutdown command to SHMServer which is in state: {self.STATE}")
+                #kill_thread(self.serve_thread_loop)
+                from network_tools.rpc.shared_memory.SHMClient import SHMClient
+                client = SHMClient(self.server_methods, self.port)
+                shutdown_ok = False
+                for x in range(10000):
+                    xx = client.send(b'shutdown', str(getpid()).encode('ascii'))
+                    print("SHUTDOWN RESPONSE:", xx)
+                    if xx == b'ok':
+                        print(f"Thread shutdown OK pid [{getpid()}]")
+                        shutdown_ok = True
+                        break
+
+                if not shutdown_ok:
+                    print(f"SHUTDOWN NOT OK!!! pid [{getpid()}]")
+                    time.sleep(1)
+                    raise Exception(f"SHUTDOWN NOT OK!!! pid [{getpid()}]")
+                time.sleep(1)
+                break
 
     def __reap_client_sockets(self):
         """
@@ -78,6 +108,7 @@ class SHMServer(ServerProviderBase):
 
         # t_from = time.time()
         # while time.time()-t_from < 20:
+        spin_next_time = 1
 
         while True:
             # TODO: Should there be better error handling here?
@@ -86,38 +117,67 @@ class SHMServer(ServerProviderBase):
             # should die anyway(?)
             #print(f"{self.server_methods.name}: "
             #      f"Getting from {self.request_socket.socket_name}")
-            echo_me, cmd, args, client_id = self.request_socket.get(timeout=-1)
-            response_socket = self.__get_response_socket(client_id)
-            #print(f"{self.server_methods.name}:{self.server_methods.port} "
-            #      f"Handling command:", cmd, args)
-
-            if cmd == b'heartbeat':
-                try:
-                    response_socket.put(echo_me, b'+'+args, timeout=-1)
-                except:
-                    traceback.print_exc()
-            else:
-                try:
-                    result = self.handle_fn(cmd, args)
-                    send_data = b'+' + result
-
-                except Exception as exc:
-                    # Just send a basic Exception instance for now, but would be nice
-                    # if could recreate some kinds of exceptions on the other end
-                    send_data = b'-' + repr(exc).encode('utf-8')
-                    traceback.print_exc()
-
-                #print(f"{self.server_methods.name}:"
-                #      f"{self.server_methods.port}: "
-                #      f"putting {send_data[:20]}")
-
-                try:
-                    response_socket.put(echo_me, send_data, timeout=-1)
-                except:
-                    traceback.print_exc()
 
             if self.shut_me_down:
-                raise SystemExit("Shutdown requested via SIGINT")
+                self.shutdown_ok = True
+                print(f"Signal to shutdown SHMServer {self.name} in worker thread caught: returning")
+                return
+
+            try:
+                try:
+                    self.STATE = 'waiting for command'
+                    echo_me, cmd, args, client_id = self.request_socket.get(
+                        timeout=1, spin=spin_next_time
+                    )
+                    spin_next_time = 1
+                except TimeoutError:
+                    spin_next_time = 0
+                    continue
+
+                self.STATE = f'getting response socket for {client_id}'
+                response_socket = self.__get_response_socket(client_id)
+                #print(f"{self.server_methods.name}:{self.server_methods.port} "
+                #      f"Handling command:", cmd, args)
+
+                if cmd == b'heartbeat':
+                    self.STATE = 'heartbeat'
+                    try:
+                        response_socket.put(echo_me, b'+'+args, timeout=20)
+                    except:
+                        traceback.print_exc()
+                elif cmd == b'shutdown':
+                    shutdown_pid = int(args)
+                    if shutdown_pid == getpid():
+                        self.STATE = 'shutdown'
+                        response_socket.put(echo_me, b'+ok', timeout=20)
+                        raise SystemExit(f"Shutdown requested for SHMServer {self.name}")
+                    else:
+                        self.STATE = 'ignore shutdown'
+                        response_socket.put(echo_me, b'+mismatch:%s!=%s' % (getpid(), shutdown_pid), timeout=20)
+                else:
+                    self.STATE = f'handling command {cmd}'
+                    try:
+                        result = self.handle_fn(cmd, args)
+                        send_data = b'+' + result
+
+                    except Exception as exc:
+                        # Just send a basic Exception instance for now, but would be nice
+                        # if could recreate some kinds of exceptions on the other end
+                        send_data = b'-' + repr(exc).encode('utf-8')
+                        traceback.print_exc()
+
+                    #print(f"{self.server_methods.name}:"
+                    #      f"{self.server_methods.port}: "
+                    #      f"putting {send_data[:20]}")
+
+                    self.STATE = f'sending response for command {cmd}'
+                    try:
+                        response_socket.put(echo_me, send_data, timeout=20)
+                    except:
+                        traceback.print_exc()
+            except:
+                traceback.print_exc()
+                time.sleep(1)
 
     def __get_response_socket(self, client_id):
         """

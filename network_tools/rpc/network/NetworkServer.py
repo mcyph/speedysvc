@@ -29,6 +29,7 @@ class NetworkServer(ServerProviderBase):
     def __call__(self, server_methods):
         ServerProviderBase.__call__(self, server_methods)
         start_new_thread(self.__listen_for_conns_loop, ())
+        return self
 
     def __listen_for_conns_loop(self):
         server = self.sock
@@ -62,7 +63,7 @@ class NetworkServer(ServerProviderBase):
                 recv(len_packer.size)
             )
             cmd = recv(cmd_len)
-            args = self.compression_inst.uncompress(
+            args = self.compression_inst.decompress(
                 recv(data_len)
             )
             #print(data_len, cmd_len, cmd, args)

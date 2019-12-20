@@ -38,7 +38,7 @@ class NetworkClient(ClientProviderBase):
 
     @copydoc(ClientProviderBase.send)
     def send(self, fn, data):
-        data = snappy.compress(fn.serialiser.dumps(data))
+        data = self.compression_inst.compress(fn.serialiser.dumps(data))
         cmd = fn.__name__.encode('ascii')
         prefix = len_packer.pack(len(data), len(cmd))
 
@@ -58,7 +58,9 @@ class NetworkClient(ClientProviderBase):
         data_len, status = response_packer.unpack(
             recv(response_packer.size)
         )
-        data = snappy.uncompress(recv(data_len))
+        data = self.compression_inst.decompress(
+            recv(data_len)
+        )
 
         if status == b'+':
             return fn.serialiser.loads(data)

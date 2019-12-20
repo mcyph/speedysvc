@@ -22,7 +22,7 @@ class TestServerMethods(ServerMethodsBase):
 
     @raw_method
     def test_raw_echo(self, data):
-        print("RAW DATA LEN:", len(data))
+        #print("RAW DATA LEN:", len(data))
         return data
 
     @raw_method
@@ -47,14 +47,25 @@ class TestServerMethods(ServerMethodsBase):
 
 
 if __name__ == '__main__':
+    import multiprocessing
     from time import sleep
     from network_tools.rpc.network.NetworkServer import \
         NetworkServer
     from network_tools.rpc.shared_memory.SHMServer import SHMServer
 
-    methods = TestServerMethods()
-    provider1 = SHMServer()(methods)
-    #provider2 = NetworkServer()(methods)
+    network_server = NetworkServer(TestServerMethods)
+
+    def run_me(init_resources):
+        methods = TestServerMethods()
+        provider1 = SHMServer()(methods, init_resources=init_resources)
+        provider2 = network_server(methods)
+        while 1: sleep(10)
+
+    for x in range(2):
+        p = multiprocessing.Process(target=run_me, args=(not x,))
+        p.start()
+        if not x:
+            sleep(2)
 
     while 1:
         sleep(10)
