@@ -9,7 +9,7 @@ from network_tools.rpc.shared_memory.JSONMMapArray import JSONMMapArray
 from network_tools.rpc.base_classes.ClientProviderBase import ClientProviderBase
 
 
-class SHMClient(ClientProviderBase, SHMBase, Singleton):
+class SHMClient(ClientProviderBase, SHMBase):
     def __init__(self, server_methods, port=None):
         # Create the shared mmap space/client+server semaphores.
 
@@ -19,10 +19,10 @@ class SHMClient(ClientProviderBase, SHMBase, Singleton):
         ClientProviderBase.__init__(self, server_methods, port)
 
         self.mmap = self.create_pid_mmap(
-            2048, port, getpid()
+            2048, self.port, getpid()
         )
         self.client_lock, self.server_lock = self.get_pid_semaphores(
-            port, getpid(), CREATE_NEW_OVERWRITE
+            self.port, getpid(), CREATE_NEW_OVERWRITE
         )
 
         # Make myself known to the server (my PID)

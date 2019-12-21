@@ -106,7 +106,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                 import traceback
                 traceback.print_exc()
 
-            time.sleep(5)
+            time.sleep(0.5)
 
     def main(self, pid):
         """
