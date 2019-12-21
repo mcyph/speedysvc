@@ -61,7 +61,7 @@ if __name__ == '__main__':
         provider2 = network_server(methods)
         while 1: sleep(10)
 
-    for x in range(2):
+    for x in range(6):
         p = multiprocessing.Process(target=run_me, args=(not x,))
         p.start()
         if not x:

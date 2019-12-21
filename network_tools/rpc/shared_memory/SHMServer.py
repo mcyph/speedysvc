@@ -160,6 +160,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                     break # OK
                 elif mmap[0] == INVALID:
                     # Size change - re-open the mmap!
+                    print(f"Server: memory map has been marked as invalid")
                     mmap = self.connect_to_pid_mmap(self.port, pid)
                     continue
                 elif mmap[0] == CLIENT:
@@ -208,10 +209,13 @@ class SHMServer(SHMBase, ServerProviderBase):
 
             # Resize the mmap as needed
             if len(encoded) > len(mmap)-1:
-                mmap[0] = INVALID
+                print(f"Server: Recreating memory map to be at "
+                      f"least {len(encoded) + 1} bytes")
+                old_mmap = mmap
                 mmap = self.create_pid_mmap(
                     min_size=len(encoded)+1, port=self.port, pid=pid
                 )
+                old_mmap[0] = INVALID
 
             # Set the result, and end the call
             mmap[1:1+len(encoded)] = encoded

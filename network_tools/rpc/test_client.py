@@ -30,7 +30,7 @@ if __name__ == '__main__':
     import multiprocessing
     from network_tools.rpc.network.NetworkClient import NetworkClient
     from network_tools.rpc.shared_memory.SHMClient import SHMClient
-    MSG_SIZE = 1000 # HACK!
+    MSG_SIZE = 5000 # HACK!
 
     def run_test():
         client = TestClientMethods(SHMClient(srv))
@@ -87,7 +87,7 @@ if __name__ == '__main__':
         while 1:
             time.sleep(1)
 
-    for x in range(2):
+    for x in range(6):
         p = multiprocessing.Process(target=run_test)
         p.start()
     import time

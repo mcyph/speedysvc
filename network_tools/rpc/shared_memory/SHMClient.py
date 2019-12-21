@@ -59,11 +59,14 @@ class SHMClient(ClientProviderBase, SHMBase):
         self.client_lock.lock(timeout=timeout)
         try:
             # Send the result to the server!
-            if len(encoded_request) > len(self.mmap) - 1:
-                mmap[0] = INVALID
+            if len(encoded_request) > (len(self.mmap)-1):
+                print(f"Client: Recreating memory map to be at "
+                      f"least {len(encoded_request) + 1} bytes")
+                old_mmap = mmap
                 mmap = self.mmap = self.create_pid_mmap(
                     len(encoded_request) + 1, self.port, getpid()
                 )
+                old_mmap[0] = INVALID
             mmap[1:1+len(encoded_request)] = encoded_request
 
             # Wait for the server to begin processing
@@ -80,7 +83,8 @@ class SHMClient(ClientProviderBase, SHMBase):
                 if mmap[0] == CLIENT:
                     pass # OK
                 elif mmap[0] == INVALID:
-                    mmap = self.connect_to_pid_mmap(self.port, getpid())
+                    print(f"Client: memory map has been marked as invalid")
+                    mmap = self.mmap = self.connect_to_pid_mmap(self.port, getpid())
                     if mmap[0] == CLIENT:
                         pass # OK
                     else:
