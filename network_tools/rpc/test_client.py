@@ -30,7 +30,7 @@ if __name__ == '__main__':
     import multiprocessing
     from network_tools.rpc.network.NetworkClient import NetworkClient
     from network_tools.rpc.shared_memory.SHMClient import SHMClient
-    from network_tools.rpc.shared_memory.shared_params import MSG_SIZE
+    MSG_SIZE = 1000 # HACK!
 
     def run_test():
         client = TestClientMethods(SHMClient(srv))
@@ -40,6 +40,7 @@ if __name__ == '__main__':
         #    LClients.append(TestClientMethods(SHMClient(srv)))
         raw_data = repr(SERIALISE_ME).encode('utf-8')
         for x in range(MSG_SIZE-20, MSG_SIZE+20):
+            print(x)
             assert client.test_raw_return_len(str(x).encode('ascii')) == b'Z'*x, x
 
         """

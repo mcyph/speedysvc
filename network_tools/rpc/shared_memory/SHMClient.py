@@ -1,134 +1,112 @@
-import time
-import _thread
-from collections import Counter
-from toolkit.documentation.copydoc import copydoc
+from os import getpid
+from toolkit.patterns.Singleton import Singleton
+from hybrid_lock import CREATE_NEW_OVERWRITE
+from network_tools.serialisation.RawSerialisation import RawSerialisation
+from network_tools.rpc.shared_memory.SHMBase import SHMBase
+from network_tools.rpc.shared_memory.shared_params import \
+    PENDING, INVALID, SERVER, CLIENT
+from network_tools.rpc.shared_memory.JSONMMapArray import JSONMMapArray
 from network_tools.rpc.base_classes.ClientProviderBase import ClientProviderBase
-from network_tools.rpc.shared_memory.shm_socket.RequestSHMSocket import RequestSHMSocket
-from network_tools.rpc.shared_memory.shm_socket.ResponseSHMSocket import ResponseSHMSocket
 
 
-DPortCounter = Counter()
-
-
-class SHMClient(ClientProviderBase):
+class SHMClient(ClientProviderBase, SHMBase, Singleton):
     def __init__(self, server_methods, port=None):
-        """
+        # Create the shared mmap space/client+server semaphores.
 
-        :param server_methods:
-        """
-        if port is None:
-            port = server_methods.port
-        self.port = port
-        self.lock = _thread.allocate_lock()
-
+        # Connect to a shared shm/semaphore which stores the
+        # current processes which are associated with this service,
+        # and add this process' PID.
         ClientProviderBase.__init__(self, server_methods, port)
 
-        self.__create_conn_to_server()
-        _thread.start_new_thread(self.__periodic_heartbeat, ())
-
-        if DPortCounter.get(port):
-            import warnings
-            warnings.warn(
-                f"Client started more than once for port {port}: "
-                f"is this necessary?"
-            )
-        DPortCounter[port] += 1
-
-    def __del__(self):
-        DPortCounter[self.port] -= 1
-
-    def __periodic_heartbeat(self):
-        while 1:
-            if self.request_socket.get_sockets_destroyed():
-                print("To server socket destroyed; attempting to recreate")
-                self.__create_conn_to_server()
-
-            if self.response_socket.get_sockets_destroyed():
-                # Should never get here, I think(?)
-                print("From server socket destroyed; attempting to recreate")
-                self.__create_conn_to_server()
-
-            #try:
-            #    self.send('heartbeat', str(time.time()).encode('ascii'))
-            #except:
-            #    print("Heartbeat failed; attempting to recreate connection")
-            #    self.__create_conn_to_server()
-
-            time.sleep(3)
-
-    def __create_conn_to_server(self):
-        # Acquire a lock to the server(s)
-        self.client_id = self._acquire_lock()
-
-        # Create a connection to the server(s)
-        self.request_socket = RequestSHMSocket(
-            socket_name='to_server_%s' % self.port,
-            init_resources=False
+        self.mmap = self.create_pid_mmap(
+            2048, port, getpid()
         )
-        # Create a connection that the server can use to talk to us
-        self.response_socket = ResponseSHMSocket(
-            socket_name='from_server_%s_%s' % (self.port, self.client_id),
-            init_resources=True
+        self.client_lock, self.server_lock = self.get_pid_semaphores(
+            port, getpid(), CREATE_NEW_OVERWRITE
         )
 
-        t = str(time.time()).encode('ascii')
-        assert self.send(b'heartbeat', t, timeout=-1) == t
+        # Make myself known to the server (my PID)
+        # TODO: Figure out what to do in the case
+        #  of the PID already being in the array! ====================================================================
+        self.pids_array = pids_array = JSONMMapArray(
+            self.port, create=False
+        )
+        with pids_array:
+            pids_array.append(getpid())
 
-    @copydoc(ClientProviderBase.send)
-    def send(self, fn, data, timeout=-1):
-        with self.lock:
+    def get_server_methods(self):
+        return self.server_methods
+
+    def send(self, cmd, args, timeout=-1):
+        if isinstance(cmd, bytes):
+            # cmd -> a bytes object, most likely heartbeat or shutdown
+            serialiser = RawSerialisation
+        else:
+            # cmd -> a function in the ServerMethods subclass
+            serialiser = cmd.serialiser
+            cmd = cmd.__name__.encode('ascii')
+
+        # Encode the request command/arguments
+        # (I've put the encoding/decoding outside the critical area,
+        #  so as to potentially allow for more remote commands from
+        #  different threads)
+        mmap = self.mmap
+        args = serialiser.dumps(args)
+        encoded_request = self.request_serialiser.pack(
+            len(cmd), len(args)
+        ) + cmd + args
+
+        self.client_lock.lock(timeout=timeout)
+        try:
+            # Send the result to the server!
+            if len(encoded_request) > len(self.mmap) - 1:
+                mmap[0] = INVALID
+                mmap = self.mmap = self.create_pid_mmap(
+                    len(encoded_request) + 1, self.port, getpid()
+                )
+            mmap[1:1+len(encoded_request)] = encoded_request
+
+            # Wait for the server to begin processing
+            mmap[0] = PENDING
+            #print("BEFORE SERVER UNLOCK:", self.server_lock.get_value(), self.client_lock.get_value())
+            self.server_lock.unlock()
+            while mmap[0] == PENDING:
+                pass # spin! - should check to make sure this isn't being called too often!!! ==========================
+
+            self.server_lock.lock(timeout=-1)  # CHECK ME!!!!
             try:
-                fn_name = fn.__name__.encode('ascii')
-                serialiser = fn.serialiser
-            except AttributeError:
-                from network_tools.serialisation.RawSerialisation import RawSerialisation
-                fn_name = fn
-                serialiser = RawSerialisation
+                # Make sure response state ok,
+                # reconnecting to mmap if resized
+                if mmap[0] == CLIENT:
+                    pass # OK
+                elif mmap[0] == INVALID:
+                    mmap = self.connect_to_pid_mmap(self.port, getpid())
+                    if mmap[0] == CLIENT:
+                        pass # OK
+                    else:
+                        raise Exception("Should never get here!")
+                elif mmap[0] == SERVER:
+                    raise Exception("Should never get here!")
+                else:
+                    raise Exception("Unknown state: %s" % mmap[0])
 
-            data = serialiser.dumps(data)
-            echo_data = self.request_socket.put(
-                fn_name, data, self.client_id, timeout
-            )
-            data = self.response_socket.get(
-                echo_data, timeout=timeout
-            )
+                # Decode the result!
+                response_status, data_size = self.response_serialiser.unpack(
+                    mmap[1:1+self.response_serialiser.size]
+                )
+                response_data = mmap[
+                    1+self.response_serialiser.size:
+                    1+self.response_serialiser.size+data_size
+                ]
+            finally:
+                pass
+                #self.server_lock.unlock()
+        finally:
+            self.client_lock.unlock()
 
-            # TODO: REWRITE THIS NEXT SECTION!!!! ==============================================================
-            if data[0] == b'+'[0]:
-                # An "ok" response
-                data = serialiser.loads(data[1:])
-                return data
-            elif data[0] == b'-'[0]:
-                # An exception occurred
-                raise Exception(data[1:])
-            else:
-                raise Exception("Invalid response code: %s" % data[0])
-
-
-if __name__ == '__main__':
-    import time
-    from random import randint
-
-    def run():
-        t = time.time()
-        inst = SHMClient(5555)
-
-        for x in range(100000):
-            #print('SEND:', i)
-            #for inst in LInsts:
-            i = str(randint(0, 9999999999999)).encode('ascii')*50
-            data = inst.send('echo', i)
-            assert data == i, (data, i)
-
-            if x % 10000 == 0:
-                print(data)
-
-        print(time.time()-t)
-
-    import multiprocessing
-    LProcesses = []
-    for x in range(12):
-        process = multiprocessing.Process(target=run)
-        LProcesses.append(process)
-        process.start()
-    while 1: time.sleep(1)
+        if response_status == b'+':
+            return serialiser.loads(response_data)
+        elif response_status == b'-':
+            raise Exception(response_data)
+        else:
+            raise Exception("Unknown status response %s" % response_status)

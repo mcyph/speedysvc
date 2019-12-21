@@ -1,58 +1,45 @@
 import time
-import threading
-import signal
 from os import getpid
-import traceback
-from random import getrandbits
-#from toolkit.benchmarking.benchmark import benchmark
-from network_tools.rpc.base_classes.ServerProviderBase import \
-    ServerProviderBase
-from network_tools.rpc.shared_memory.shm_socket.ResponseSHMSocket import \
-    ResponseSHMSocket
-from network_tools.rpc.shared_memory.shm_socket.RequestSHMSocket import \
-    RequestSHMSocket
-from network_tools.rpc.shared_memory.kill_thread import kill_thread
+from _thread import start_new_thread
+from network_tools.rpc.base_classes.ServerProviderBase import ServerProviderBase
+from network_tools.serialisation.RawSerialisation import RawSerialisation
+from network_tools.rpc.shared_memory.JSONMMapArray import JSONMMapArray
+from network_tools.rpc.shared_memory.SHMBase import SHMBase
+from network_tools.rpc.shared_memory.shared_params import \
+    PENDING, INVALID, SERVER, CLIENT
+from hybrid_lock import CONNECT_TO_EXISTING
 
 
-def json_method(fn):
-    fn.is_json_method = True
-    return fn
-
-
-class SHMServer(ServerProviderBase):
-    def __init__(self, client_timeout=10):
-        """
-        :param init_resources:
-        :param client_timeout:
-        """
-        self.client_timeout = client_timeout
+class SHMServer(SHMBase, ServerProviderBase):
+    def __init__(self):
+        pass
 
     def __call__(self, server_methods, init_resources=True):
+        # TODO!
         print(f"{server_methods.name}:{server_methods.port}: "
               f"SHMServer __call__; init_resources:", init_resources)
         # NOTE: init_resources should only be called if creating from scratch -
         # if connecting to an existing socket, init_resources should be False!
         ServerProviderBase.__call__(self, server_methods)
-
         print('Starting new SHMServer on port:',
               server_methods.port, init_resources)
-        port = self.port = server_methods.port
-
-        self.request_socket = RequestSHMSocket(
-            socket_name='to_server_%s' % port,
-            init_resources=init_resources
-        )
-
+        self.port = server_methods.port
         self.shut_me_down = False
-        self.shutdown_ok = False
 
-        self.DResponseSHMSockets = {}
-        t1 = threading.Thread(target=self.__reap_client_sockets, args=())
-        t1.start()
-        t2 = self.serve_thread_loop = threading.Thread(target=self.__main, args=())
-        t2.start()
-        #_thread.start_new_thread(self.__reap_client_sockets, ())
-        #_thread.start_new_thread(self.__main, ())
+        # Add some default methods: heartbeat to make sure the service
+        # is responding to requests; shutdown to cleanly exit.
+        self.server_methods.heartbeat = lambda data: data
+        self.server_methods.heartbeat.serialiser = RawSerialisation
+        def shutdown(data):
+            pass  # TODO!
+        self.server_methods.shutdown = shutdown
+
+        """
+        TODO: Create or connect to a shared shm/semaphore which stores the
+         current processes which are associated with this service.
+        """
+        self.init_pids_map_array(init_resources)
+        start_new_thread(self.monitor_pids, ())
         return self
 
     def shutdown(self):
@@ -60,11 +47,11 @@ class SHMServer(ServerProviderBase):
         t_from = time.time()
         while not self.shutdown_ok:
             time.sleep(0.05)
-            if time.time()-t_from > 5:
-                print(f"Trying to send shutdown command to SHMServer which is in state: {self.STATE}")
-                #kill_thread(self.serve_thread_loop)
+            if time.time() - t_from > 5:
+                print(f"Trying to send shutdown command to SHMServer")
+                # kill_thread(self.serve_thread_loop)
                 from network_tools.rpc.shared_memory.SHMClient import SHMClient
-                client = SHMClient(self.server_methods, self.port)
+                client = SHMClient(self.server_methods)
                 shutdown_ok = False
                 for x in range(10000):
                     xx = client.send(b'shutdown', str(getpid()).encode('ascii'))
@@ -81,161 +68,155 @@ class SHMServer(ServerProviderBase):
                 time.sleep(1)
                 break
 
-    def __reap_client_sockets(self):
-        """
-        Periodically clean out client sockets
-        which haven't been used in some time
-        """
-        while 1:
-            L = []
-            for client_id, client_socket in list(self.DResponseSHMSockets.items()):
-                if time.time()-client_socket.get_last_used_time() > self.client_timeout:
-                    L.append(client_id)
-                elif client_socket.get_sockets_destroyed():
-                    L.append(client_id)
+    def init_pids_map_array(self, init_resources):
+        self.LPIDs = JSONMMapArray(
+            port=self.port, create=init_resources
+        )
+        self.SPIDThreads = set()
 
-            for client_id in L:
-                #print("Reaping socket to client: %s" % client_id)
-                del self.DResponseSHMSockets[client_id]
-
-            time.sleep(self.client_timeout/2)
-
-    #@benchmark(restrictions=(30,))
-    def __main(self):
+    def monitor_pids(self):
         """
-        Process RPC calls forever.
-        """
+        Monitor the shared shm information about the service periodically,
+        starting a new thread for new client PIDs/removing client PIDs which
+        don't exist any more, as needed.
 
-        # t_from = time.time()
-        # while time.time()-t_from < 20:
-        spin_next_time = 1
+        If the client PID no longer exists, also clean up its resources,
+        as needed.
+        """
+        while True:
+            if self.shut_me_down:
+                return
+            try:
+                with self.LPIDs:
+                    SPIDs = set()
+                    for pid in self.LPIDs:
+                        SPIDs.add(pid)
+                        if self.shut_me_down:
+                            # Don't start any more threads if
+                            # a shutdown has been requested!
+                            return
+                        elif not pid in self.SPIDThreads:
+                            self.SPIDThreads.add(pid)
+                            start_new_thread(self.main, (pid,))
+
+                    for pid in list(self.SPIDThreads):
+                        if not pid in SPIDs:
+                            self.SPIDThreads.remove(pid)
+            except:
+                import traceback
+                traceback.print_exc()
+
+            time.sleep(5)
+
+    def main(self, pid):
+        """
+        Connect to the shared mmap space/client+server semaphores.
+        Continuously poll for commands, responding as needed.
+        """
+        client_lock, server_lock = self.get_pid_semaphores(
+            self.port, pid, mode=CONNECT_TO_EXISTING
+        )
+        mmap = self.connect_to_pid_mmap(self.server_methods.port, pid)
+        do_spin = True
 
         while True:
-            # TODO: Should there be better error handling here?
-            # The trouble is, nothing should ever be allowed to
-            # go wrong here - if it does, perhaps the server
-            # should die anyway(?)
-            #print(f"{self.server_methods.name}: "
-            #      f"Getting from {self.request_socket.socket_name}")
-
-            if self.shut_me_down:
-                self.shutdown_ok = True
-                print(f"Signal to shutdown SHMServer {self.name} in worker thread caught: returning")
+            if not pid in self.SPIDThreads:
+                # PID no longer exists, so don't continue to loop
+                return
+            elif self.shut_me_down:
+                self.SPIDThreads.remove(pid)
+                self.shutdown_ok = not len(self.SPIDThreads)
+                print(f"Signal to shutdown SHMServer {self.name} "
+                      f"in worker thread for pid {pid} caught: "
+                      f"returning ({len(self.SPIDThreads)} remaining)")
                 return
 
             try:
-                try:
-                    self.STATE = 'waiting for command'
-                    echo_me, cmd, args, client_id = self.request_socket.get(
-                        timeout=1, spin=spin_next_time
-                    )
-                    spin_next_time = 1
-                except TimeoutError:
-                    spin_next_time = 0
-                    continue
-
-                self.STATE = f'getting response socket for {client_id}'
-                response_socket = self.__get_response_socket(client_id)
-                #print(f"{self.server_methods.name}:{self.server_methods.port} "
-                #      f"Handling command:", cmd, args)
-
-                if cmd == b'heartbeat':
-                    self.STATE = 'heartbeat'
-                    try:
-                        response_socket.put(echo_me, b'+'+args, timeout=20)
-                    except:
-                        traceback.print_exc()
-                elif cmd == b'shutdown':
-                    shutdown_pid = int(args)
-                    if shutdown_pid == getpid():
-                        self.STATE = 'shutdown'
-                        response_socket.put(echo_me, b'+ok', timeout=20)
-                        raise SystemExit(f"Shutdown requested for SHMServer {self.name}")
-                    else:
-                        self.STATE = 'ignore shutdown'
-                        response_socket.put(echo_me, b'+mismatch:%s!=%s' % (getpid(), shutdown_pid), timeout=20)
-                else:
-                    self.STATE = f'handling command {cmd}'
-                    try:
-                        result = self.handle_fn(cmd, args)
-                        send_data = b'+' + result
-
-                    except Exception as exc:
-                        # Just send a basic Exception instance for now, but would be nice
-                        # if could recreate some kinds of exceptions on the other end
-                        send_data = b'-' + repr(exc).encode('utf-8')
-                        traceback.print_exc()
-
-                    #print(f"{self.server_methods.name}:"
-                    #      f"{self.server_methods.port}: "
-                    #      f"putting {send_data[:20]}")
-
-                    self.STATE = f'sending response for command {cmd}'
-                    try:
-                        response_socket.put(echo_me, send_data, timeout=20)
-                    except:
-                        traceback.print_exc()
+                do_spin, mmap = self.handle_command(mmap, server_lock, pid, do_spin)
             except:
+                import traceback
                 traceback.print_exc()
-                time.sleep(1)
 
-    def __get_response_socket(self, client_id):
-        """
-        Get a SHMSocket object that allows sending
-        the return values of RPC calls to clients
-        :param client_id: the integer ID of the client
-        :return: a SHMSocket object
-        """
-        if client_id in self.DResponseSHMSockets:
-            # Can only send to client if the socket hasn't
-            # been destroyed on the client end!
-            client_socket = self.DResponseSHMSockets[client_id]
-            if client_socket.get_sockets_destroyed():
-                del self.DResponseSHMSockets[client_id]
+    def handle_command(self, mmap, server_lock, pid, do_spin):
+        # TODO:
+        if server_lock.get_value() and mmap[0] == CLIENT:
+            # Don't try to take over if the client is going to
+            # TODO: Perhaps this should sleep after a certain
+            #  amount of time?
+            return True, mmap # spin spin spin! - CHECK ME!!!! ===========================================================
 
-        if not client_id in self.DResponseSHMSockets:
-            # Create the connection to the client
-            socket_name = 'from_server_%s_%s' % (self.port, client_id)
-            self.DResponseSHMSockets[client_id] = ResponseSHMSocket(
-                socket_name=socket_name,
-                init_resources=False
+        try:
+            server_lock.lock(timeout=1, spin=do_spin)
+            do_spin = True
+        except TimeoutError:
+            # Disable spinning for subsequent tries!
+            do_spin = False
+            return do_spin, mmap
+
+        try:
+            for x in range(2):
+                # Prepare for handling command
+                if mmap[0] == PENDING:
+                    break # OK
+                elif mmap[0] == INVALID:
+                    # Size change - re-open the mmap!
+                    mmap = self.connect_to_pid_mmap(self.port, pid)
+                    continue
+                elif mmap[0] == CLIENT:
+                    # We'll just return here, as we
+                    # shouldn't have obtained the lock
+                    return do_spin, mmap # Should this not spin??? ========================================
+                elif mmap[0] == SERVER:
+                    raise Exception("Should never get here!")
+                else:
+                    raise Exception("Unknown state: %s" % mmap[0])
+
+            # Get the command+parameters
+            mmap[0] = SERVER
+            cmd_len, args_len = self.request_serialiser.unpack(
+                mmap[1:1 + self.request_serialiser.size]
             )
-            #print(f"__get_response_socket: {socket_name}")
+            cmd = mmap[
+                1 + self.request_serialiser.size:
+                1 + self.request_serialiser.size + cmd_len
+            ].decode('ascii')
+            args = mmap[
+                1 + self.request_serialiser.size + cmd_len:
+                1 + self.request_serialiser.size + cmd_len + args_len
+            ]
 
-        return self.DResponseSHMSockets[client_id]
+            try:
+                # Handle the command
+                fn = getattr(self.server_methods, cmd)
+                serialiser = fn.serialiser
+                if serialiser == RawSerialisation:
+                    result = serialiser.dumps(fn(args))
+                else:
+                    result = serialiser.dumps(fn(*serialiser.loads(args)))
 
+                encoded = self.response_serialiser.pack(
+                    b'+', len(result)
+                ) + result
 
-if __name__ == '__main__':
-    import time
+            except Exception as exc:
+                # Just send a basic Exception instance for now, but would be nice
+                # if could recreate some kinds of exceptions on the other end
+                result = b'-' + repr(exc).encode('utf-8')
+                encoded = self.response_serialiser.pack(
+                    b'-', len(result)
+                ) + result
 
-    def run(init_resources=True):
-        inst = SHMServer({
-            'echo': lambda data: data
-        })
-        inst(
-            port=5555,
-            init_resources=init_resources
-        )
+            # Resize the mmap as needed
+            if len(encoded) > len(mmap)-1:
+                mmap[0] = INVALID
+                mmap = self.create_pid_mmap(
+                    min_size=len(encoded)+1, port=self.port, pid=pid
+                )
 
-        while 1:
-            time.sleep(1)
+            # Set the result, and end the call
+            mmap[1:1+len(encoded)] = encoded
+            mmap[0] = CLIENT
 
-    if False:
-        run()
-    else:
-        import multiprocessing
-        LProcesses = []
-
-        for x in range(12):
-            process = multiprocessing.Process(
-                target=run,
-                kwargs={'init_resources': not x}
-            )
-            LProcesses.append(process)
-            process.start()
-
-            if not x:
-                time.sleep(1)
-
-        while 1:
-            time.sleep(1)
+        finally:
+            server_lock.unlock()
+        return do_spin, mmap
