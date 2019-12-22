@@ -22,15 +22,10 @@ class SHMBase:
         # The alternatives like just raising an error, or having multipart
         # mode seemed too limiting and too complicated/high overhead
         # for it to be worthwhile.
-        new_size = 1
-        while 1:
-            if new_size >= min_size:
-                break
-            new_size *= 2
 
         socket_name = f'service_{port}_{pid}'.encode('ascii')
         return get_mmap(
-            socket_name, create=True, new_size=new_size
+            socket_name, create=True, new_size=int(min_size*1.5)
         )
 
     def connect_to_pid_mmap(self, port, pid):

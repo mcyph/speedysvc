@@ -87,7 +87,7 @@ if __name__ == '__main__':
         while 1:
             time.sleep(1)
 
-    for x in range(6):
+    for x in range(1):
         p = multiprocessing.Process(target=run_test)
         p.start()
     import time

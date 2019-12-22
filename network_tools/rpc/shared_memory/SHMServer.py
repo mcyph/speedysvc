@@ -25,14 +25,12 @@ class SHMServer(SHMBase, ServerProviderBase):
               server_methods.port, init_resources)
         self.port = server_methods.port
         self.shut_me_down = False
+        self.shutdown_ok = False
 
         # Add some default methods: heartbeat to make sure the service
         # is responding to requests; shutdown to cleanly exit.
         self.server_methods.heartbeat = lambda data: data
         self.server_methods.heartbeat.serialiser = RawSerialisation
-        def shutdown(data):
-            pass  # TODO!
-        self.server_methods.shutdown = shutdown
 
         """
         TODO: Create or connect to a shared shm/semaphore which stores the
@@ -44,29 +42,9 @@ class SHMServer(SHMBase, ServerProviderBase):
 
     def shutdown(self):
         self.shut_me_down = True
-        t_from = time.time()
         while not self.shutdown_ok:
             time.sleep(0.05)
-            if time.time() - t_from > 5:
-                print(f"Trying to send shutdown command to SHMServer")
-                # kill_thread(self.serve_thread_loop)
-                from network_tools.rpc.shared_memory.SHMClient import SHMClient
-                client = SHMClient(self.server_methods)
-                shutdown_ok = False
-                for x in range(10000):
-                    xx = client.send(b'shutdown', str(getpid()).encode('ascii'))
-                    print("SHUTDOWN RESPONSE:", xx)
-                    if xx == b'ok':
-                        print(f"Thread shutdown OK pid [{getpid()}]")
-                        shutdown_ok = True
-                        break
-
-                if not shutdown_ok:
-                    print(f"SHUTDOWN NOT OK!!! pid [{getpid()}]")
-                    time.sleep(1)
-                    raise Exception(f"SHUTDOWN NOT OK!!! pid [{getpid()}]")
-                time.sleep(1)
-                break
+            continue
 
     def init_pids_map_array(self, init_resources):
         self.LPIDs = JSONMMapArray(
@@ -138,13 +116,6 @@ class SHMServer(SHMBase, ServerProviderBase):
                 traceback.print_exc()
 
     def handle_command(self, mmap, server_lock, pid, do_spin):
-        # TODO:
-        if server_lock.get_value() and mmap[0] == CLIENT:
-            # Don't try to take over if the client is going to
-            # TODO: Perhaps this should sleep after a certain
-            #  amount of time?
-            return True, mmap # spin spin spin! - CHECK ME!!!! ===========================================================
-
         try:
             server_lock.lock(timeout=1, spin=do_spin)
             do_spin = True
@@ -154,19 +125,25 @@ class SHMServer(SHMBase, ServerProviderBase):
             return do_spin, mmap
 
         try:
-            for x in range(2):
+            while True: # WARNING
                 # Prepare for handling command
                 if mmap[0] == PENDING:
                     break # OK
                 elif mmap[0] == INVALID:
                     # Size change - re-open the mmap!
                     print(f"Server: memory map has been marked as invalid")
+                    prev_len = len(mmap)
                     mmap = self.connect_to_pid_mmap(self.port, pid)
+
+                    # Make sure it actually is larger than the previous one,
+                    # so as to reduce the risk of an infinite loop
+                    assert len(mmap) > prev_len, \
+                        "New memory map should be larger than the previous one!"
                     continue
                 elif mmap[0] == CLIENT:
                     # We'll just return here, as we
                     # shouldn't have obtained the lock
-                    return do_spin, mmap # Should this not spin??? ========================================
+                    return False, mmap # Should this not spin??? ========================================
                 elif mmap[0] == SERVER:
                     raise Exception("Should never get here!")
                 else:
@@ -208,13 +185,14 @@ class SHMServer(SHMBase, ServerProviderBase):
                 ) + result
 
             # Resize the mmap as needed
-            if len(encoded) > len(mmap)-1:
+            if len(encoded) >= len(mmap)-1:
                 print(f"Server: Recreating memory map to be at "
                       f"least {len(encoded) + 1} bytes")
                 old_mmap = mmap
                 mmap = self.create_pid_mmap(
                     min_size=len(encoded)+1, port=self.port, pid=pid
                 )
+                mmap[0] = old_mmap[0]
                 old_mmap[0] = INVALID
 
             # Set the result, and end the call
