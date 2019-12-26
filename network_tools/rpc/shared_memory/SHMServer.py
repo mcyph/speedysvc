@@ -1,9 +1,8 @@
 import time
-from os import getpid
 from _thread import start_new_thread
 from network_tools.rpc.base_classes.ServerProviderBase import ServerProviderBase
 from network_tools.serialisation.RawSerialisation import RawSerialisation
-from network_tools.rpc.shared_memory.JSONMMapArray import JSONMMapArray
+from network_tools.ipc.JSONMMapList import JSONMMapList
 from network_tools.rpc.shared_memory.SHMBase import SHMBase
 from network_tools.rpc.shared_memory.shared_params import \
     PENDING, INVALID, SERVER, CLIENT
@@ -47,7 +46,7 @@ class SHMServer(SHMBase, ServerProviderBase):
             continue
 
     def init_pids_map_array(self, init_resources):
-        self.LPIDs = JSONMMapArray(
+        self.LPIDs = JSONMMapList(
             port=self.port, create=init_resources
         )
         self.SPIDThreads = set()

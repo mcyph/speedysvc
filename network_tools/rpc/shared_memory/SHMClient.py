@@ -4,7 +4,7 @@ from network_tools.serialisation.RawSerialisation import RawSerialisation
 from network_tools.rpc.shared_memory.SHMBase import SHMBase
 from network_tools.rpc.shared_memory.shared_params import \
     PENDING, INVALID, SERVER, CLIENT
-from network_tools.rpc.shared_memory.JSONMMapArray import JSONMMapArray
+from network_tools.ipc.JSONMMapList import JSONMMapList
 from network_tools.rpc.base_classes.ClientProviderBase import ClientProviderBase
 
 
@@ -33,7 +33,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         # we won't be able to connect properly, or will make
         # the previous resources invalid
 
-        self.pids_array = pids_array = JSONMMapArray(
+        self.pids_array = pids_array = JSONMMapList(
             self.port, create=False
         )
         with pids_array:
