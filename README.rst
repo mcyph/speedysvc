@@ -2,29 +2,69 @@
 About
 ===========================
 
-This module provides very low-latency, high-throughput inter-process queues using
-`shared memory`_.
-It allows for basic client/server remote procedure calls (RPC), potentially with
-multiple servers serving multiple clients.
+    NOTE: This module's status is still alpha - I'm using it in my projects, but
+    there may be bugs/breaking changes to the API.
+
+This module provides low-latency, high-throughput interprocess queues using
+`shared memory`_. It allows for basic client/server remote procedure calls (RPC),
+potentially with multiple servers serving multiple clients. Unlike the
+python mmap_ module, it does not page written data to file on disk
+(is not `copy-on-write`_) resulting in improved performance.
 
 It provides this via custom shared memory queues, synchronised by a hybrid
-spinlock/named semaphore. This potentially allows sub-millisecond latencies,
+spinlock_/`named semaphore`_. This potentially allows sub-millisecond latencies,
 and high throughput, at a cost of some wasted CPU cycles (up to around
-1 millisecond per call). In other words, this module is useful when
-parallelisation can reduce RAM usage, or when the `Global Interpreter Lock (GIL)`_
-is a limiting factor. It was also intended to be a way of allowing for a
-separation of concerns, effectively allowing complex programs to be separated
-into smaller "blocks" or microservices.
+1 millisecond per call).
+
+This module is useful when moving functions/in-memory data to dedicated
+process(es) rather than in each webserver worker process,
+which can use less RAM. This can also be useful when the
+`Global Interpreter Lock (GIL)`_ is a limiting factor, as it can scale up or
+down worker processes depending on CPU usage over time.
+
+It was also intended to be a way of allowing for a
+`separation of concerns`_, effectively allowing larger complex programs to be moved
+into smaller "blocks" or microservices. Each shared memory client to server
+"connection" allocates a shared memory block, which starts at >=2048 bytes, and expands
+when requests/responses are larger than can be written. It does this in increments of
+powers of 2 of the operating system's `page size`_.
 
 It also allows RPC to be performed via ordinary TCP sockets. It uses a specific
-protocol which sends the length of commands and data so as to improve buffering
-performance with TCP. This can be around 4-5 times slower than shared memory,
-but could allow connections to remote hosts.
+protocol which sends the length of data prior to sending the data
+itself so as to improve buffering performance. This can be around 4-5 times slower
+than shared memory, but could allow connections to remote hosts.
 
 A unique port number and service name must be provided by servers. Although the
 port can be either an integer or bytes for the shared memory server, it's
-normally best to keep this as a number, to allow backwards compatibility with
+normally best to keep this as a number, to allow compatibility with
 network sockets.
+
+==============================
+License
+==============================
+
+
+
+==============================
+Install and Dependencies
+==============================
+
+Type:
+
+    pip3 install git+[[TODO]]
+
+This module has only been tested on Linux (specifically Ubuntu 18.04 LTS),
+but should work on other Linuxes, and potentially some other POSIX-compliant
+systems. It probably won't ever work on Windows, except for via the `Windows
+Subsystem for Linux`_ due to its reliance on POSIX semaphores and shared
+memory.
+
+It has the following dependencies:
+
+* msgpack - for faster IPC serialisation
+* flask - for the monitoring/management web interface
+* posix_ipc - for shared memory support
+* python-snappy - for fast compression in combination with remote TCP sockets
 
 ==============================
 Client/Server RPC
@@ -37,12 +77,13 @@ test_server.py:
 
 .. code-block:: python
 
-    from network_tools import ServerMethodsBase, raw_method
+    from shmrpc import ServerMethodsBase, raw_method
 
     class TestServerMethods(ServerMethodsBase):
         port = 5555
         name = 'echo_serv'
 
+        # Note that raw_method can only send data as the "bytes" type.
         # json, msgpack, pickle, marshal etc are options in place of raw,
         # with significantly differing performance, serialisable types
         # and security: please see below.
@@ -54,7 +95,7 @@ test_client.py:
 
 .. code-block:: python
 
-    from network_tools import ClientMethodsBase
+    from shmrpc import ClientMethodsBase, SHMClient
     from test_server import TestServerMethods
 
     class TestClientMethods(ClientMethodsBase):
@@ -63,8 +104,18 @@ test_client.py:
 
         # echo_raw = TestServerMethods.echo_raw.as_rpc()
         # can also do the same as the below code.
+        # Note that "data" is actually a list of arguments
+        # for other serialisers than raw.
         def echo_raw(self, data):
-            return self.send(TestServerMethods.echo_raw, [])
+            return self.send(TestServerMethods.echo_raw, data)
+
+    if __name__ == '__main__':
+        # client can be replaced with NetworkClient(host_address)
+        # to allow for remote connections. The bind_tcp ini setting
+        # must be set in this case: see below.
+        client = SHMClient()
+        methods = TestClientMethods(client)
+        print("Received data:", methods.echo_raw(b"Lorem ipsum"))
 
 service.ini:
 
@@ -76,25 +127,98 @@ service.ini:
     [TestServerMethods]
     import_from=server
 
-Then type ``python3 -m network_tools.service service.ini``
-from the same directory.
-
-Benchmarks
----------------------------
-
-TODO!
+Then type ``python3 -m shmrpc.service service.ini &``
+from the same directory to start the server; and
+``python3 test_client.py`` to test a connection to it.
 
 Reference
 ---------------------------
 
-TODO!
+* ``.ini`` file format
 
-====================================
-POSIX Memory Mapped Sockets
-====================================
+.. code-block:: ini
 
-Examples
------------------------
+    # The values in "defaults" will be used if they aren't
+    # overridden in individual methods
+    [defaults]
+    # The location for the time series data (memory data etc)
+    # and stdout/stderr logs
+    log_dir=/tmp/test_server_logs/
+    # The address to bind to (if you want to also allow connection via TCP).
+    # If you don't, a NetworkServer will not be created.
+    tcp_bind=127.0.0.1
+
+    # The maximum number of worker processes
+    # Defaults to the number of CPU cores
+    max_proc_num=X
+    # The minumum number of workers. Defaults to 1
+    min_proc_num=X
+    # Whether to wait for the service to boot before moving on to the next
+    # entry: each entry is executed in sequential order if True
+    wait_until_completed=True
+    # Whether to allow insecure serialisation methods like pickle/marshal
+    # in combination with NetworkServer
+    force_insecure_serialisation=False
+
+    # The name of the ServerMethodsBase-derived class to import,
+    # and the module from which to import the class.
+    # This is basically the same as
+    # from module_name import MethodsClassName
+    # in python.
+    [MethodsClassName]
+    import_from=module_name
+
+
+* ``ClientMethodsBase``: The class from which client methods must derive from.
+  This might include logic that allows for creating e.g. class instances from
+  basic types like lists, which can be better supported by JSON and other
+  encoders.
+  The ``__init__`` method takes a single parameter - ``client_provider``, which
+  may be either an ``SHMClient`` or a ``NetworkClient`` instance.
+* ``ServerMethodsBase``: The class from which client server methods must derive.
+  Subclasses must have a unique ``port`` number, and a unique ``name`` for
+  identification in logs.
+* ``NetworkClient``/``SHMClient``: Instances of one of these must be provided to
+  ``ClientMethodsBase``-derived classes. The ``NetworkClient`` requires a single
+  parameter of ``host``.
+
+Different kinds of encoders/decoders:
+
+* ``@raw_method``: Define a method which sends/receives data
+  using the python raw ``bytes`` type
+* ``@json_method``: Define a method sends/receives data using
+  the built-in json module. Tested the most, and quite
+  interoperable: I generally use this, unless there's a
+  good reason not to.
+* ``@msgpack_method``: Define a method that sends/receives data using the
+  msgpack module. Supports most/all the types supported
+  by json, but typically is 2x+ faster, at the expense
+  of (potentially) losing interoperability.
+* ``@pickle_method``: Define a method that sends/receives data using the
+  ``pickle`` module. **Potentially insecure** as arbitrary
+  code could be sent, but is very fast, and supports many
+  python types. Supports int/tuple etc keys in dicts,
+  which json/msgpack don't.
+* ``@marshal_method``: Define a method that sends/receives data using the
+  ``pickle`` module. **Potentially insecure** as there
+  could be potential buffer overrun vulnerabilities,
+  but is very fast.
+* ``@arrow_method``: Define a method that sends/receives data using the
+  ``pyarrow`` module. Reported to be very fast for numpy
+  ``ndarray`` types, and support for many of the types that
+  json does, but seemed to be orders of magnitude slower
+  for many other datatypes when I tested it.
+
+Benchmarks:
+-----------------------------------
+
+Different kinds of serialisation
+
+Many clients to single server
+
+Single client to many servers
+
+Many clients to many servers
 
 ==============================
 Hybrid Spin Semaphore
@@ -107,7 +231,7 @@ HybridLock constructor:
 
     HybridLock(sem_loc, mode, initial_value, permissions)
 
-where mode is one of:
+``mode`` is one of:
 
 * ``CONNECT_OR_CREATE``: Connect to an existing semaphore if it exists, otherwise
   create one.
@@ -138,11 +262,9 @@ Examples
     sem.unlock()
 
 That's pretty much it - at the moment it only supports timeout
-values in seconds using whole integers, but it should be easy
-to support floating point numbers. It also would be nice to allow
-for setting the maximum "spin" time.
+values in seconds using whole integers.
 
-Why not use...? Or Why?
+Why I made this module
 -----------------------
 
 It's a common situation in the c implementation of python where one is limited
@@ -212,14 +334,20 @@ TODO
 
 * Docker integration would be useful. I've tried to keep this in mind
   for future refactors, making it so that the management interface
-  is separate to the process managers/worker processes, the latter
-  two which would be ideally be individual containers communicating
+  is separate to the process managers/worker processes. The latter
+  two would be ideally be individual containers communicating
   with the host (or a dedicated management interface container).
-  I'm hoping this will make this possible in the future.
 
 * It would be nice to be able to have version-specific servers/clients,
   so that previous applications can continue to function while allowing
   for breaking changes in APIs.
+
+* Currently the HybridLock only allows locking in whole seconds, but it
+  should be easy to support floating point numbers. It also would be
+  nice to allow for setting the maximum "spin" time.
+
+* Add transparent compression support for NetworkServer/NetworkClient,
+  with the client receiving the compression type before first commands.
 
 ===========================
 Bugs/Limitations
@@ -232,6 +360,11 @@ reconnect through previously used "port"s.
 Please report any such bugs to [[FIXME...]]
 
 
+.. _separation of concerns: https://en.wikipedia.org/wiki/Separation_of_concerns
+.. _copy-on-write: https://en.wikipedia.org/wiki/Copy-on-write
+.. _mmap: https://docs.python.org/3/library/mmap.html
+.. _Windows Subsystem for Linux: https://en.wikipedia.org/wiki/Windows_Subsystem_for_Linux
+.. _page size: https://en.wikipedia.org/wiki/Page_(computer_memory)
 .. _shared memory: https://en.wikipedia.org/wiki/Shared_memory
 .. _Global Interpreter Lock (GIL): https://en.wikipedia.org/wiki/Global_interpreter_lock
 .. _GIL: https://en.wikipedia.org/wiki/Global_interpreter_lock
@@ -243,6 +376,7 @@ Please report any such bugs to [[FIXME...]]
 .. _TCP sockets: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
 .. _spinlocks: https://en.wikipedia.org/wiki/Spinlock
 .. _named semaphores: http://man7.org/linux/man-pages/man7/sem_overview.7.html
+.. _named semaphore: http://man7.org/linux/man-pages/man7/sem_overview.7.html
 .. _mutexes: https://en.wikipedia.org/wiki/Lock_(computer_science)
 .. _spinlock: https://en.wikipedia.org/wiki/Spinlock
 .. _between 0.75ms and 6ms: https://stackoverflow.com/questions/16401294/how-to-know-linux-scheduler-time-slice

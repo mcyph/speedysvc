@@ -20,7 +20,7 @@ with open(join(here, 'README.rst'), encoding='utf-8') as f:
 
 extensions = [Extension(
     'hybrid_lock', [
-        "network_tools/hybrid_lock/hybrid_lock.pyx",
+        "shmrpc/hybrid_lock/hybrid_lock.pyx",
     ],
 
     libraries=[
@@ -39,7 +39,7 @@ extensions = [Extension(
     library_dirs=[
         join(
             dirname(abspath(__file__)),
-            "network_tools/hybrid_lock"
+            "shmrpc/hybrid_lock"
         )
     ]
 )]
@@ -47,11 +47,11 @@ extensions = [Extension(
 #
 
 setup(
-    name='network_tools',
+    name='shmrpc',
     version='0.1.0',
     description='Send/receive client/server classes which use sockets across networks, or high-performance mmap',
     long_description=long_description,
-    url='https://github.com/jiyiiy/network_tools',
+    url='https://github.com/jiyiiy/shmrpc',
     author='David Morrissey',
     author_email='david.l.morrissey@gmail.com',
 
@@ -83,17 +83,18 @@ setup(
     packages=find_packages(),
     ext_modules=cythonize(
         extensions,
-        include_path=[join(dirname(abspath(__file__)), "network_tools/hybrid_lock")],
+        include_path=[join(dirname(abspath(__file__)), "shmrpc/hybrid_lock")],
         language_level=3
     ),
 
     install_requires=[
         'msgpack',
-        'setproctitle',
-        'dataclasses',
+        #'setproctitle',
+        #'dataclasses',
+        'posix_ipc',
 
-        'matplotlib',
-        'pyarrow',
+        #'matplotlib',
+        #'pyarrow',
         'python-snappy',
         'flask',
     ],
