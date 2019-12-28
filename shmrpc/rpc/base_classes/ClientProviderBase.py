@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
+from shmrpc.toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
 
 
 class ClientProviderBase(ABC):

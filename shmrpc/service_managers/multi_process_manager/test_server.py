@@ -7,7 +7,7 @@ from shmrpc.service_managers.multi_process_manager.MultiProcessManager import \
     MultiProcessServer
 from shmrpc.logger.ServiceTimeSeriesData import ServiceTimeSeriesData
 from shmrpc.rpc_decorators import pickle_method
-from toolkit.io.make_dirs import make_dirs
+from shmrpc.toolkit.io.make_dirs import make_dirs
 
 
 class TestServerMethods(ServerMethodsBase):

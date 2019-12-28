@@ -4,7 +4,7 @@ from .serialisation.MsgPackSerialisation import MsgPackSerialisation
 from .serialisation.PickleSerialisation import PickleSerialisation
 from .serialisation.RawSerialisation import RawSerialisation
 from .serialisation.MarshalSerialisation import MarshalSerialisation
-from .serialisation.ArrowSerialisation import ArrowSerialisation
+#from .serialisation.ArrowSerialisation import ArrowSerialisation
 
 
 def __from_server_method(server_fn):
@@ -130,13 +130,13 @@ def marshal_method(fn):
     return __network_method(fn, MarshalSerialisation)
 
 
-def arrow_method(fn):
-    """
-    Define a method that sends/receives data using the
-    `pyarrow` module. Reported to be very fast for numpy
-    `ndarray` types, and support for many of the types that
-    json does, but seemed to be orders of magnitude slower
-    for many other datatypes when I tested it.
-    """
-    return __network_method(fn, ArrowSerialisation)
+#def arrow_method(fn):
+#    """
+#    Define a method that sends/receives data using the
+#    `pyarrow` module. Reported to be very fast for numpy
+#    `ndarray` types, and support for many of the types that
+#    json does, but seemed to be orders of magnitude slower
+#    for many other datatypes when I tested it.
+#    """
+#    return __network_method(fn, ArrowSerialisation)
 

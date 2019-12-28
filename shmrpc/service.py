@@ -7,10 +7,9 @@ from shmrpc.rpc.shared_memory.SHMServer import SHMServer
 from shmrpc.service_managers.multi_process_manager.MultiProcessManager import \
     MultiProcessServer
 from shmrpc.logger.ServiceTimeSeriesData import ServiceTimeSeriesData
-from toolkit.io.make_dirs import make_dirs
-from toolkit.py_ini.read.ReadIni import ReadIni
+from shmrpc.toolkit.io.make_dirs import make_dirs
+from shmrpc.toolkit.py_ini.read.ReadIni import ReadIni
 from shmrpc.web_monitor.app import add_service, run_server
-
 
 
 # A variable to make sure the servers stay
@@ -78,6 +77,7 @@ if __name__ == '__main__':
 
     DArgKeys = {
         'log_dir': lambda x: x,
+        'tcp_bind': lambda x : x,
         'max_proc_num': greater_than_0_int,
         'min_proc_num': greater_than_0_int,
         'wait_until_completed': convert_bool

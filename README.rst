@@ -3,7 +3,8 @@ About
 ===========================
 
     NOTE: This module's status is still alpha - I'm using it in my projects, but
-    there may be bugs/breaking changes to the API.
+    is still under active development. There are likely bugs and there will be
+    breaking changes to the API.
 
 This module provides low-latency, high-throughput interprocess queues using
 `shared memory`_. It allows for basic client/server remote procedure calls (RPC),
@@ -38,6 +39,10 @@ A unique port number and service name must be provided by servers. Although the
 port can be either an integer or bytes for the shared memory server, it's
 normally best to keep this as a number, to allow compatibility with
 network sockets.
+
+A management interface (by default on 127.0.0.1:5000) can allow viewing each
+service's status as defined in the .ini file, and view memory/io/cpu usage over time,
+as well as stdout/stderr logs.
 
 ==============================
 License

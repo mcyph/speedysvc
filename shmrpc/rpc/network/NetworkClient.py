@@ -2,7 +2,7 @@ import time
 import snappy
 import socket
 from struct import Struct
-from toolkit.documentation.copydoc import copydoc
+from shmrpc.toolkit.documentation.copydoc import copydoc
 
 from shmrpc.rpc.base_classes.ClientProviderBase import ClientProviderBase
 from shmrpc.rpc.network.consts import len_packer, response_packer
