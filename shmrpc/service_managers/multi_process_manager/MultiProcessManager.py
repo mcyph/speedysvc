@@ -271,7 +271,7 @@ class MultiProcessServer:
             self.logger_client = LoggerClient(self.server_methods)
             print(f"{self.server_methods.name} child: "
                   f"Creating server methods")
-            smi = self.server_methods()
+            smi = self.server_methods(self.logger_client)
             print(f"{self.server_methods.name} child: "
                   f"Server methods created, starting implementations")
 
@@ -294,7 +294,7 @@ class MultiProcessServer:
             # Tell the logger server that a child has properly loaded:
             # this helps to make sure if processes are loaded properly,
             # if one depends on another.
-            self.logger_client.loaded_ok_signal()
+            self.logger_client._loaded_ok_signal_()
 
             try:
                 while 1:

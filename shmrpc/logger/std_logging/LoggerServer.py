@@ -1,7 +1,10 @@
 import time
 from _thread import allocate_lock, start_new_thread
+
 from shmrpc.rpc.shared_memory.SHMServer import SHMServer
 from shmrpc.rpc_decorators import raw_method, json_method
+from shmrpc.logger.std_logging.log_entry_types import \
+    dict_to_log_entry, STDERR, STDOUT
 
 
 FLUSH_EVERY_SECONDS = 1.0
@@ -67,33 +70,39 @@ class LoggerServer:
     #                 Write to stdout/stderr                  #
     #=========================================================#
 
-    @raw_method
-    def stderr_write(self, s):
+    @json_method
+    def _write_to_log_(self, t, pid, port, service_name, msg, level):
         """
-        Write to stderr
-        :param s:
-        :return:
-        """
-        with self.stderr_lock:
-            self.f_stderr.write(s)
-            #self.f_stderr.flush()
-            self.flush_needed = True
-        return b'ok'
 
-    @raw_method
-    def stdout_write(self, s):
+        :param t: the time when the log entry occurred
+        :param pid: the process ID from which the event occurred
+        :param port: the port of the service
+        :param service_name: the name of the service
+        :param msg: the log message
+        :param level: a log level, e.g. ERROR, or INFO
         """
-        Write to stdout
-        :param s:
-        :return:
-        """
-        with self.stdout_lock:
-            self.f_stdout.write(s)
-            #self.f_stdout.flush()
-            self.flush_needed = True
-        return b'ok'
+        log_entry = dict_to_log_entry({
+            't': t,
+            'pid': pid,
+            'port': port,
+            'service_name': service_name,
+            'msg': msg,
+            'level': level
+        })
+
+        if log_entry.writes_to == STDERR:
+            with self.stderr_lock:
+                self.f_stderr.write(log_entry.to_text())
+                self.flush_needed = True
+        elif log_entry.writes_to == STDOUT:
+            with self.stdout_lock:
+                self.f_stdout.write(log_entry.to_text())
+                self.flush_needed = True
+        else:
+            # Should never get here!
+            raise Exception("Unknown writes_to: %s" % log_entry.writes_to)
 
     @json_method
-    def loaded_ok_signal(self):
+    def _loaded_ok_signal_(self):
         self.loaded_ok = True
         return None

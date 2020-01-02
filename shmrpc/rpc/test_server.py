@@ -9,8 +9,8 @@ class TestServerMethods(ServerMethodsBase):
     port = 5555
     name = 'echo_serv'
 
-    def __init__(self):
-        ServerMethodsBase.__init__(self)
+    def __init__(self, logger_client):
+        ServerMethodsBase.__init__(self, logger_client)
 
     @json_method
     def test_defaults(self, data, default='test'):

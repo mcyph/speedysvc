@@ -2,6 +2,7 @@ from datetime import datetime
 from shmrpc.toolkit.html_tools.escape import E
 
 
+# VERBOSE??
 NOTSET = 0
 DEBUG = 10
 INFO = 20
@@ -10,6 +11,8 @@ ERROR = 40
 CRITICAL = 50
 
 _END_COLOUR = '\033[0m'
+STDERR = -1
+STDOUT = -2
 
 
 class __LogEntryType:
@@ -174,6 +177,7 @@ class NotSetLogEntry(__LogEntryType):
     format_html = ('',
                    '')
     description = None
+    writes_to = STDOUT
 
 
 class InfoLogEntry(__LogEntryType):
@@ -182,6 +186,7 @@ class InfoLogEntry(__LogEntryType):
     format_html = ('',
                    '')
     description = 'info'
+    writes_to = STDOUT
 
 
 class DebugLogEntry(__LogEntryType):
@@ -190,6 +195,7 @@ class DebugLogEntry(__LogEntryType):
     format_html = ('<span style="color: gray">',
                    '</span>')
     description = 'dbg'
+    writes_to = STDOUT
 
 
 class WarningLogEntry(__LogEntryType):
@@ -198,6 +204,7 @@ class WarningLogEntry(__LogEntryType):
     format_html = ('<span style="color: orange>',
                    '</span>')
     description = 'warn'
+    writes_to = STDERR
 
 
 class ErrorLogEntry(__LogEntryType):
@@ -206,6 +213,7 @@ class ErrorLogEntry(__LogEntryType):
     format_html = ('<span style="color: darkred">',
                    '</span>')
     description = 'err'
+    writes_to = STDERR
 
 
 class CriticalLogEntry(__LogEntryType):
@@ -214,6 +222,7 @@ class CriticalLogEntry(__LogEntryType):
     format_html = ('<span style="font-weight: bold; color: darkred">',
                    '</span>')
     description = 'critical'
+    writes_to = STDERR
 
 
 def dict_to_log_entry(D) -> __LogEntryType:

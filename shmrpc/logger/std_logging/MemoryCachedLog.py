@@ -60,11 +60,7 @@ class MemoryCachedLog:
             data = self.cache.read(self.max_cache-self.spindle)
             self.cache.seek(0)
             data += self.cache.read(self.spindle)
-            self.cache.seek(self.spindle)
 
-            #data = (
-            #    self.cache[self.spindle:] + self.cache[:self.spindle]
-            #)
         elif offset > self.spindle:
             # Spindle has moved back past 0 (potentially multiple times,
             # causing bugs - though I don't think this edge case matters
@@ -75,22 +71,17 @@ class MemoryCachedLog:
             data = self.cache.read(self.max_cache-offset)
             self.cache.seek(0)
             data += self.cache.read(self.spindle)
-            self.cache.seek(self.spindle)
 
-            #data = (
-            #    self.cache[offset:] + self.cache[:self.spindle]
-            #)
         elif offset < self.spindle:
             # Just return the amount up to the spindle
             self.cache.seek(offset)
             data = self.cache.read(self.spindle-offset)
-            self.cache.seek(self.spindle)
 
-            #data = self.cache[offset:self.spindle]
         else:
             # Nothing to return
             return
 
+        self.cache.seek(self.spindle)
         for x, line in enumerate(data.split(b'\n')):
             if not x:
                 continue
@@ -130,7 +121,6 @@ if __name__ == '__main__':
 
     for x in mcl._iter_from_disk():
         print(x)
-
 
     for x in mcl._iter_from_cache(50):
         print(x)

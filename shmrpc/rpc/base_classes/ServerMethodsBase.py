@@ -1,10 +1,12 @@
 class ServerMethodsBase:
-    def __init__(self):
+    def __init__(self, logger_client):
         """
         TODO!!! =========================================================
         """
         assert hasattr(self, 'port')
         assert hasattr(self, 'name')
+
+        self.logger_client = self.log = logger_client
 
     """
     `port` Must be implemented by classes
