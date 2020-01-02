@@ -5,6 +5,7 @@ from shmrpc.rpc.shared_memory.SHMServer import SHMServer
 from shmrpc.rpc_decorators import raw_method, json_method
 from shmrpc.logger.std_logging.log_entry_types import \
     dict_to_log_entry, STDERR, STDOUT
+from shmrpc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
 
 
 FLUSH_EVERY_SECONDS = 1.0
@@ -42,6 +43,11 @@ class LoggerServer:
         self.f_stderr = open(
             f'{log_dir}/{self.name}.stderr', 'ab+',
             buffering=8192 # LINE BUFFERED!
+        )
+
+        # Create the memory cached log
+        self.fifo_json_log = FIFOJSONLog(
+            path=f'{log_dir}/{self.name}.log.json'
         )
 
         # Start the server
@@ -101,6 +107,11 @@ class LoggerServer:
         else:
             # Should never get here!
             raise Exception("Unknown writes_to: %s" % log_entry.writes_to)
+
+        self.fifo_json_log.write_to_log(
+            # Note the keys of to_dict aren't identical to above
+            **log_entry.to_dict()
+        )
 
     @json_method
     def _loaded_ok_signal_(self):

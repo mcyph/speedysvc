@@ -22,7 +22,17 @@ class Services {
     }
 
     pollPeriodically() {
-        const req = new AjaxRequest("poll");
+        // TODO:
+        // * Only poll time series data if it's expanded
+        // * Get the updated console data based on the current offset
+        // * Only show method average execution times/number of calls if expanded
+        //   (after implementing this functionality!)
+
+        const offsets = {};
+        for (let service of this.LServices) {
+            offsets[service.port] = service.getConsoleOffset();
+        }
+        const req = new AjaxRequest("poll", {offsets: JSON.stringify(offsets)});
         const that = this;
 
         req.send(function(o) {

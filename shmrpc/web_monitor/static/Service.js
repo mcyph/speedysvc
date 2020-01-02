@@ -15,6 +15,12 @@ class Service {
         return this.elm.querySelector(selector);
     }
 
+    getConsoleOffset() {
+        return parseInt(
+            this.$(".console_log")[0].getAttribute("offset")
+        );
+    }
+
     //======================================================//
     // Start/stop/restart
     //======================================================//

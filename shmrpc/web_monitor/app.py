@@ -69,19 +69,19 @@ def send_js(path):
 
 @app.route('/start_service')
 def start_service(port):
-    _DServices[port].start_service()
+    _DServices[int(port)].start_service()
     return "ok"
 
 
 @app.route('/stop_service')
 def stop_service(port):
-    _DServices[port].stop_service()
+    _DServices[int(port)].stop_service()
     return "ok"
 
 
 @app.route('/restart_service')
 def restart_service(port):
-    _DServices[port].restart_service()
+    _DServices[int(port)].restart_service()
     return "ok"
 
 
@@ -91,16 +91,20 @@ def restart_service(port):
 
 
 @app.route('/poll')
-def poll():
+def poll(offsets):
+    DOffsets = json.loads(offsets)
+
     D = {}
     for port in _DServices:  # ORDER?? ============================
         assert not port in D
-        D[port] = web_service_info._get_service_info_dict(port)
+        D[port] = web_service_info._get_service_info_dict(
+            port, DOffsets[port]
+        )
     return json.dumps(D)
 
 
 class WebServiceInfo:
-    def _get_service_info_dict(self, port):
+    def _get_service_info_dict(self, port, console_offset=None):
         service = _DServices[port]
         stsd = service.service_time_series_data
         recent_values = stsd.get_recent_values()
@@ -110,6 +114,8 @@ class WebServiceInfo:
                 '%m/%d %H:%M:%S'
             ) for D in recent_values
         ]
+
+        offset, LHTML = service.fifo_json_log.get_html_log(console_offset)
 
         D = {
             "graphs": {
@@ -129,7 +135,8 @@ class WebServiceInfo:
                     'cpu_usage_pc'
                 ),
             },
-            "console_text": '',  # FIXME!! =========================================
+            "console_text": '\n'.join(LHTML),
+            "console_offset": offset,
             "port": port,
             "name": service.name,
             "implementations": [

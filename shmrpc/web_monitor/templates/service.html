@@ -2,6 +2,12 @@
     <div class="service_cont_div" id="service_cont_div_{{ DService['port'] }}">
         {{ service_status_table(DService) }}
 
+        <div class="console_log"
+             style="font-family: monospace; white-space: pre"
+             offset="{{ console_offset }}">
+            {{ DService['console_text'] }}
+        </div>
+
         {#
         <div class="slidecontainer">
             Number values to display:
