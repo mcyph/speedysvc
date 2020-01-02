@@ -8,51 +8,29 @@ About
 
 This module provides low-latency, high-throughput interprocess queues using
 `shared memory`_. It allows for basic client/server remote procedure calls (RPC),
-potentially with multiple servers serving multiple clients. Unlike the
-python mmap_ module, it does not page written data to file on disk
-(is not `copy-on-write`_) resulting in improved performance.
+potentially with multiple servers serving multiple clients. It is licensed under
+the MIT License.
 
-It provides this via custom shared memory queues, synchronised by a hybrid
-spinlock_/`named semaphore`_. This potentially allows sub-millisecond latencies,
-and high throughput, at a cost of some wasted CPU cycles (up to around
-1 millisecond per call).
+While there are many RPC libraries for python, most don't use shared memory,
+or use synchronisation that can make them orders of magnitude slower. Unlike the
+python mmap_ module, this does not page written data to file on disk
+(is not `copy-on-write`_) often resulting in performance not much less than if
+functions are called in-process.
 
-This module is useful when moving functions/in-memory data to dedicated
-process(es) rather than in each webserver worker process,
-which can use less RAM. This can also be useful when the
-`Global Interpreter Lock (GIL)`_ is a limiting factor, as it can scale up or
-down worker processes depending on CPU usage over time.
+Other capabilities:
 
-It was also intended to be a way of allowing for a
-`separation of concerns`_, effectively allowing larger complex programs to be moved
-into smaller "blocks" or microservices. Each shared memory client to server
-"connection" allocates a shared memory block, which starts at >=2048 bytes, and expands
-when requests/responses are larger than can be written. It does this in increments of
-powers of 2 of the operating system's `page size`_.
+* A management web interface based on flask, showing logs/performance data for each
+  service, and allowing restarting services. Services auto-restart when they crash.
+* Multiple servers can serve to multiple clients: additional server worker processes
+  can optionally start when overall CPU usage exceeds a certain %. This helps to work
+  around the often-cited GIL_ limitations of python.
+* Not much boilerplate code required, with the server only requiring an encoding type
+  decorator, like ``@json_method``. Clients verify all their method names match with
+  the server's. They copy the port/name from the server, so as to reduce the amount of
+  places things need to be kept up-to-date.
 
-It also allows RPC to be performed via ordinary TCP sockets. It uses a specific
-protocol which sends the length of data prior to sending the data
-itself so as to improve buffering performance. This can be around 4-5 times slower
-than shared memory, but could allow connections to remote hosts.
-
-A unique port number and service name must be provided by servers. Although the
-port can be either an integer or bytes for the shared memory server, it's
-normally best to keep this as a number, to allow compatibility with
-network sockets.
-
-A management interface (by default on 127.0.0.1:5000) can allow viewing each
-service's status as defined in the .ini file, and view memory/io/cpu usage over time,
-as well as stdout/stderr logs.
-
-==============================
-License
-==============================
-
-
-
-==============================
-Install and Dependencies
-==============================
+Install/Dependencies
+------------------------------
 
 Type:
 
@@ -66,23 +44,19 @@ memory.
 
 It has the following dependencies:
 
-* msgpack - for faster IPC serialisation
+* msgpack - for faster IPC serialisation with JSON-supported types
 * flask - for the monitoring/management web interface
 * posix_ipc - for shared memory support
 * python-snappy - for fast compression in combination with remote TCP sockets
 
-==============================
-Client/Server RPC
-==============================
-
-Examples
+Example
 -----------------------
 
 test_server.py:
 
 .. code-block:: python
 
-    from shmrpc import ServerMethodsBase, raw_method
+    from shmrpc import ServerMethodsBase, raw_method, json_method
 
     class TestServerMethods(ServerMethodsBase):
         port = 5555
@@ -94,6 +68,10 @@ test_server.py:
         # and security: please see below.
         @raw_method
         def echo_raw(self, data):
+            return data
+
+        @json_method
+        def echo_json(self, data):
             return data
 
 test_client.py:
@@ -109,10 +87,13 @@ test_client.py:
 
         # echo_raw = TestServerMethods.echo_raw.as_rpc()
         # can also do the same as the below code.
-        # Note that "data" is actually a list of arguments
-        # for other serialisers than raw.
         def echo_raw(self, data):
             return self.send(TestServerMethods.echo_raw, data)
+
+        # Note that "data" is actually a list of arguments
+        # for non-raw serialisers.
+        def echo_json(self, data):
+            return self.send(TestServerMethods.echo_json, [data])
 
     if __name__ == '__main__':
         # client can be replaced with NetworkClient(host_address)
@@ -130,11 +111,80 @@ service.ini:
     log_dir=/tmp/test_server_logs/
 
     [TestServerMethods]
-    import_from=server
+    import_from=test_server
 
 Then type ``python3 -m shmrpc.service service.ini &``
 from the same directory to start the server; and
 ``python3 test_client.py`` to test a connection to it.
+
+Implementation details
+------------------------
+
+This provides RPC via custom shared memory queues, synchronised by a hybrid
+spinlock_/`named semaphore`_. This potentially allows sub-millisecond latencies,
+and high throughput, at a cost of some wasted CPU cycles (up to around
+1 millisecond per call).
+
+This module is useful when moving functions/in-memory data to dedicated
+process(es) rather than in each webserver worker process,
+which can use less RAM. This can also be useful when the
+`Global Interpreter Lock (GIL)`_ is a limiting factor, as it can scale up or
+down worker processes depending on CPU usage over time.
+
+It was also intended to be a way of allowing for a
+`separation of concerns`_, effectively allowing larger complex programs to be moved
+into smaller "blocks" or microservices. Each shared memory client to server
+"connection" allocates a shared memory block, which starts at >=2048 bytes, and expands
+when requests/responses are larger than can be written. It does this in increments of
+powers of 2 of the operating system's `page size`_.
+
+Each client connection needs a single shared memory block and thread on each
+worker server. The latter also has some overhead, but in my case I thought this would
+be low enough for most situations I would be likely to use this.
+Currently only a single connection can be made to a service for each individual process,
+as shared memory is referenced by the client process' PID.
+
+It also allows RPC to be performed via ordinary TCP sockets. It uses a specific
+protocol which sends the length of data prior to sending the data
+itself so as to improve buffering performance. This can be around 4-5 times slower
+than shared memory, but could allow connections to remote hosts.
+
+A unique port number and service name must be provided by servers. Although the
+port can be either an integer or bytes for the shared memory server, it's
+normally best to keep this as a number, to allow compatibility with
+network sockets.
+
+A management interface (by default on 127.0.0.1:5000) can allow viewing each
+service's status as defined in the .ini file, and view memory, io and cpu usage over
+time, as well as stdout/stderr logs.
+
+License
+-----------------------
+
+Licensed under the MIT License.
+
+Copyright 2020 David L Morrissey
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this
+software and associated documentation files (the "Software"), to deal in the Software
+without restriction, including without limitation the rights to use, copy, modify,
+merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice shall be included in all copies
+or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+==============================
+Client/Server RPC
+==============================
 
 Reference
 ---------------------------
@@ -189,29 +239,24 @@ Reference
 
 Different kinds of encoders/decoders:
 
-* ``@raw_method``: Define a method which sends/receives data
-  using the python raw ``bytes`` type
-* ``@json_method``: Define a method sends/receives data using
-  the built-in json module. Tested the most, and quite
-  interoperable: I generally use this, unless there's a
-  good reason not to.
-* ``@msgpack_method``: Define a method that sends/receives data using the
-  msgpack module. Supports most/all the types supported
-  by json, but typically is 2x+ faster, at the expense
-  of (potentially) losing interoperability.
-* ``@pickle_method``: Define a method that sends/receives data using the
-  ``pickle`` module. **Potentially insecure** as arbitrary
-  code could be sent, but is very fast, and supports many
-  python types. Supports int/tuple etc keys in dicts,
+* ``@raw_method``: Define a method which sends/receives data using the python raw
+  ``bytes`` type
+* ``@json_method``: Define a method sends/receives data using the built-in json
+  module. Tested the most, and quite interoperable: I generally use this, unless
+  there's a good reason not to.
+* ``@msgpack_method``: Define a method that sends/receives data using the msgpack
+  module. Supports most/all the types supported by json, but typically is 2x+
+  faster, at the expense of (potentially) losing interoperability.
+* ``@pickle_method``: Define a method that sends/receives data using the ``pickle``
+  module. **Potentially insecure** as arbitrary code could be sent, but is
+  fast, and supports many python types. Supports int/tuple etc keys in dicts,
   which json/msgpack don't.
-* ``@marshal_method``: Define a method that sends/receives data using the
-  ``pickle`` module. **Potentially insecure** as there
-  could be potential buffer overrun vulnerabilities,
-  but is very fast.
-* ``@arrow_method``: Define a method that sends/receives data using the
-  ``pyarrow`` module. Reported to be very fast for numpy
-  ``ndarray`` types, and support for many of the types that
-  json does, but seemed to be orders of magnitude slower
+* ``@marshal_method``: Define a method that sends/receives data using the ``pickle``
+  module. **Potentially insecure** as there could be potential buffer overflow
+  vulnerabilities etc, but is fast.
+* ``@arrow_method``: Define a method that sends/receives data using the ``pyarrow``
+  module. Reported to be very fast for numpy ``ndarray`` types, and support for
+  many of the types that json does, but seemed to be orders of magnitude slower
   for many other datatypes when I tested it.
 
 Benchmarks:
@@ -269,8 +314,8 @@ Examples
 That's pretty much it - at the moment it only supports timeout
 values in seconds using whole integers.
 
-Why I made this module
------------------------
+Implementation Considerations
+--------------------------------
 
 It's a common situation in the c implementation of python where one is limited
 by the `GIL`_, and you can't use more than a single CPU core at once for a
@@ -343,13 +388,31 @@ TODO
   two would be ideally be individual containers communicating
   with the host (or a dedicated management interface container).
 
+* The ability to communicate with services using other languages,
+  such as JavaScript, Java or Kotlin using TCP sockets. The reverse
+  direction probably is a lower priority, as I only have so much time
+  to maintain my existing python services.
+  I suspect shared memory and named semaphore locks might be easier to do
+  with something like Rust or GoLang, but would probably only attempt this
+  if python is too slow/won't scale.
+
 * It would be nice to be able to have version-specific servers/clients,
   so that previous applications can continue to function while allowing
-  for breaking changes in APIs.
+  for breaking changes in APIs. This may not happen, as I suspect it may
+  be best to do versioning at a Docker/Linux KVM etc level for my
+  purposes.
 
 * Currently the HybridLock only allows locking in whole seconds, but it
   should be easy to support floating point numbers. It also would be
   nice to allow for setting the maximum "spin" time.
+
+* Possibly improve spinlock performance.
+  https://probablydance.com/2019/12/30/measuring-mutexes-spinlocks-and-how-bad-the-linux-scheduler-really-is/
+  may be worth referring to. Currently the spinlock is just a simple
+  variable (not atomic/volatile) and it falls back to named semaphores
+  whether it's acquired in time or not. The current one is relatively
+  simple in implementation which is a big advantage, and I'm not sure
+  much performance would be gained.
 
 * Add transparent compression support for NetworkServer/NetworkClient,
   with the client receiving the compression type before first commands.

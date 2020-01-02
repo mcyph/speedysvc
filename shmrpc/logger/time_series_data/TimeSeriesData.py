@@ -162,6 +162,9 @@ class TimeSeriesData(ABC):
         """
         # OPEN ISSUE: Should this support slices??? =================================================================
 
+        # TODO: MAKE SURE PENDING DATA FLUSHED TO DISK!
+        # TODO: GRAB FROM CACHE IF POSSIBLE!!! ======================================================================
+
         with self.lock:
             self.f.seek(item*self.struct.size)
             encoded = self.f.read(self.struct.size)

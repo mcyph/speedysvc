@@ -25,8 +25,8 @@ class LoggerClient(ClientMethodsBase):
 
         self.client = SHMClient(LoggerServer, port=f'{server_methods.port}_log')
         ClientMethodsBase.__init__(self, client_provider=self.client)
-        self.stderr_logger = _StdErrLogger(self)
-        self.stdout_logger = _StdOutLogger(self)
+        self.stderr_logger = self._StdErrLogger(self)
+        self.stdout_logger = self._StdOutLogger(self)
         start_new_thread(self.__log_thread, ())
 
     def __log_thread(self):
@@ -67,26 +67,29 @@ class LoggerClient(ClientMethodsBase):
         assert self.send(LoggerServer.stderr_write, s) == b'ok'
 
 
-class _StdOutLogger:
-    def __init__(self, logger_client):
-        self.old_stdout = sys.stdout
-        sys.stdout = self
-        self.logger_client = logger_client
+    class _StdOutLogger:
+        def __init__(self, logger_client):
+            self.old_stdout = sys.stdout
+            sys.stdout = self
+            self.logger_client = logger_client
 
-    def write(self, s):
-        # WARNING: If the logger client's send command needs
-        # to send to the log itself, then it'll result in a deadlock!
-        # This is the reason why I'm replacing sys.stdout during the call..
-        self.old_stdout.write(s)
-        log_queue.put((STDOUT, s))
+        def write(self, s):
+            # WARNING: If the logger client's send command needs
+            # to send to the log itself, then it'll result in a deadlock!
+            # This is the reason why I'm replacing sys.stdout during the call..
+            self.old_stdout.write(s)
+            log_queue.put((STDOUT, s))
 
 
-class _StdErrLogger:
-    def __init__(self, logger_client):
-        self.old_stderr = sys.stderr
-        sys.stderr = self
-        self.logger_client = logger_client
+    class _StdErrLogger:
+        def __init__(self, logger_client):
+            self.old_stderr = sys.stderr
+            sys.stderr = self
+            self.logger_client = logger_client
 
-    def write(self, s):
-        self.old_stderr.write(s)
-        log_queue.put((STDERR, s))
+        def write(self, s):
+            self.old_stderr.write(s)
+            log_queue.put((STDERR, s))
+
+
+

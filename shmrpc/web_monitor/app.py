@@ -44,7 +44,7 @@ def index():
     return render_template(
         "index.html",
         LServices=[
-            _get_service_info_dict(port)
+            web_service_info._get_service_info_dict(port)
             for port in _DServices
         ],
         services_json=(
@@ -95,87 +95,86 @@ def poll():
     D = {}
     for port in _DServices:  # ORDER?? ============================
         assert not port in D
-        D[port] = _get_service_info_dict(port)
+        D[port] = web_service_info._get_service_info_dict(port)
     return json.dumps(D)
 
 
-def _get_service_info_dict(port):
-    service = _DServices[port]
-    stsd = service.service_time_series_data
-    recent_values = stsd.get_recent_values()
+class WebServiceInfo:
+    def _get_service_info_dict(self, port):
+        service = _DServices[port]
+        stsd = service.service_time_series_data
+        recent_values = stsd.get_recent_values()
 
-    labels = [
-        datetime.utcfromtimestamp(D['timestamp']).strftime(
-            '%m/%d %H:%M:%S'
-        ) for D in recent_values
+        labels = [
+            datetime.utcfromtimestamp(D['timestamp']).strftime(
+                '%m/%d %H:%M:%S'
+            ) for D in recent_values
+        ]
+
+        D = {
+            "graphs": {
+                "labels": labels,
+                "ram": self._get_data_for_keys(
+                    recent_values,
+                    'shared_mem', 'physical_mem', 'virtual_mem',
+                    divisor=1024*1024
+                ),
+                "io": self._get_data_for_keys(
+                    recent_values,
+                    'io_read', 'io_written',
+                    divisor=1024 * 1024
+                ),
+                "cpu": self._get_data_for_keys(
+                    recent_values,
+                    'cpu_usage_pc'
+                ),
+            },
+            "console_text": '',  # FIXME!! =========================================
+            "port": port,
+            "name": service.name,
+            "implementations": [
+                implementation.__class__.__name__
+                for implementation
+                in service.server_providers
+            ],
+            "status": service.get_status_as_string(),
+            'workers': len(service.LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
+            'ram': recent_values[0]['virtual_mem']//1024//1024,  # CHECK ME! =================================
+            'cpu': recent_values[0]['cpu_usage_pc'],
+        }
+        D["table_html"] = self._get_table_html(D)
+        return D
+
+    LColours = [
+        'red',
+        'green',
+        'blue',
+        'purple',
+        'orange',
+        'brown',
+        'pink',
+        'cyan',
+        'magenta',
+        'yellow'
     ]
 
-    D = {
-        "graphs": {
-            "labels": labels,
-            "ram": _get_data_for_keys(
-                recent_values,
-                'shared_mem', 'physical_mem', 'virtual_mem',
-                divisor=1024*1024
-            ),
-            "io": _get_data_for_keys(
-                recent_values,
-                'io_read', 'io_written',
-                divisor=1024 * 1024
-            ),
-            "cpu": _get_data_for_keys(
-                recent_values,
-                'cpu_usage_pc'
-            ),
-        },
-        "console_text": '',  # FIXME!! =========================================
-        "port": port,
-        "name": service.name,
-        "implementations": [
-            implementation.__class__.__name__
-            for implementation
-            in service.server_providers
-        ],
-        "status": service.get_status_as_string(),
-        'workers': len(service.LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
-        'ram': recent_values[0]['virtual_mem']//1024//1024,  # CHECK ME! =================================
-        'cpu': recent_values[0]['cpu_usage_pc'],
-    }
-    D["table_html"] = _get_table_html(D)
-    return D
+    def _get_data_for_keys(self, values, *keys, divisor=None):
+        LData = []
+        for x, key in enumerate(keys):
+            LOut = []
+            for D in values:
+                i = D[key]
+                if divisor is not None:
+                    i //= divisor
+                LOut.append(i)
+            LData.append([key, LOut, self.LColours[x]])
+        return LData
 
+    def _get_table_html(self, DService):
+        return render_template_string(
+            '{% from "service.html" import service_status_table %}\n'
+            '{{ service_status_table(DService) }}',
+            DService=DService
+        )
 
-LColours = [
-    'red',
-    'green',
-    'blue',
-    'purple',
-    'orange',
-    'brown',
-    'pink',
-    'cyan',
-    'magenta',
-    'yellow'
-]
-
-
-def _get_data_for_keys(values, *keys, divisor=None):
-    LData = []
-    for x, key in enumerate(keys):
-        LOut = []
-        for D in values:
-            i = D[key]
-            if divisor is not None:
-                i //= divisor
-            LOut.append(i)
-        LData.append([key, LOut, LColours[x]])
-    return LData
-
-
-def _get_table_html(DService):
-    return render_template_string(
-        '{% from "service.html" import service_status_table %}\n'
-        '{{ service_status_table(DService) }}',
-        DService=DService
-    )
-
+web_service_info = WebServiceInfo()
