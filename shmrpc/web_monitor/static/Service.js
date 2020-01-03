@@ -11,6 +11,31 @@ class Service {
         this.elm = elm;
     }
 
+    pollPeriodically() {
+        // TODO:
+        // * Only poll time series data if it's expanded
+        // * Get the updated console data based on the current offset
+        // * Only show method average execution times/number of calls if expanded
+        //   (after implementing this functionality!)
+
+        const req = new AjaxRequest("poll_service_info", {
+            port: this.port,
+            console_offset: this.getConsoleOffset()
+        });
+        const that = this;
+
+        req.send(function(o) {
+            for (let port in o) {
+                that.DServices[port].update(o[port]);
+            }
+        }, function() {
+
+        });
+
+        // Poll once every 3 secs, in line with data
+        setTimeout(this.pollPeriodically, 3000);
+    }
+
     $(selector) {
         return this.elm.querySelector(selector);
     }

@@ -15,6 +15,10 @@ class WebServiceManager:
         self.DServices = {}
 
     def iter_services_by_name(self):
+        """
+
+        :return:
+        """
         for service in sorted(
             self.DServices.values(),
             key=lambda service: service.name.lower()
@@ -22,6 +26,10 @@ class WebServiceManager:
             yield service
 
     def iter_services_by_port(self):
+        """
+
+        :return:
+        """
         for service in sorted(
             self.DServices.values(),
             key=lambda service: service.port
@@ -29,6 +37,10 @@ class WebServiceManager:
             yield service
 
     def iter_service_ports(self):
+        """
+
+        :return:
+        """
         for port in sorted(self.DServices):
             yield port
 
@@ -53,23 +65,46 @@ class WebServiceManager:
     #=====================================================================#
 
     def get_overall_service_table(self):
+        """
+
+        :return:
+        """
         L = []
         for service in self.iter_services_by_name():
             L.append(self.get_D_service_info(service.port))
         return L
 
     def get_D_service_info(self, port, console_offset=None):
+        """
+
+        :param port:
+        :param console_offset:
+        :return:
+        """
         service = self.DServices[port]
         stsd = service.service_time_series_data
         recent_values = stsd.get_recent_values()
         offset, LHTML = service.logger_server.fifo_json_log.get_html_log(
             console_offset
         )
-
         D = {
             "graphs": self.__get_D_graphs(recent_values),
             "console_text": '\n'.join(LHTML),
-            "console_offset": offset,
+            "console_offset": offset
+        }
+        D.update(self.__get_D_table_info(port, recent_values))
+        D["table_html"] = self.__get_table_html(D)
+        return D
+
+    def __get_D_table_info(self, port, recent_values):
+        """
+
+        :param port:
+        :param recent_values:
+        :return:
+        """
+        service = self.DServices[port]
+        return {
             "port": port,
             "name": service.name,
             "implementations": [
@@ -79,13 +114,17 @@ class WebServiceManager:
             ],
             "status": service.get_status_as_string(),
             'workers': len(service.LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
-            'physical_mem': recent_values[0]['physical_mem']//1024//1024,  # CHECK ME! =================================
-            'cpu': recent_values[0]['cpu_usage_pc'],
+            'physical_mem': recent_values[0]['physical_mem'] // 1024 // 1024,
+            # CHECK ME! =================================
+            'cpu': recent_values[0]['cpu_usage_pc']
         }
-        D["table_html"] = self.__get_table_html(D)
-        return D
 
     def __get_D_graphs(self, recent_values):
+        """
+
+        :param recent_values:
+        :return:
+        """
         labels = [
             datetime.utcfromtimestamp(D['timestamp']).strftime(
                 '%m/%d %H:%M:%S'
@@ -110,6 +149,13 @@ class WebServiceManager:
         }
 
     def __get_data_for_keys(self, values, *keys, divisor=None):
+        """
+
+        :param values:
+        :param keys:
+        :param divisor:
+        :return:
+        """
         LData = []
         for x, key in enumerate(keys):
             LOut = []
@@ -122,6 +168,11 @@ class WebServiceManager:
         return LData
 
     def __get_table_html(self, DService):
+        """
+
+        :param DService:
+        :return:
+        """
         return render_template_string(
             '{% from "service_macros.html" import service_status_table %}\n'
             '{{ service_status_table([DService]) }}',

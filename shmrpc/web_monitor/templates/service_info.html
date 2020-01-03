@@ -8,22 +8,21 @@
     <script src="/static/AjaxRequest.js"></script>
     <script src="/static/LineChart.js"></script>
     <script src="/static/Service.js"></script>
-    <script src="/static/Services.js"></script>
 </head>
 <body>
 
 <div style="width: 920px; padding: 10px; margin: 0 auto">
     <h1>Network Tools Service Web Monitor</h1>
 
-    {% for DService in LServices %}
-        {{ service(DService) }}
-    {% endfor %}
+    {{ service(DService) }}
 </div>
 
 <script type="text/javascript">
-    new Services({{ services_json|tojson }});
+    (function() {
+        const elm = document.getElementById(`service_cont_div_${port}`);
+        new Service({{ service_name|tojson }}, {{ port }}, elm);
+    })();
 </script>
 
 </body>
 </html>
-

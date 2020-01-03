@@ -41,12 +41,6 @@
     <div class="service_cont_div" id="service_cont_div_{{ DService['port'] }}">
         {{ service_status_table([DService]) }}
 
-        <div class="console_log"
-             style="font-family: monospace; white-space: pre; width: 900px; max-height: 200px; overflow: auto"
-             offset="{{ DService['console_offset'] }}">
-            {{ DService['console_text']|safe }}
-        </div>
-
         <div class="cpu_chart" style="float: left"
             ><canvas width="300" height="200"></canvas>
         </div>
@@ -55,6 +49,12 @@
         </div>
         <div class="io_chart" style="float: left"
             ><canvas width="300" height="200"></canvas>
+        </div>
+
+        <div class="console_log"
+             style="font-family: monospace; white-space: pre; width: 900px; overflow-x: auto"
+             offset="{{ DService['console_offset'] }}">
+            {{ DService['console_text']|safe }}
         </div>
     </div>
 {% endmacro %}

@@ -7,7 +7,6 @@
     <script src="/static/chart.min.js"></script>
     <script src="/static/AjaxRequest.js"></script>
     <script src="/static/LineChart.js"></script>
-    <script src="/static/Service.js"></script>
     <script src="/static/Services.js"></script>
 </head>
 <body>
@@ -15,9 +14,9 @@
 <div style="width: 920px; padding: 10px; margin: 0 auto">
     <h1>Network Tools Service Web Monitor</h1>
 
-    {% for DService in LServices %}
-        {{ service(DService) }}
-    {% endfor %}
+    <div id="service_status_table_cont">
+        {{ service_status_table(LServices) }}
+    </div>
 </div>
 
 <script type="text/javascript">
@@ -26,4 +25,3 @@
 
 </body>
 </html>
-
