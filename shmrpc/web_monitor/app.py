@@ -1,7 +1,8 @@
 import os
 import json
-from datetime import datetime
-from flask import Flask, send_from_directory, render_template, render_template_string
+from flask import Flask, send_from_directory, render_template, request
+from shmrpc.web_monitor.WebServiceManager import WebServiceManager
+
 
 app = Flask(
     __name__,
@@ -9,8 +10,7 @@ app = Flask(
         os.path.dirname(__file__), 'templates'
     )
 )
-
-_DServices = {}
+web_service_manager = WebServiceManager()
 
 
 def run_server(services=(), debug=False):
@@ -19,38 +19,16 @@ def run_server(services=(), debug=False):
     MultiProcessManager's and/or InProcessManager's
     """
     for service in services:
-        _DServices[str(service.port)] = service
+        web_service_manager.add_service(service)
 
     app.jinja_env.auto_reload = True
     app.config['TEMPLATES_AUTO_RELOAD'] = True
     app.run(debug=debug)
 
 
-def add_service(service):
-    _DServices[str(service.port)] = service
-
-
-def remove_service(port):
-    del _DServices[port]
-
-
 #================================================#
-# Main index method
+# Static file serving
 #================================================#
-
-
-@app.route('/')
-def index():
-    return render_template(
-        "index.html",
-        LServices=[
-            web_service_info._get_service_info_dict(port)
-            for port in _DServices
-        ],
-        services_json=(
-            [(service.name, service.port) for service in _DServices.values()]
-        )
-    )
 
 
 @app.route('/static/<path:path>')
@@ -63,128 +41,71 @@ def send_js(path):
 
 
 #================================================#
-# Manage services
+# Main index methods
 #================================================#
 
 
-@app.route('/start_service')
-def start_service(port):
-    _DServices[int(port)].start_service()
-    return "ok"
+@app.route('/')
+def index():
+    return render_template(
+        "index.html",
+        LServices=[
+            web_service_manager.get_D_service_info(port)
+            for port in web_service_manager.iter_service_ports()
+        ],
+        services_json=([
+            (service.name, service.port)
+            for service
+            in web_service_manager.values()
+        ])
+    )
 
-
-@app.route('/stop_service')
-def stop_service(port):
-    _DServices[int(port)].stop_service()
-    return "ok"
-
-
-@app.route('/restart_service')
-def restart_service(port):
-    _DServices[int(port)].restart_service()
-    return "ok"
-
-
-#================================================#
-# Update from data periodically
-#================================================#
-
-from flask import request
 
 @app.route('/poll')
 def poll():
     DOffsets = json.loads(request.args.get('offsets'))
 
     D = {}
-    for port in _DServices:  # ORDER?? ============================
+    for port in web_service_manager.iter_service_ports():
         assert not port in D
-        D[port] = web_service_info._get_service_info_dict(
+        D[port] = web_service_manager.get_D_service_info(
             port, DOffsets[port]
         )
     return json.dumps(D)
 
 
-class WebServiceInfo:
-    def _get_service_info_dict(self, port, console_offset=None):
-        service = _DServices[port]
-        stsd = service.service_time_series_data
-        recent_values = stsd.get_recent_values()
+#================================================#
+# Service detailed info methods
+#================================================#
 
-        labels = [
-            datetime.utcfromtimestamp(D['timestamp']).strftime(
-                '%m/%d %H:%M:%S'
-            ) for D in recent_values
-        ]
 
-        #print("GETTING HTML LOG!")
-        offset, LHTML = service.logger_server.fifo_json_log.get_html_log(console_offset)
-        #print("OK:", LHTML)
+@app.route('/service_info')
+def service_info():
+    port = request.args.get('port')
 
-        D = {
-            "graphs": {
-                "labels": labels,
-                "ram": self._get_data_for_keys(
-                    recent_values,
-                    'shared_mem', 'physical_mem', 'virtual_mem',
-                    divisor=1024*1024
-                ),
-                "io": self._get_data_for_keys(
-                    recent_values,
-                    'io_read', 'io_written',
-                    divisor=1024 * 1024
-                ),
-                "cpu": self._get_data_for_keys(
-                    recent_values,
-                    'cpu_usage_pc'
-                ),
-            },
-            "console_text": '\n'.join(LHTML),
-            "console_offset": offset,
-            "port": port,
-            "name": service.name,
-            "implementations": [
-                implementation.__class__.__name__
-                for implementation
-                in service.server_providers
-            ],
-            "status": service.get_status_as_string(),
-            'workers': len(service.LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
-            'ram': recent_values[0]['virtual_mem']//1024//1024,  # CHECK ME! =================================
-            'cpu': recent_values[0]['cpu_usage_pc'],
-        }
-        D["table_html"] = self._get_table_html(D)
-        return D
 
-    LColours = [
-        'red',
-        'green',
-        'blue',
-        'purple',
-        'orange',
-        'brown',
-        'pink',
-        'cyan',
-        'magenta',
-        'yellow'
-    ]
+#================================================#
+# Manage services
+#================================================#
 
-    def _get_data_for_keys(self, values, *keys, divisor=None):
-        LData = []
-        for x, key in enumerate(keys):
-            LOut = []
-            for D in values:
-                i = D[key]
-                if divisor is not None:
-                    i //= divisor
-                LOut.append(i)
-            LData.append([key, LOut, self.LColours[x]])
-        return LData
 
-    def _get_table_html(self, DService):
-        return render_template_string(
-            '{% from "service.html" import service_status_table %}\n'
-            '{{ service_status_table(DService) }}',
-            DService=DService
-        )
+@app.route('/start_service')
+def start_service():
+    port = int(request.args.get('port'))
+    web_service_manager.start_service(port)
+    return "ok"
 
-web_service_info = WebServiceInfo()
+
+@app.route('/stop_service')
+def stop_service():
+    port = int(request.args.get('port'))
+    web_service_manager.stop_service(port)
+    return "ok"
+
+
+@app.route('/restart_service')
+def restart_service():
+    port = int(request.args.get('port'))
+    web_service_manager.restart_service(port)
+    return "ok"
+

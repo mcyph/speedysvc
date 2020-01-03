@@ -1,0 +1,64 @@
+{#######################################}
+{# Multiple service status information #}
+{#######################################}
+
+{% macro service_status_table(LServiceDicts) %}
+    <div class="status_table_cont_div" style="text-align: center">
+        <table>
+            <tr>
+                <th>Service</th>
+                <th>Port</th>
+                <th>Implementations</th>
+                <th>Status</th>
+                <th>Physical RAM (MB)</th>
+                <th>CPU</th>
+                <th>Workers</th>
+            </tr>
+            {% for DService in LServiceDicts %}
+                {{ service_status_row(DService) }}
+            {% endfor %}
+        </table>
+    </div>
+{% endmacro %}
+
+{% macro service_status_row(DService) %}
+    <tr>
+        <td>{{ DService['name']|e }}</td>
+        <td>{{ DService['port']|e }}</td>
+        <td>{{ DService['implementations']|join(", ")|e }}</td>
+        <td>{{ DService['status']|e }}</td>
+        <td>{{ DService['physical_mem']|e }}</td>
+        <td>{{ DService['cpu']|e }}</td>
+        <td>{{ DService['workers']|e }}</td>
+    </tr>
+{% endmacro %}
+
+{#######################################}
+{#  Single service status information  #}
+{#######################################}
+
+{% macro service(DService) %}
+    <div class="service_cont_div" id="service_cont_div_{{ DService['port'] }}">
+        {{ service_status_table([DService]) }}
+
+        <div class="console_log"
+             style="font-family: monospace; white-space: pre; width: 900px; max-height: 200px; overflow: auto"
+             offset="{{ DService['console_offset'] }}">
+            {{ DService['console_text']|safe }}
+        </div>
+
+        <div class="cpu_chart" style="float: left"
+            ><canvas width="300" height="200"></canvas>
+        </div>
+        <div class="ram_chart" style="float: left"
+            ><canvas width="300" height="200"></canvas>
+        </div>
+        <div class="io_chart" style="float: left"
+            ><canvas width="300" height="200"></canvas>
+        </div>
+    </div>
+{% endmacro %}
+
+{% macro service_method_stats(LStats) %}
+    {# TODO! #}
+{% endmacro %}
