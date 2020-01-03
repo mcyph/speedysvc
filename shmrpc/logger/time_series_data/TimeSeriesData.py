@@ -55,6 +55,9 @@ class TimeSeriesData(ABC):
             assert getsize(path) % self.struct.size == 0
             self.__size = int(getsize(path)/self.struct.size)
 
+            # OPEN ISSUE: Start off with blank data in the cache,
+            # as that data normally isn't that useful in between sessions.
+            # The disadvantage would be __getitem__ wouldn't be cacheable
             for x, DProperties in enumerate(self.iterate_backwards()):
                 self.deque.appendleft(DProperties)
                 if x >= fifo_cache_len:
@@ -162,12 +165,20 @@ class TimeSeriesData(ABC):
         """
         # OPEN ISSUE: Should this support slices??? =================================================================
 
-        # TODO: MAKE SURE PENDING DATA FLUSHED TO DISK!
         # TODO: GRAB FROM CACHE IF POSSIBLE!!! ======================================================================
 
         with self.lock:
             self.f.seek(item*self.struct.size)
             encoded = self.f.read(self.struct.size)
+
+            if len(encoded) != self.struct.size:
+                # If not enough returned here, it's probably
+                # data not written to disk due to OS buffering
+                self.f.flush()
+                self.f.seek(item * self.struct.size)
+                encoded = self.f.read(self.struct.size)
+                assert len(encoded) == self.struct.size
+
         data = self.struct.unpack(encoded)
 
         return dict(zip(
@@ -238,7 +249,8 @@ class TimeSeriesData(ABC):
         DVals = Counter()
         num_vals = 0
 
-        if self.deque[0]['timestamp'] >= from_time:
+        # the last value in self.deque is the least recent
+        if from_time >= self.deque[-1]['timestamp']:
             # Use the recent values cache if range in memory
             for DRecord in self.deque:
                 if from_time <= DRecord['timestamp'] <= to_time:
@@ -247,6 +259,15 @@ class TimeSeriesData(ABC):
                             continue
                         DVals[property] += DRecord[property]
                     num_vals += 1
+        elif self.deque:
+            # I've disabled the below code grabbing from disk,
+            # as should always have enough data in cache
+            # (at least in the current interface).
+            # If I ever need to do long-term analytics,
+            # will uncomment the below.
+            raise Exception("Averaging should always be in memory!")
+
+        """
         elif self.deque:
             # Otherwise grab from disk (**very slow**)
             # only if there actually have been values
@@ -261,6 +282,7 @@ class TimeSeriesData(ABC):
                         continue
                     DVals[property] += DRecord[property]
                 num_vals += 1
+        """
 
         return {
             key: val / num_vals
