@@ -17,7 +17,7 @@ class Service {
 
     getConsoleOffset() {
         return parseInt(
-            this.$(".console_log")[0].getAttribute("offset")
+            this.$(".console_log").getAttribute("offset")
         );
     }
 
@@ -50,7 +50,7 @@ class Service {
         this.updateGraphs(o["graphs"]);
 
         if (o["console_text"]) {
-            this.writeConsoleText(o["console_text"]);
+            this.writeConsoleHTML(o["console_text"]);
         }
     }
 
@@ -88,10 +88,7 @@ class Service {
     // Console Text
     //======================================================//
 
-    writeConsoleText(text) {
-        this.consoleDiv.appendChild(
-            // TODO: Check whitespace is preserved here!! =====================================================
-            document.createTextNode(text)
-        );
+    writeConsoleHTML(html) {
+        this.$(".console_log").innerHTML += html;
     }
 }

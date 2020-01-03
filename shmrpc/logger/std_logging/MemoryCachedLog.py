@@ -2,7 +2,7 @@ from io import BytesIO
 
 
 class MemoryCachedLog:
-    def __init__(self, path, max_cache=500000):  # 500kb
+    def __init__(self, path, max_cache=5000):  # 5kb
         """
         A disk-backed log, with a circular FIFO in-memory buffer that
         overwrites itself after max_cache is reached.
@@ -37,6 +37,9 @@ class MemoryCachedLog:
         :return: an int
         """
         return self.spindle
+
+    def flush(self):
+        self.f.flush()
 
     def _iter_from_disk(self):
         """

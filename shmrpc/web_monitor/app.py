@@ -89,10 +89,11 @@ def restart_service(port):
 # Update from data periodically
 #================================================#
 
+from flask import request
 
 @app.route('/poll')
-def poll(offsets):
-    DOffsets = json.loads(offsets)
+def poll():
+    DOffsets = json.loads(request.args.get('offsets'))
 
     D = {}
     for port in _DServices:  # ORDER?? ============================
@@ -115,7 +116,9 @@ class WebServiceInfo:
             ) for D in recent_values
         ]
 
-        offset, LHTML = service.fifo_json_log.get_html_log(console_offset)
+        #print("GETTING HTML LOG!")
+        offset, LHTML = service.logger_server.fifo_json_log.get_html_log(console_offset)
+        #print("OK:", LHTML)
 
         D = {
             "graphs": {

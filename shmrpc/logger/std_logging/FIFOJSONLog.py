@@ -7,7 +7,7 @@ from shmrpc.logger.std_logging.log_entry_types import dict_to_log_entry, INFO
 
 
 class FIFOJSONLog(MemoryCachedLog):
-    def __init__(self, path, max_cache=500000):  # 500kb
+    def __init__(self, path, max_cache=5000):  # 5kb
         """
         A disk-backed, in-memory-cached JSON log, delimited by
         newlines before each entry so as to be able to figure
@@ -24,25 +24,26 @@ class FIFOJSONLog(MemoryCachedLog):
     #                          Add Log Entries                           #
     #====================================================================#
 
-    def write_to_log(self, pid, port, service_name, msg, level=INFO):
+    def write_to_log(self, t, pid, port, svc, msg, level=INFO):
         """
         Write a message to the log.
 
+        :param t: the unix timestamp from the epoch as returned by time.time()
         :param pid: the process ID from which the event occurred
         :param port: the port of the service
-        :param service_name: the name of the service
+        :param svc: the name of the service
         :param msg: the log message
         :param level: a log level, e.g. ERROR, or INFO
         """
         with self.lock:
             self._write_line(json.dumps({
-                't': int(time.time()),
+                't': int(t),
                 'level': level,
                 'pid': pid,
                 'port': port,
-                'svc': service_name,
+                'svc': svc,
                 'msg': msg
-            }))
+            }).encode('utf-8'))
 
     #====================================================================#
     #                          Get Log Entries                           #
@@ -53,20 +54,16 @@ class FIFOJSONLog(MemoryCachedLog):
         Iterate through all log items from disk -
         not just the ones in-memory, or from this session
         """
-        with self.lock:
-            for line in self._iter_from_disk():
-                yield json.loads(line)
+        for line in self._iter_from_disk():
+            yield json.loads(line.decode('utf-8'))
 
     def iter_from_cache(self, offset=None):
         """
         Iterate through cache log items - yield the JSON log dicts
         Better to use this in most cases, as is much faster
         """
-        with self.lock:
-            for x, line in enumerate(self._iter_from_cache(offset)):
-                if not x:
-                    continue
-                yield json.loads(line)
+        for x, line in enumerate(self._iter_from_cache(offset)):
+            yield json.loads(line.decode('utf-8'))
 
     def get_text_log(self, include_service=True, include_date=True, include_time=True,
                      offset=None):
@@ -132,3 +129,15 @@ class FIFOJSONLog(MemoryCachedLog):
                     include_service, include_date, include_time
                 ))
             return self.get_fifo_spindle(), L
+
+
+if __name__ == '__main__':
+    log = FIFOJSONLog('/tmp/test_fifo_json_log.json')
+    log.write_to_log(555, 55, 'mine', 'message')
+    print(log.get_coloured_console_log())
+    print(log.get_html_log())
+    print(log.get_text_log())
+    print(log.get_coloured_console_log())
+    print(log.get_html_log())
+    print(log.get_text_log())
+

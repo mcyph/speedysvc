@@ -1,12 +1,12 @@
 import time
 from multiprocessing import cpu_count
 
-from shmrpc.logger.LoggerServer import LoggerServer
+from shmrpc.logger.std_logging.LoggerServer import LoggerServer
 from shmrpc.rpc.network.NetworkServer import NetworkServer
 from shmrpc.rpc.shared_memory.SHMServer import SHMServer
 from shmrpc.service_managers.multi_process_manager.MultiProcessManager import \
     MultiProcessServer
-from shmrpc.logger.ServiceTimeSeriesData import ServiceTimeSeriesData
+from shmrpc.logger.time_series_data.ServiceTimeSeriesData import ServiceTimeSeriesData
 from shmrpc.toolkit.io.make_dirs import make_dirs
 from shmrpc.toolkit.py_ini.read.ReadIni import ReadIni
 from shmrpc.web_monitor.app import add_service, run_server

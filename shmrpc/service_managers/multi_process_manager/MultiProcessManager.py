@@ -6,7 +6,7 @@ import psutil
 import _thread
 from multiprocessing import cpu_count
 
-from shmrpc.logger.LoggerClient import LoggerClient
+from shmrpc.logger.std_logging.LoggerClient import LoggerClient
 from shmrpc.rpc.network.NetworkServer import NetworkServer
 from shmrpc.rpc.shared_memory.SHMServer import SHMServer
 
@@ -271,7 +271,7 @@ class MultiProcessServer:
             self.logger_client = LoggerClient(self.server_methods)
             print(f"{self.server_methods.name} child: "
                   f"Creating server methods")
-            smi = self.server_methods(self.logger_client)
+            smi = self.server_methods_inst = self.server_methods(self.logger_client)
             print(f"{self.server_methods.name} child: "
                   f"Server methods created, starting implementations")
 

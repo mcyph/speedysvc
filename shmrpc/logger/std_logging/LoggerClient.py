@@ -4,11 +4,11 @@ from os import getpid
 from queue import Queue
 from _thread import allocate_lock, start_new_thread
 
-from shmrpc.logger.LoggerServer import LoggerServer
+from shmrpc.logger.std_logging.LoggerServer import LoggerServer
 from shmrpc.rpc.shared_memory.SHMClient import SHMClient
 from shmrpc.rpc.base_classes.ClientMethodsBase import ClientMethodsBase
 from shmrpc.logger.std_logging.log_entry_types import \
-    NOTSET, DEBUG, INFO, ERROR, WARN, CRITICAL
+    NOTSET, DEBUG, INFO, ERROR, WARNING, CRITICAL
 
 
 # We'll use a queue here sending in a thread rather
@@ -23,11 +23,14 @@ class LoggerClient(ClientMethodsBase):
         A basic logger which sends stderr/stdout
         output to a logging server
         """
+        print("ALLOCATE!")
         self.lock = allocate_lock()
-        self.__pid = getpid()
+        self.pid = getpid()
 
+        print("CREATE CLIENT!")
         self.client = SHMClient(LoggerServer, port=f'{server_methods.port}_log')
         ClientMethodsBase.__init__(self, client_provider=self.client)
+        print("CREATE LOGGERS!")
         self.stderr_logger = self._StdErrLogger(self)
         self.stdout_logger = self._StdOutLogger(self)
         start_new_thread(self.__log_thread, ())
@@ -40,10 +43,12 @@ class LoggerClient(ClientMethodsBase):
         while True:
             try:
                 self._write_to_log_(log_queue.get())
-            except:
+            except Exception as e:
                 # WARNING WARNING#
                 # Trouble is, if things go wrong here, they could lead to recursive
                 # write to stderr/stdout, so I'm not sure handling this is worth it..
+                import traceback
+                self.stderr_logger.old_stderr.write(traceback.format_exc())
                 time.sleep(1)
 
     def _loaded_ok_signal_(self):
@@ -59,7 +64,7 @@ class LoggerClient(ClientMethodsBase):
         :param log_params:
         :return:
         """
-        self.send(LoggerServer.stdout_write, log_params)
+        self.send(LoggerServer._write_to_log_, log_params)
 
     #=================================================================#
     #                      User-Callable Methods                      #
@@ -77,9 +82,19 @@ class LoggerClient(ClientMethodsBase):
         :param msg: the string message
         :param level: the log level, e.g. DEBUG or INFO
         """
-        pid = self.__pid
-        port = self.server_methods.port
-        service_name = self.server_methods.name
+        pid = self.pid
+
+        #print(hasattr(self, 'server_methods'))
+
+        if hasattr(self.server_methods, 'port'):
+            port = self.server_methods.port
+        else:
+            port = -1
+
+        if hasattr(self.server_methods, 'name'):
+            service_name = self.server_methods.name
+        else:
+            service_name = '(unknown service)'
 
         log_queue.put(
             (int(time.time()), pid, port, service_name, msg, level)
@@ -119,7 +134,7 @@ class LoggerClient(ClientMethodsBase):
         Output a warning message
         :param msg: the string message
         """
-        self(msg, WARN)
+        self(msg, WARNING)
     warning = warn
 
     def critical(self, msg):
@@ -139,6 +154,9 @@ class LoggerClient(ClientMethodsBase):
             sys.stdout = self
             self.logger_client = logger_client
 
+        def flush(self):
+            self.old_stdout.flush()
+
         def write(self, s):
             # WARNING: If the logger client's send command needs
             # to send to the log itself, then it'll result in a deadlock!
@@ -151,6 +169,9 @@ class LoggerClient(ClientMethodsBase):
             self.old_stderr = sys.stderr
             sys.stderr = self
             self.logger_client = logger_client
+
+        def flush(self):
+            self.old_stderr.flush()
 
         def write(self, s):
             self.old_stderr.write(s)

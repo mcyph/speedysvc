@@ -9,7 +9,7 @@ from shmrpc.rpc.network.NetworkServer import NetworkServer
 from shmrpc.rpc_decorators import \
     json_method, marshal_method, msgpack_method, \
     raw_method, pickle_method
-from shmrpc.logger.LoggerServer import LoggerServer
-from shmrpc.logger.LoggerClient import LoggerClient
-from shmrpc.logger.ServiceTimeSeriesData import \
+from shmrpc.logger.std_logging.LoggerServer import LoggerServer
+from shmrpc.logger.std_logging.LoggerClient import LoggerClient
+from shmrpc.logger.time_series_data.ServiceTimeSeriesData import \
     ServiceTimeSeriesData

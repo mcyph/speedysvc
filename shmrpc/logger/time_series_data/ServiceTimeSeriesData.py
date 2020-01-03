@@ -1,6 +1,6 @@
 from collections import Counter
 from psutil import Process, pid_exists
-from shmrpc.logger.TimeSeriesData import TimeSeriesData
+from shmrpc.logger.time_series_data.TimeSeriesData import TimeSeriesData
 
 
 class ServiceTimeSeriesData(TimeSeriesData):

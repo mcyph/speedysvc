@@ -69,6 +69,9 @@ class LoggerServer:
                 self.f_stderr.flush()
             with self.stdout_lock:
                 self.f_stdout.flush()
+            with self.stdout_lock:
+                with self.stderr_lock:
+                    self.fifo_json_log.flush()
             self.flush_needed = False
         time.sleep(FLUSH_EVERY_SECONDS)
 
@@ -91,25 +94,24 @@ class LoggerServer:
             't': t,
             'pid': pid,
             'port': port,
-            'service_name': service_name,
+            'svc': service_name,
             'msg': msg,
             'level': level
         })
 
         if log_entry.writes_to == STDERR:
             with self.stderr_lock:
-                self.f_stderr.write(log_entry.to_text())
+                self.f_stderr.write(log_entry.to_text().encode('utf-8'))
                 self.flush_needed = True
         elif log_entry.writes_to == STDOUT:
             with self.stdout_lock:
-                self.f_stdout.write(log_entry.to_text())
+                self.f_stdout.write(log_entry.to_text().encode('utf-8'))
                 self.flush_needed = True
         else:
             # Should never get here!
             raise Exception("Unknown writes_to: %s" % log_entry.writes_to)
 
         self.fifo_json_log.write_to_log(
-            # Note the keys of to_dict aren't identical to above
             **log_entry.to_dict()
         )
 

@@ -3,9 +3,9 @@
         {{ service_status_table(DService) }}
 
         <div class="console_log"
-             style="font-family: monospace; white-space: pre"
-             offset="{{ console_offset }}">
-            {{ DService['console_text'] }}
+             style="font-family: monospace; white-space: pre; width: 900px; max-height: 200px; overflow: auto"
+             offset="{{ DService['console_offset'] }}">
+            {{ DService['console_text']|safe }}
         </div>
 
         {#

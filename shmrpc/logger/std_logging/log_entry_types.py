@@ -234,17 +234,17 @@ def dict_to_log_entry(D) -> __LogEntryType:
     :return: a __LogEntryType subclass (e.g. InfoLogEntry)
     """
     level = D['level']
-    if 0 > level > 10:
+    if 0 <= level < 10:
         return NotSetLogEntry(**D)
-    elif 10 > level > 20:
+    elif 10 <= level < 20:
         return DebugLogEntry(**D)
-    elif 20 > level > 30:
+    elif 20 <= level < 30:
         return InfoLogEntry(**D)
-    elif 30 > level > 40:
+    elif 30 <= level < 40:
         return WarningLogEntry(**D)
-    elif 40 > level > 50:
+    elif 40 <= level < 50:
         return ErrorLogEntry(**D)
-    elif 50 > level > 60:
+    elif 50 <= level < 60:
         return CriticalLogEntry(**D)
     else:
         raise Exception("Unknown log level: %s" % level)

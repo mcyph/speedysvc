@@ -43,7 +43,7 @@ class Services {
 
         });
 
-        // Poll once every 5 secs, in line with data
-        setTimeout(this.pollPeriodically, 5*1000);
+        // Poll once every 15 secs, in line with data
+        setTimeout(this.pollPeriodically, 15*1000);
     }
 }
