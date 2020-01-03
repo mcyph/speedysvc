@@ -23,14 +23,11 @@ class LoggerClient(ClientMethodsBase):
         A basic logger which sends stderr/stdout
         output to a logging server
         """
-        print("ALLOCATE!")
         self.lock = allocate_lock()
         self.pid = getpid()
 
-        print("CREATE CLIENT!")
         self.client = SHMClient(LoggerServer, port=f'{server_methods.port}_log')
         ClientMethodsBase.__init__(self, client_provider=self.client)
-        print("CREATE LOGGERS!")
         self.stderr_logger = self._StdErrLogger(self)
         self.stdout_logger = self._StdOutLogger(self)
         start_new_thread(self.__log_thread, ())

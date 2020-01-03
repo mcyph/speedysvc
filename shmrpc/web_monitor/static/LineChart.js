@@ -35,7 +35,7 @@ class LineChart {
             },
 
             // Configuration options go here
-            options: {}
+            options: {animation: false}
         });
     }
 

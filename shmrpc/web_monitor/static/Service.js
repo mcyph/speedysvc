@@ -9,6 +9,8 @@ class Service {
         this.serviceName = serviceName;
         this.port = port;
         this.elm = elm;
+        this.pollPeriodically = this.pollPeriodically.bind(this);
+        this.pollPeriodically();
     }
 
     pollPeriodically() {
@@ -24,10 +26,8 @@ class Service {
         });
         const that = this;
 
-        req.send(function(o) {
-            for (let port in o) {
-                that.DServices[port].update(o[port]);
-            }
+        req.send(function(DService) {
+            that.update(DService);
         }, function() {
 
         });

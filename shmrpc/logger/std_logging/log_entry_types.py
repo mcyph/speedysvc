@@ -79,7 +79,7 @@ class __LogEntryType:
                  compatible with only Unix terminals
         """
         return self._log_item_formatted(
-            self.format_console,
+            self.msg_format_console,
             self.service_format_console,
             self.date_time_format_console,
             include_service, include_date, include_time
@@ -95,7 +95,7 @@ class __LogEntryType:
         :return: coloured html-formatted entries
         """
         return self._log_item_formatted(
-            self.format_html,
+            self.msg_format_html,
             self.service_format_html,
             self.date_time_format_html,
             include_service, include_date, include_time,
@@ -103,7 +103,7 @@ class __LogEntryType:
         )
 
     def _log_item_formatted(self,
-                            colour_template,
+                            msg_colour_template,
                             service_colour_template,
                             date_time_colour_template,
                             include_service=True,
@@ -113,8 +113,8 @@ class __LogEntryType:
         """
         Format a log message.
 
-        :param colour_template: a two-tuple of (start formatting, end formatting)
-                                for log messages
+        :param msg_colour_template: a two-tuple of (start formatting, end formatting)
+                                    for log messages
         :param service_colour_template: a two-tuple of (start formatting, end formatting)
                                         for service name/pid/port
         :param date_time_colour_template: a two-tuple of (start formatting, end formatting)
@@ -162,8 +162,8 @@ class __LogEntryType:
             E(self.msg) if escape_html else self.msg
         )
 
-        if colour_template:
-            start, end = colour_template
+        if msg_colour_template:
+            start, end = msg_colour_template
             item += start + msg + end
         else:
             item += msg
@@ -172,54 +172,54 @@ class __LogEntryType:
 
 
 class NotSetLogEntry(__LogEntryType):
-    format_console = ('',
+    msg_format_console = ('',
                       '')
-    format_html = ('',
+    msg_format_html = ('',
                    '')
     description = None
     writes_to = STDOUT
 
 
 class InfoLogEntry(__LogEntryType):
-    format_console = ('',
+    msg_format_console = ('',
                       '')
-    format_html = ('',
+    msg_format_html = ('',
                    '')
     description = 'info'
     writes_to = STDOUT
 
 
 class DebugLogEntry(__LogEntryType):
-    format_console = ('',
+    msg_format_console = ('',
                       '')  # FIXME
-    format_html = ('<span style="color: gray">',
+    msg_format_html = ('<span style="color: gray">',
                    '</span>')
     description = 'dbg'
     writes_to = STDOUT
 
 
 class WarningLogEntry(__LogEntryType):
-    format_console = ('\033[93m',
+    msg_format_console = ('\033[93m',
                       _END_COLOUR)
-    format_html = ('<span style="color: orange>',
+    msg_format_html = ('<span style="color: orange>',
                    '</span>')
     description = 'warn'
     writes_to = STDERR
 
 
 class ErrorLogEntry(__LogEntryType):
-    format_console = ('\033[91m',
+    msg_format_console = ('\033[91m',
                       _END_COLOUR)
-    format_html = ('<span style="color: darkred">',
+    msg_format_html = ('<span style="color: darkred">',
                    '</span>')
     description = 'err'
     writes_to = STDERR
 
 
 class CriticalLogEntry(__LogEntryType):
-    format_console = ('\033[1m\033[91m',
+    msg_format_console = ('\033[1m\033[91m',
                       _END_COLOUR+_END_COLOUR)
-    format_html = ('<span style="font-weight: bold; color: darkred">',
+    msg_format_html = ('<span style="font-weight: bold; color: darkred">',
                    '</span>')
     description = 'critical'
     writes_to = STDERR

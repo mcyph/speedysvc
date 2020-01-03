@@ -2,7 +2,7 @@
 "use strict";
 
 class Services {
-    constructor(LServices) {
+    constructor() {
         /*
         A class that keeps track of all the services,
         polling for updates for them all via AJAX.

@@ -77,6 +77,10 @@ def __network_method(fn, serialiser):
         f"Serialiser has already been set for {fn}"
     fn.serialiser = serialiser
     fn.as_rpc = lambda: __from_server_method(fn)
+    fn.metadata = {
+        'num_calls': 0,
+        'total_time': 0
+    }
     return fn
 
 

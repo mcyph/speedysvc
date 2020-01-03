@@ -149,6 +149,12 @@ class SHMServer(SHMBase, ServerProviderBase):
                 else:
                     raise Exception("Unknown state: %s" % mmap[0])
 
+            # Measure for complete time it takes from
+            # getting/putting back to the shm block
+            # for benchmarking
+            t_from = time.time()
+            fn = None
+
             # Get the command+parameters
             mmap[0] = SERVER
             cmd_len, args_len = self.request_serialiser.unpack(
@@ -198,6 +204,11 @@ class SHMServer(SHMBase, ServerProviderBase):
             # Set the result, and end the call
             mmap[1:1+len(encoded)] = encoded
             mmap[0] = CLIENT
+
+            # Add to some variables for basic benchmarking
+            if hasattr(fn, 'metadata'):
+                fn.metadata['num_calls'] += 1
+                fn.metadata['total_time'] += time.time() - t_from
 
         finally:
             server_lock.unlock()

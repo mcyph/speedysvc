@@ -133,7 +133,7 @@ class FIFOJSONLog(MemoryCachedLog):
 
 if __name__ == '__main__':
     log = FIFOJSONLog('/tmp/test_fifo_json_log.json')
-    log.write_to_log(555, 55, 'mine', 'message')
+    log.write_to_log(5454, 555, 55, 'mine', 'message')
     print(log.get_coloured_console_log())
     print(log.get_html_log())
     print(log.get_text_log())

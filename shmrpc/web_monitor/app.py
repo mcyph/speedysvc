@@ -53,22 +53,15 @@ def index():
         services_json=([
             (service.name, service.port)
             for service
-            in web_service_manager.values()
+            in web_service_manager.iter_services_by_name()
         ])
     )
 
 
 @app.route('/poll')
 def poll():
-    DOffsets = json.loads(request.args.get('offsets'))
-
-    D = {}
-    for port in web_service_manager.iter_service_ports():
-        assert not port in D
-        D[port] = web_service_manager.get_D_service_info(
-            port, DOffsets[port]
-        )
-    return json.dumps(D)
+    LServiceInfo = web_service_manager.get_overall_table_html(add_links=True)
+    return json.dumps(LServiceInfo)
 
 
 #================================================#

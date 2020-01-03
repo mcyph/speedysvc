@@ -9,7 +9,7 @@ from shmrpc.service_managers.multi_process_manager.MultiProcessManager import \
 from shmrpc.logger.time_series_data.ServiceTimeSeriesData import ServiceTimeSeriesData
 from shmrpc.toolkit.io.make_dirs import make_dirs
 from shmrpc.toolkit.py_ini.read.ReadIni import ReadIni
-from shmrpc.web_monitor.app import add_service, run_server
+from shmrpc.web_monitor.app import web_service_manager, run_server
 
 
 # A variable to make sure the servers stay
@@ -54,7 +54,7 @@ def run_multi_proc_server(server_methods,
         min_proc_num=min_proc_num,
         wait_until_completed=wait_until_completed
     ))
-    add_service(__LServers[-1])
+    web_service_manager.add_service(__LServers[-1])
 
 
 if __name__ == '__main__':

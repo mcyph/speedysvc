@@ -19,7 +19,7 @@
 
 <script type="text/javascript">
     (function() {
-        const elm = document.getElementById(`service_cont_div_${port}`);
+        const elm = document.getElementById(`service_cont_div_{{port}}`);
         new Service({{ service_name|tojson }}, {{ port }}, elm);
     })();
 </script>

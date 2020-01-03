@@ -64,6 +64,14 @@ class WebServiceManager:
     #                      Get Service Status/Stats                       #
     #=====================================================================#
 
+    def get_overall_table_html(self, add_links=True):
+        return render_template_string(
+            '{% from "service_macros.html" import service_status_table %}\n'
+            '{{ service_status_table(LServiceTable, add_links) }}',
+            LServiceTable=self.get_overall_service_table(),
+            add_links=add_links
+        )
+
     def get_overall_service_table(self):
         """
 
@@ -114,9 +122,10 @@ class WebServiceManager:
             ],
             "status": service.get_status_as_string(),
             'workers': len(service.LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
-            'physical_mem': recent_values[0]['physical_mem'] // 1024 // 1024,
-            # CHECK ME! =================================
-            'cpu': recent_values[0]['cpu_usage_pc']
+            'physical_mem': recent_values[-1]['physical_mem'] // 1024 // 1024,
+            # We'll average over 3 iterations, as this can spike pretty quickly.
+            # Note that recent_values is actually reversed for displaying on the graph rtl
+            'cpu': sum([recent_values[-x]['cpu_usage_pc'] for x in range(3)]) / 3
         }
 
     def __get_D_graphs(self, recent_values):

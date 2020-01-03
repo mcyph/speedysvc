@@ -2,7 +2,7 @@
 {# Multiple service status information #}
 {#######################################}
 
-{% macro service_status_table(LServiceDicts) %}
+{% macro service_status_table(LServiceDicts, add_links=False) %}
     <div class="status_table_cont_div" style="text-align: center">
         <table>
             <tr>
@@ -15,15 +15,19 @@
                 <th>Workers</th>
             </tr>
             {% for DService in LServiceDicts %}
-                {{ service_status_row(DService) }}
+                {{ service_status_row(DService, add_links) }}
             {% endfor %}
         </table>
     </div>
 {% endmacro %}
 
-{% macro service_status_row(DService) %}
+{% macro service_status_row(DService, add_links=False) %}
     <tr>
-        <td>{{ DService['name']|e }}</td>
+        {% if add_links %}
+            <td><a href="/service_info?port={{ DService['port'] }}">{{ DService['name']|e }}</a></td>
+        {% else %}
+            <td>{{ DService['name']|e }}</td>
+        {% endif %}
         <td>{{ DService['port']|e }}</td>
         <td>{{ DService['implementations']|join(", ")|e }}</td>
         <td>{{ DService['status']|e }}</td>
