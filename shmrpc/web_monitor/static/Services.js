@@ -30,6 +30,8 @@ class Services {
             document.querySelector(".console_log").setAttribute(
                 "offset", DServices["console_offset"]
             );
+            document.getElementById("overall_service_methods_cont").innerHTML =
+                DServices["overall_service_methods_html"];
         }, function() {
 
         });
@@ -40,7 +42,7 @@ class Services {
 
     getConsoleOffset() {
         return parseInt(
-            this.$(".console_log").getAttribute("offset")
+            document.querySelector(".console_log").getAttribute("offset")
         );
     }
 }

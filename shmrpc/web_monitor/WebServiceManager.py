@@ -128,6 +128,43 @@ class WebServiceManager:
             L.append(self.get_D_service_info(service.port))
         return L
 
+    def get_overall_service_methods(self, max_methods=15):
+        """
+        Get a summary of the methods from all services, sorted
+        by total time the method has taken over all calls
+        :param max_methods:
+        :return:
+        """
+        L = []
+        for service in self.iter_services_by_name():
+            DMethodStats = service.logger_server.get_D_method_stats()
+
+            L.extend([
+                (
+                    service.port,
+                    service.name,
+                    method_name,
+                    D['num_calls'],
+                    D['avg_call_time'],
+                    D['total_time'])
+                for method_name, D
+                in DMethodStats.items()
+            ])
+
+        L.sort(key=lambda i: -i[-1])
+        if max_methods is not None:
+            L = L[:max_methods]
+
+        return L
+
+    def get_overall_service_methods_html(self, max_methods=15):
+        L = self.get_overall_service_methods(max_methods)
+        return render_template_string(
+            '{% from "service_macros.html" import overall_method_stats_html %}\n'
+            '{{ overall_method_stats_html(LMethodStats) }}',
+            LMethodStats=L
+        )
+
     #=====================================================================#
     #                   Get Single Service Status/Stats                   #
     #=====================================================================#

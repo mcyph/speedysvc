@@ -53,6 +53,7 @@ def index():
         LServices=web_service_manager.get_overall_service_table(),
         console_text=console_text,
         console_offset=console_offset,
+        LOverallServiceMethods=web_service_manager.get_overall_service_methods(),
         services_json=([
             (service.name, service.port)
             for service
@@ -67,8 +68,11 @@ def poll():
     console_offset, console_text = web_service_manager.get_overall_log(
         offset=int(request.args.get('offset'))
     )
+    overall_service_methods_html = web_service_manager.get_overall_service_methods_html()
+
     return json.dumps({
         'service_table_html': service_table_html,
+        'overall_service_methods_html': overall_service_methods_html,
         'console_text': console_text,
         'console_offset': console_offset
     })

@@ -26,7 +26,7 @@ def run_multi_proc_server(server_methods,
                           wait_until_completed=True,
                           force_insecure_serialisation=False,
 
-                          logger_parent=None):
+                          fifo_json_log_parent=None):
 
     # TODO: Run this method in a separate process, so as to allow for
 
@@ -40,7 +40,8 @@ def run_multi_proc_server(server_methods,
     )
     logger_server = LoggerServer(
         log_dir=f'{log_dir}/{server_methods.name}/',
-        server_methods=server_methods
+        server_methods=server_methods,
+        fifo_json_log_parent=fifo_json_log_parent
     )
 
     __LServers.append(MultiProcessServer(
@@ -57,7 +58,6 @@ def run_multi_proc_server(server_methods,
         min_proc_num=min_proc_num,
         wait_until_completed=wait_until_completed
     ))
-    web_service_manager.set_logger_parent(logger_parent)
     web_service_manager.add_service(__LServers[-1])
 
 
@@ -96,16 +96,20 @@ if __name__ == '__main__':
     if not 'log_dir' in DDefaults:
         # Note this - the logger parent always uses the "default" dir currently
         DDefaults['log_dir'] = '/tmp/shmrpc_logs'
-    logger_parent = FIFOJSONLog(f"{DDefaults['log_dir']}/GLOBAL_LOGS")
+    fifo_json_log_parent = FIFOJSONLog(f"{DDefaults['log_dir']}/GLOBAL_LOGS")
+    web_service_manager.set_logger_parent(fifo_json_log_parent)
 
     for section, DSection in DValues.items():
-        print("SECTION:", section)
+        #print("SECTION:", section)
         import_from = DSection.pop('import_from')
         server_methods = getattr(importlib.import_module(import_from), section) # Package?
 
         DArgs = DDefaults.copy()
         DArgs.update({k: DArgKeys[k](v) for k, v in DSection.items()})
-        run_multi_proc_server(server_methods, **DArgs)
+        run_multi_proc_server(
+            server_methods, **DArgs,
+            fifo_json_log_parent=fifo_json_log_parent
+        )
 
     print("Services started - starting web monitoring interface")
 

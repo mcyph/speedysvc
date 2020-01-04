@@ -11,7 +11,7 @@
 {#######################################}
 
 {% macro service_status_table(LServiceDicts, add_links=False) %}
-    <div class="status_table_cont_div" style="text-align: center">
+    <div class="status_table_cont_div">
         <table>
             <tr>
                 <th>Service</th>
@@ -43,6 +43,27 @@
         <td>{{ DService['cpu']|e }}</td>
         <td>{{ DService['workers']|e }}</td>
     </tr>
+{% endmacro %}
+
+{% macro overall_method_stats_html(LMethodStats) %}
+    <table>
+        <tr>
+            <th>Service</th>
+            <th>Method Name</th>
+            <th>Total Calls</th>
+            <th>Total Call Time</th>
+            <th>Average Call Time</th>
+        </tr>
+        {% for port, svc, method_name, num_calls, avg_call_time, total_time in LMethodStats %}
+            <tr>
+                <td><a href="/service_info?port={{ port }}">{{ svc }}</a></td>
+                <td>{{ method_name }}</td>
+                <td>{{ num_calls }}</td>
+                <td>{{ '%0.5f'| format(total_time|float) }}</td>
+                <td>{{ '%0.5f'| format(avg_call_time|float) }}</td>
+            </tr>
+        {% endfor %}
+    </table>
 {% endmacro %}
 
 {#######################################}
@@ -93,3 +114,6 @@
         {% endfor %}
     </table>
 {% endmacro %}
+
+
+
