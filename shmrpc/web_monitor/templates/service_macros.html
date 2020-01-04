@@ -1,3 +1,11 @@
+{% macro console_log(console_offset, console_text) %}
+    <div class="console_log"
+         style="font-family: monospace; white-space: pre; width: 900px; overflow-x: auto"
+         offset="{{ console_offset }}"
+        >{{ console_text|safe }}</div>
+{% endmacro %}
+
+
 {#######################################}
 {# Multiple service status information #}
 {#######################################}
@@ -62,11 +70,8 @@
         </div>
 
         <h2>Console Log</h2>
-        <div class="console_log"
-             style="font-family: monospace; white-space: pre; width: 900px; overflow-x: auto"
-             offset="{{ DService['console_offset'] }}"
-            >{{ DService['console_text']|safe }}</div>
-
+        {{ console_log(DService['console_offset'],
+                       DService['console_text']) }}
     </div>
 {% endmacro %}
 
@@ -88,4 +93,3 @@
         {% endfor %}
     </table>
 {% endmacro %}
-

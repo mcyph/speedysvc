@@ -47,9 +47,12 @@ def send_js(path):
 
 @app.route('/')
 def index():
+    console_offset, console_text = web_service_manager.get_overall_log()
     return render_template(
         "index.html",
         LServices=web_service_manager.get_overall_service_table(),
+        console_text=console_text,
+        console_offset=console_offset,
         services_json=([
             (service.name, service.port)
             for service
@@ -60,8 +63,15 @@ def index():
 
 @app.route('/poll')
 def poll():
-    LServiceInfo = web_service_manager.get_overall_table_html(add_links=True)
-    return json.dumps(LServiceInfo)
+    service_table_html = web_service_manager.get_overall_table_html(add_links=True)
+    console_offset, console_text = web_service_manager.get_overall_log(
+        offset=int(request.args.get('offset'))
+    )
+    return json.dumps({
+        'service_table_html': service_table_html,
+        'console_text': console_text,
+        'console_offset': console_offset
+    })
 
 
 #================================================#

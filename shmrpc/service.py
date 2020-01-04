@@ -2,6 +2,7 @@ import time
 from multiprocessing import cpu_count
 
 from shmrpc.logger.std_logging.LoggerServer import LoggerServer
+from shmrpc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
 from shmrpc.rpc.network.NetworkServer import NetworkServer
 from shmrpc.rpc.shared_memory.SHMServer import SHMServer
 from shmrpc.service_managers.multi_process_manager.MultiProcessManager import \
@@ -23,7 +24,9 @@ def run_multi_proc_server(server_methods,
                           max_proc_num=cpu_count(),
                           min_proc_num=1,
                           wait_until_completed=True,
-                          force_insecure_serialisation=False):
+                          force_insecure_serialisation=False,
+
+                          logger_parent=None):
 
     # TODO: Run this method in a separate process, so as to allow for
 
@@ -54,6 +57,7 @@ def run_multi_proc_server(server_methods,
         min_proc_num=min_proc_num,
         wait_until_completed=wait_until_completed
     ))
+    web_service_manager.set_logger_parent(logger_parent)
     web_service_manager.add_service(__LServers[-1])
 
 
@@ -88,6 +92,11 @@ if __name__ == '__main__':
         DDefaults = {k: DArgKeys[k](v) for k, v in DDefaults.items()}
     else:
         DDefaults = {}
+
+    if not 'log_dir' in DDefaults:
+        # Note this - the logger parent always uses the "default" dir currently
+        DDefaults['log_dir'] = '/tmp/shmrpc_logs'
+    logger_parent = FIFOJSONLog(f"{DDefaults['log_dir']}/GLOBAL_LOGS")
 
     for section, DSection in DValues.items():
         print("SECTION:", section)

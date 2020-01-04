@@ -7,7 +7,7 @@ from shmrpc.logger.std_logging.log_entry_types import dict_to_log_entry, INFO
 
 
 class FIFOJSONLog(MemoryCachedLog):
-    def __init__(self, path, max_cache=5000):  # 5kb
+    def __init__(self, path, max_cache=5000, parent_logger=None):  # 5kb
         """
         A disk-backed, in-memory-cached JSON log, delimited by
         newlines before each entry so as to be able to figure
@@ -18,6 +18,7 @@ class FIFOJSONLog(MemoryCachedLog):
 
         """
         self.lock = allocate_lock()
+        self.parent_logger = parent_logger
         MemoryCachedLog.__init__(self, path, max_cache=max_cache)
 
     #====================================================================#
@@ -44,6 +45,13 @@ class FIFOJSONLog(MemoryCachedLog):
                 'svc': svc,
                 'msg': msg
             }).encode('utf-8'))
+
+            if self.parent_logger:
+                # Forward onto the parent (probably global)
+                # FIFOJSONLog if one's been specified
+                self.parent_logger.write_to_log(
+                    t, pid, port, svc, msg, level
+                )
 
     #====================================================================#
     #                          Get Log Entries                           #

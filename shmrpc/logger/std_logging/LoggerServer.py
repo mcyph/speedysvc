@@ -12,7 +12,8 @@ FLUSH_EVERY_SECONDS = 1.0
 
 
 class LoggerServer:
-    def __init__(self, log_dir, server_methods):
+    def __init__(self, log_dir, server_methods,
+                 fifo_json_log_parent=None):
         """
 
         :param log_dir:
@@ -47,7 +48,8 @@ class LoggerServer:
 
         # Create the memory cached log
         self.fifo_json_log = FIFOJSONLog(
-            path=f'{log_dir}/{self.name}.log.json'
+            path=f'{log_dir}/{self.name}.log.json',
+            parent_logger=fifo_json_log_parent
         )
 
         # Start the server

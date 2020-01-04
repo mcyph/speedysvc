@@ -15,6 +15,15 @@ class WebServiceManager:
     def __init__(self):
         self.DServices = {}
 
+    def set_logger_parent(self, logger_parent):
+        """
+        Set the logger parent (a FIFOJSONLog instance)
+        :param logger_parent:
+        :return:
+        """
+        # TODO: Move this somewhere more appropriate!
+        self.logger_parent = logger_parent
+
     def iter_services_by_name(self):
         """
 
@@ -82,10 +91,26 @@ class WebServiceManager:
         raise NotImplementedError()  # TODO!
 
     #=====================================================================#
-    #                    Get Single Service Status/Stats                  #
+    #                     Get All Service Status/Stats                    #
     #=====================================================================#
 
+    def get_overall_log(self, offset=None):
+        """
+        Get the "overall" log for all services
+        :param offset:
+        :return:
+        """
+        offset, LHTML = self.logger_parent.get_html_log(
+            offset=offset
+        )
+        return offset, '\n'.join(LHTML)
+
     def get_overall_table_html(self, add_links=True):
+        """
+
+        :param add_links:
+        :return:
+        """
         return render_template_string(
             '{% from "service_macros.html" import service_status_table %}\n'
             '{{ service_status_table(LServiceTable, add_links) }}',
@@ -104,7 +129,7 @@ class WebServiceManager:
         return L
 
     #=====================================================================#
-    #                    Get All Service Status/Stats                     #
+    #                   Get Single Service Status/Stats                   #
     #=====================================================================#
 
     def get_D_service_info(self, port, console_offset=None):

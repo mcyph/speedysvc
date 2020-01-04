@@ -1,4 +1,4 @@
-{% from "service_macros.html" import service_status_table %}
+{% from "service_macros.html" import service_status_table, console_log %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -17,6 +17,9 @@
     <div id="service_status_table_cont">
         {{ service_status_table(LServices, add_links=True) }}
     </div>
+
+    <h2>Console Log</h2>
+    {{ console_log(console_offset, console_text) }}
 </div>
 
 <script type="text/javascript">
