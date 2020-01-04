@@ -73,11 +73,12 @@ def poll():
 def service_info():
     port = int(request.args.get('port'))
     DService = web_service_manager.get_D_service_info(port)
+
     return render_template(
         "service_info.html",
         service_name=DService['name'],
         port=port,
-        DService=DService,
+        DService=DService
     )
 
 

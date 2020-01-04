@@ -15,7 +15,7 @@ While there are many RPC libraries for python, most don't use shared memory,
 or use synchronisation that can make them orders of magnitude slower. Unlike the
 python mmap_ module, this does not page written data to file on disk
 (is not `copy-on-write`_) often resulting in performance not much less than if
-functions are called in-process.
+functions were called in-process.
 
 Other capabilities:
 
@@ -378,7 +378,7 @@ TODO
   REST, so as to allow services to use the same code.
   If this was to be implemented, it would likely allow requests
   via GET/POST only using the the encoding defined using
-  server method decorators. Swagger/OpenAPI are interesting, but requires
+  server method decorators. Swagger/OpenAPI are interesting, but require
   a fair amount of boilerplate and would require maintaining
   documentation multiple times, so are not a goal of this project.
 
@@ -396,13 +396,7 @@ TODO
   with something like Rust or GoLang, but would probably only attempt this
   if python is too slow/won't scale.
 
-* It would be nice to be able to have version-specific servers/clients,
-  so that previous applications can continue to function while allowing
-  for breaking changes in APIs. This may not happen, as I suspect it may
-  be best to do versioning at a Docker/Linux KVM etc level for my
-  purposes.
-
-* Currently the HybridLock only allows locking in whole seconds, but it
+* Currently the HybridLock only allows locking for whole seconds, but it
   should be easy to support floating point numbers. It also would be
   nice to allow for setting the maximum "spin" time.
 
@@ -413,6 +407,11 @@ TODO
   whether it's acquired in time or not. The current one is relatively
   simple in implementation which is a big advantage, and I'm not sure
   much performance would be gained.
+
+* There's a basic JSON-based logging system and time series data collection
+  which can be viewed using the web interface, but it would be nice to be
+  able to (optionally) integrate them using something like Prometheus, and
+  allow for more advanced queries/metrics.
 
 * Add transparent compression support for NetworkServer/NetworkClient,
   with the client receiving the compression type before first commands.

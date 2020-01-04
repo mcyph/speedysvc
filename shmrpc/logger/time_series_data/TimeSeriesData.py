@@ -13,7 +13,7 @@ from _thread import allocate_lock, start_new_thread
 
 class TimeSeriesData(ABC):
     def __init__(self, path, LFormat,
-                 fifo_cache_len=100,
+                 fifo_cache_len=300,
                  sample_interval_secs=5,
                  start_collecting_immediately=False):
         """
@@ -25,7 +25,7 @@ class TimeSeriesData(ABC):
         (i.e. how to read the data/which fields there are)
         and so if LFormat changes, then the file will not be readable.
         For this reason, it's probably best to create new subclasses
-        rather than modify existing ones, if backwards compabitibility
+        rather than modify existing ones, if backwards compatibility
         is desired.
 
         :param path: where to put the binary data on-disk
@@ -58,10 +58,15 @@ class TimeSeriesData(ABC):
             # OPEN ISSUE: Start off with blank data in the cache,
             # as that data normally isn't that useful in between sessions.
             # The disadvantage would be __getitem__ wouldn't be cacheable
+            LAppend = []
             for x, DProperties in enumerate(self.iterate_backwards()):
-                self.deque.appendleft(DProperties)
+                LAppend.append(DProperties)
                 if x >= fifo_cache_len:
                     break
+
+            for DProperties in reversed(LAppend):
+                # Make sure appended in order oldest first
+                self.deque.appendleft(DProperties)
         else:
             self.__size = 0
 
@@ -265,7 +270,7 @@ class TimeSeriesData(ABC):
             # (at least in the current interface).
             # If I ever need to do long-term analytics,
             # will uncomment the below.
-            raise Exception("Averaging should always be in memory!")
+            raise Exception(f"Averaging should always be in memory! (from_time: {from_time}; last deque: {self.deque[-1]}; first dequeue: {self.deque[0]}")
 
         """
         elif self.deque:

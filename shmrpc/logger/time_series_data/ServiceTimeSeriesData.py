@@ -7,7 +7,7 @@ class ServiceTimeSeriesData(TimeSeriesData):
     path_suffix = 'procdata'
 
     def __init__(self, path,
-                 fifo_cache_len=100,
+                 fifo_cache_len=300,
                  sample_interval_secs=5,
                  start_collecting_immediately=False):
         """

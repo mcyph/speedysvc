@@ -33,7 +33,7 @@ class Service {
         });
 
         // Poll once every 3 secs, in line with data
-        setTimeout(this.pollPeriodically, 3000);
+        setTimeout(this.pollPeriodically, 2000);
     }
 
     $(selector) {
@@ -77,6 +77,10 @@ class Service {
         if (o["console_text"]) {
             this.writeConsoleHTML(o["console_text"]);
         }
+        //console.log(o["console_offset"]);
+        this.$(".console_log").setAttribute("offset", o["console_offset"]);
+        document.getElementById("method_stats_html_cont_div").innerHTML =
+            o["method_stats_html"];
     }
 
     updateStatusTable(tableHTML) {
@@ -115,5 +119,6 @@ class Service {
 
     writeConsoleHTML(html) {
         this.$(".console_log").innerHTML += html;
+
     }
 }

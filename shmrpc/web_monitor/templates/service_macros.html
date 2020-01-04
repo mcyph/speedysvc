@@ -45,6 +45,7 @@
     <div class="service_cont_div" id="service_cont_div_{{ DService['port'] }}">
         {{ service_status_table([DService]) }}
 
+        <h2>Time Series Data</h2>
         <div class="cpu_chart" style="float: left"
             ><canvas width="300" height="200"></canvas>
         </div>
@@ -55,14 +56,36 @@
             ><canvas width="300" height="200"></canvas>
         </div>
 
+        <h2>Method Call Statistics</h2>
+        <div id="method_stats_html_cont_div">
+            {{ DService['method_stats_html']|safe }}
+        </div>
+
+        <h2>Console Log</h2>
         <div class="console_log"
              style="font-family: monospace; white-space: pre; width: 900px; overflow-x: auto"
-             offset="{{ DService['console_offset'] }}">
-            {{ DService['console_text']|safe }}
-        </div>
+             offset="{{ DService['console_offset'] }}"
+            >{{ DService['console_text']|safe }}</div>
+
     </div>
 {% endmacro %}
 
-{% macro service_method_stats(LStats) %}
-    {# TODO! #}
+{% macro method_stats_html(LMethodStats) %}
+    <table>
+        <tr>
+            <th>Method Name</th>
+            <th>Total Calls</th>
+            <th>Total Call Time</th>
+            <th>Average Call Time</th>
+        </tr>
+        {% for method_name, num_calls, avg_call_time, total_time in LMethodStats %}
+            <tr>
+                <td>{{ method_name }}</td>
+                <td>{{ num_calls }}</td>
+                <td>{{ '%0.5f'| format(total_time|float) }}</td>
+                <td>{{ '%0.5f'| format(avg_call_time|float) }}</td>
+            </tr>
+        {% endfor %}
+    </table>
 {% endmacro %}
+

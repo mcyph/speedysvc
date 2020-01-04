@@ -31,7 +31,7 @@ class LoggerServer:
         # (e.g. how long each individual call takes,
         # and how many times each call has taken place)
         # which would take too long to store separately
-        self.DAveragesByProcessID = {}
+        self.DMethodStats = {}
 
         # Open the stdout/stderr files
         self.stdout_lock = allocate_lock()
@@ -74,6 +74,53 @@ class LoggerServer:
                     self.fifo_json_log.flush()
             self.flush_needed = False
         time.sleep(FLUSH_EVERY_SECONDS)
+
+    #=========================================================#
+    #                Update Method Statistics                 #
+    #=========================================================#
+
+    @json_method
+    def _update_method_stats_(self, pid, DMethodStats):
+        """
+        Send method statistics to the central management interface
+        (i.e. this process) to allow for benchmarks periodically
+
+        :param pid: the process ID of the calling worker
+        :param DMethodStats: the method statistics
+        """
+
+        # OPEN ISSUE: While this class is called "LoggerServer", I can't
+        # currently think of a better place to put this, as this is
+        # effectively a communications system from worker
+        # servers->worker manager - perhaps this class should be
+        # renamed to reflect its broader scope?
+
+        self.DMethodStats[pid] = DMethodStats
+
+    def get_D_method_stats(self):
+        """
+
+
+        :return:
+        """
+        D = {}
+
+        for pid, DMethodStats in self.DMethodStats.items():
+            for method_name, DMethodStat in DMethodStats.items():
+                D.setdefault(method_name, {
+                    'num_calls': 0,
+                    'total_time': 0
+                })
+                D[method_name]['num_calls'] += DMethodStat['num_calls']
+                D[method_name]['total_time'] += DMethodStat['total_time']
+
+        for method_name, i_D in D.items():
+            if i_D['num_calls'] != 0:
+                i_D['avg_call_time'] = i_D['total_time'] / i_D['num_calls']
+            else:
+                i_D['avg_call_time'] = 0  # NOTE ME: Haven't got stats yet?
+
+        return D
 
     #=========================================================#
     #                 Write to stdout/stderr                  #

@@ -1,14 +1,14 @@
 import sys
 import time
 from os import getpid
-from queue import Queue
+from queue import Queue, Empty
 from _thread import allocate_lock, start_new_thread
 
 from shmrpc.logger.std_logging.LoggerServer import LoggerServer
 from shmrpc.rpc.shared_memory.SHMClient import SHMClient
 from shmrpc.rpc.base_classes.ClientMethodsBase import ClientMethodsBase
 from shmrpc.logger.std_logging.log_entry_types import \
-    NOTSET, DEBUG, INFO, ERROR, WARNING, CRITICAL
+    NOTSET, DEBUG, INFO, ERROR, WARNING, CRITICAL, STDOUT, STDERR
 
 
 # We'll use a queue here sending in a thread rather
@@ -18,15 +18,19 @@ log_queue = Queue()
 
 
 class LoggerClient(ClientMethodsBase):
-    def __init__(self, server_methods):
+    def __init__(self, service_server_methods):
         """
         A basic logger which sends stderr/stdout
         output to a logging server
         """
         self.lock = allocate_lock()
         self.pid = getpid()
+        # Note that ClientMethodsBase will have a set of server methods
+        # associated with the log service. These are the server methods
+        # associated with the service itself.
+        self.service_server_methods = service_server_methods
 
-        self.client = SHMClient(LoggerServer, port=f'{server_methods.port}_log')
+        self.client = SHMClient(LoggerServer, port=f'{service_server_methods.port}_log')
         ClientMethodsBase.__init__(self, client_provider=self.client)
         self.stderr_logger = self._StdErrLogger(self)
         self.stdout_logger = self._StdOutLogger(self)
@@ -37,13 +41,64 @@ class LoggerClient(ClientMethodsBase):
     #=================================================================#
 
     def __log_thread(self):
+        """
+        A lot of the time, it can be hard to know where stderr/stdout starts and ends
+        (e.g. print('foo', 'bar') might print foo, bar, and \n separately)
+
+        This tries to treat stdout/stderr data as a sequence of directly following
+        strings and merges it together, assuming they occur almost immediately after
+        each other (up to 0.01 seconds).
+
+        I've made stdout/stderr output as [INFO/ERROR]+9 level
+        """
+        cur_stderr_msg = None
+        cur_stdout_msg = None
+        method_stats_last_updated = 0
+
         while True:
             try:
-                self._write_to_log_(log_queue.get())
+                if cur_stderr_msg or cur_stdout_msg:
+                    item = log_queue.get(timeout=0.01)
+                else:
+                    item = log_queue.get(timeout=2.0)
+
+                if item[-1] == STDOUT:
+                    if cur_stdout_msg:
+                        # Append to the previous stdout call
+                        cur_stdout_msg[-2] += item[-2]
+                    else:
+                        cur_stdout_msg = list(item)
+                elif item[-1] == STDERR:
+                    # Append to the previous stdout call
+                    if cur_stderr_msg:
+                        cur_stderr_msg[-2] += item[-2]
+                    else:
+                        cur_stderr_msg = list(item)
+                else:
+                    self._write_to_log_(item)
+
+            except Empty:
+                if cur_stdout_msg:
+                    # If Empty is raised, a timeout has occurred
+                    # Assume this is the end of the data that's being sent to stdout
+                    self._write_to_log_(tuple(cur_stdout_msg[:-1]+[INFO+9]))
+                    cur_stdout_msg = None
+
+                if cur_stderr_msg:
+                    # The same, but for stderr
+                    self._write_to_log_(tuple(cur_stderr_msg[:-1]+[ERROR+9]))
+                    cur_stderr_msg = None
+
+                if time.time()-method_stats_last_updated >= 4:
+                    # Periodically inform the management server how long methods
+                    # are taking/how many times they're being called for benchmarks
+                    self._update_method_stats_()
+                    method_stats_last_updated = time.time()
+
             except Exception as e:
-                # WARNING WARNING#
-                # Trouble is, if things go wrong here, they could lead to recursive
-                # write to stderr/stdout, so I'm not sure handling this is worth it..
+                # WARNING WARNING - should (hopefully) never get here
+                # I'm printing errors directly to the old stderr
+                # to prevent the risk of recursive exceptions
                 import traceback
                 self.stderr_logger.old_stderr.write(traceback.format_exc())
                 time.sleep(1)
@@ -62,6 +117,21 @@ class LoggerClient(ClientMethodsBase):
         :return:
         """
         self.send(LoggerServer._write_to_log_, log_params)
+
+    def _update_method_stats_(self):
+        """
+        Send method statistics to the central management
+        interface to allow for benchmarks periodically
+        """
+        DStats = {}
+
+        for name in dir(self.service_server_methods):
+            attr = getattr(self.service_server_methods, name)
+            if hasattr(attr, 'metadata'):
+                # DMetadata = {'num_calls': ..., 'total_time': ...}
+                DStats[name] = attr.metadata
+
+        self.send(LoggerServer._update_method_stats_, [self.pid, DStats])
 
     #=================================================================#
     #                      User-Callable Methods                      #
@@ -83,13 +153,13 @@ class LoggerClient(ClientMethodsBase):
 
         #print(hasattr(self, 'server_methods'))
 
-        if hasattr(self.server_methods, 'port'):
-            port = self.server_methods.port
+        if hasattr(self.service_server_methods, 'port'):
+            port = self.service_server_methods.port
         else:
             port = -1
 
-        if hasattr(self.server_methods, 'name'):
-            service_name = self.server_methods.name
+        if hasattr(self.service_server_methods, 'name'):
+            service_name = self.service_server_methods.name
         else:
             service_name = '(unknown service)'
 
@@ -159,7 +229,7 @@ class LoggerClient(ClientMethodsBase):
             # to send to the log itself, then it'll result in a deadlock!
             # This is the reason why I'm replacing sys.stdout during the call..
             self.old_stdout.write(s)
-            self.logger_client(s, NOTSET)
+            self.logger_client(s, STDOUT)
 
     class _StdErrLogger:
         def __init__(self, logger_client):
@@ -172,4 +242,4 @@ class LoggerClient(ClientMethodsBase):
 
         def write(self, s):
             self.old_stderr.write(s)
-            self.logger_client(s, ERROR)
+            self.logger_client(s, STDERR)
