@@ -69,8 +69,8 @@ class LoggerClient(ClientMethodsBase):
                     else:
                         cur_stdout_msg = list(item)
                 elif item[-1] == STDERR:
-                    # Append to the previous stdout call
                     if cur_stderr_msg:
+                        # Append to the previous stderr call
                         cur_stderr_msg[-2] += item[-2]
                     else:
                         cur_stderr_msg = list(item)
@@ -225,9 +225,6 @@ class LoggerClient(ClientMethodsBase):
             self.old_stdout.flush()
 
         def write(self, s):
-            # WARNING: If the logger client's send command needs
-            # to send to the log itself, then it'll result in a deadlock!
-            # This is the reason why I'm replacing sys.stdout during the call..
             self.old_stdout.write(s)
             self.logger_client(s, STDOUT)
 

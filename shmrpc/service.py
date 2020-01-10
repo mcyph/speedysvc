@@ -96,7 +96,9 @@ if __name__ == '__main__':
     if not 'log_dir' in DDefaults:
         # Note this - the logger parent always uses the "default" dir currently
         DDefaults['log_dir'] = '/tmp/shmrpc_logs'
-    fifo_json_log_parent = FIFOJSONLog(f"{DDefaults['log_dir']}/GLOBAL_LOGS")
+
+    make_dirs(DDefaults['log_dir'])
+    fifo_json_log_parent = FIFOJSONLog(f"{DDefaults['log_dir']}/global_log.json")
     web_service_manager.set_logger_parent(fifo_json_log_parent)
 
     for section, DSection in DValues.items():

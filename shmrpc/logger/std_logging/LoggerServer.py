@@ -160,9 +160,13 @@ class LoggerServer:
             # Should never get here!
             raise Exception("Unknown writes_to: %s" % log_entry.writes_to)
 
-        self.fifo_json_log.write_to_log(
-            **log_entry.to_dict()
-        )
+        try:
+            self.fifo_json_log.write_to_log(
+                **log_entry.to_dict()
+            )
+        except OverflowError:
+            import warnings
+            warnings.warn("Warning: message overflow in fifo_json_log")
 
     @json_method
     def _loaded_ok_signal_(self):

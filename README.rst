@@ -7,20 +7,24 @@ About
     breaking changes to the API.
 
 This module provides low-latency, high-throughput interprocess queues using
-`shared memory`_. It allows for basic client/server remote procedure calls (RPC),
-potentially with multiple servers serving multiple clients. It is licensed under
-the MIT License.
+`shared memory`_. It allows for basic client/server iterprocess method
+calls using these queues, with multiple server workers serving
+multiple clients. It is released under the MIT License.
 
-While there are many RPC libraries for python, most don't use shared memory,
-or use synchronisation that can make them orders of magnitude slower. Unlike the
-python mmap_ module, this does not page written data to file on disk
-(is not `copy-on-write`_) often resulting in performance not much less than if
-functions were called in-process.
+When the server is on a different PC to the client, remote procedure calls
+(RPC) are also supported over standard TCP/IP, with a fast and efficient
+protocol.
+
+While there are multiple libraries for python that can allow for interprocess
+communication, most don't use shared memory, or use synchronisation that can make
+them orders of magnitude slower. Unlike the python mmap_ module, this does not page
+written data to file on disk (is not `copy-on-write`_) often resulting in performance
+not much less than if functions were called in-process.
 
 Other capabilities:
 
 * A management web interface based on flask, showing logs/performance data for each
-  service, and allowing restarting services. Services auto-restart when they crash.
+  service, and allowing restarting services.
 * Multiple servers can serve to multiple clients: additional server worker processes
   can optionally start when overall CPU usage exceeds a certain %. This helps to work
   around the often-cited GIL_ limitations of python.
@@ -52,13 +56,13 @@ It has the following dependencies:
 Example
 -----------------------
 
-test_server.py:
+echoserver.py:
 
 .. code-block:: python
 
     from shmrpc import ServerMethodsBase, raw_method, json_method
 
-    class TestServerMethods(ServerMethodsBase):
+    class EchoServer(ServerMethodsBase):
         port = 5555
         name = 'echo_serv'
 
@@ -74,14 +78,14 @@ test_server.py:
         def echo_json(self, data):
             return data
 
-test_client.py:
+echoclient.py:
 
 .. code-block:: python
 
     from shmrpc import ClientMethodsBase, SHMClient
     from test_server import TestServerMethods
 
-    class TestClientMethods(ClientMethodsBase):
+    class EchoClient(ClientMethodsBase):
         def __init__(self, client_provider):
             ClientMethodsBase.__init__(self, client_provider)
 
@@ -110,8 +114,8 @@ service.ini:
     [defaults]
     log_dir=/tmp/test_server_logs/
 
-    [TestServerMethods]
-    import_from=test_server
+    [EchoServer]
+    import_from=echoserver
 
 Then type ``python3 -m shmrpc.service service.ini &``
 from the same directory to start the server; and
@@ -254,10 +258,6 @@ Different kinds of encoders/decoders:
 * ``@marshal_method``: Define a method that sends/receives data using the ``pickle``
   module. **Potentially insecure** as there could be potential buffer overflow
   vulnerabilities etc, but is fast.
-* ``@arrow_method``: Define a method that sends/receives data using the ``pyarrow``
-  module. Reported to be very fast for numpy ``ndarray`` types, and support for
-  many of the types that json does, but seemed to be orders of magnitude slower
-  for many other datatypes when I tested it.
 
 Benchmarks:
 -----------------------------------
@@ -402,11 +402,15 @@ TODO
 
 * Possibly improve spinlock performance.
   https://probablydance.com/2019/12/30/measuring-mutexes-spinlocks-and-how-bad-the-linux-scheduler-really-is/
+  https://matklad.github.io/2020/01/04/mutexes-are-faster-than-spinlocks.html and
+  https://www.realworldtech.com/forum/?threadid=189711&curpostid=189723
   may be worth referring to. Currently the spinlock is just a simple
   variable (not atomic/volatile) and it falls back to named semaphores
   whether it's acquired in time or not. The current one is relatively
   simple in implementation which is a big advantage, and I'm not sure
-  much performance would be gained.
+  much performance would be gained, except when there are lots of
+  servers for a single service (as each client has its own spinlock/
+  named semaphore).
 
 * There's a basic JSON-based logging system and time series data collection
   which can be viewed using the web interface, but it would be nice to be

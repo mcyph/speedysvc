@@ -7,7 +7,7 @@ from shmrpc.logger.std_logging.log_entry_types import dict_to_log_entry, INFO
 
 
 class FIFOJSONLog(MemoryCachedLog):
-    def __init__(self, path, max_cache=5000, parent_logger=None):  # 5kb
+    def __init__(self, path, max_cache=50000, parent_logger=None):  # 50kb
         """
         A disk-backed, in-memory-cached JSON log, delimited by
         newlines before each entry so as to be able to figure
@@ -57,21 +57,31 @@ class FIFOJSONLog(MemoryCachedLog):
     #                          Get Log Entries                           #
     #====================================================================#
 
-    def iter_from_disk(self):
+    def iter_from_disk(self, use_lock=True):
         """
         Iterate through all log items from disk -
         not just the ones in-memory, or from this session
         """
-        for line in self._iter_from_disk():
-            yield json.loads(line.decode('utf-8'))
+        if use_lock:
+            with self.lock:
+                for line in self._iter_from_disk():
+                    yield json.loads(line.decode('utf-8'))
+        else:
+            for line in self._iter_from_disk():
+                yield json.loads(line.decode('utf-8'))
 
-    def iter_from_cache(self, offset=None):
+    def iter_from_cache(self, offset=None, use_lock=True):
         """
         Iterate through cache log items - yield the JSON log dicts
         Better to use this in most cases, as is much faster
         """
-        for x, line in enumerate(self._iter_from_cache(offset)):
-            yield json.loads(line.decode('utf-8'))
+        if use_lock:
+            with self.lock:
+                for x, line in enumerate(self._iter_from_cache(offset)):
+                    yield json.loads(line.decode('utf-8'))
+        else:
+            for x, line in enumerate(self._iter_from_cache(offset)):
+                yield json.loads(line.decode('utf-8'))
 
     def get_text_log(self, include_service=True, include_date=True, include_time=True,
                      offset=None):
@@ -88,7 +98,7 @@ class FIFOJSONLog(MemoryCachedLog):
         """
         with self.lock:
             L = []
-            for D in self.iter_from_cache(offset):
+            for D in self.iter_from_cache(offset, use_lock=False):
                 log_entry = dict_to_log_entry(D)
                 L.append(log_entry.to_text(
                     include_service, include_date, include_time
@@ -110,7 +120,7 @@ class FIFOJSONLog(MemoryCachedLog):
         """
         with self.lock:
             L = []
-            for D in self.iter_from_cache(offset):
+            for D in self.iter_from_cache(offset, use_lock=False):
                 log_entry = dict_to_log_entry(D)
                 L.append(log_entry.to_coloured_console(
                     include_service, include_date, include_time
@@ -131,7 +141,7 @@ class FIFOJSONLog(MemoryCachedLog):
         """
         with self.lock:
             L = []
-            for D in self.iter_from_cache(offset):
+            for D in self.iter_from_cache(offset, use_lock=False):
                 log_entry = dict_to_log_entry(D)
                 L.append(log_entry.to_html(
                     include_service, include_date, include_time
@@ -141,11 +151,12 @@ class FIFOJSONLog(MemoryCachedLog):
 
 if __name__ == '__main__':
     log = FIFOJSONLog('/tmp/test_fifo_json_log.json')
-    log.write_to_log(5454, 555, 55, 'mine', 'message')
-    print(log.get_coloured_console_log())
-    print(log.get_html_log())
-    print(log.get_text_log())
-    print(log.get_coloured_console_log())
-    print(log.get_html_log())
-    print(log.get_text_log())
+    while True:
+        log.write_to_log(5454, 555, 55, 'mine', 'message'*5000)
+        print(log.get_coloured_console_log())
+        print(log.get_html_log())
+        print(log.get_text_log())
+        print(log.get_coloured_console_log())
+        print(log.get_html_log())
+        print(log.get_text_log())
 

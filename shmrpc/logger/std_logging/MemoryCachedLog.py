@@ -2,7 +2,7 @@ from io import BytesIO
 
 
 class MemoryCachedLog:
-    def __init__(self, path, max_cache=5000):  # 5kb
+    def __init__(self, path, max_cache=50000):  # 50kb
         """
         A disk-backed log, with a circular FIFO in-memory buffer that
         overwrites itself after max_cache is reached.
@@ -95,6 +95,9 @@ class MemoryCachedLog:
         Write a line both to the in-memory FIFO buffer and file on disk
         :param s: the line to write. This cannot contain any newlines
         """
+        if len(s)+1 >= self.max_cache:
+            raise OverflowError("Can't store greater than the cache amount!")
+
         assert not b'\n' in s, \
             "Each log entry shouldn't contain newlines!"
         self.f.write(s+b'\n')
