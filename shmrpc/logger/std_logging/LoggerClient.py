@@ -103,13 +103,6 @@ class LoggerClient(ClientMethodsBase):
                 self.stderr_logger.old_stderr.write(traceback.format_exc())
                 time.sleep(1)
 
-    def _loaded_ok_signal_(self):
-        """
-        Signify to the logger server that
-        the server has started properly
-        """
-        self.send(LoggerServer._loaded_ok_signal_, [])
-
     def _write_to_log_(self, log_params):
         """
         Should not be called directly!
@@ -132,6 +125,32 @@ class LoggerClient(ClientMethodsBase):
                 DStats[name] = attr.metadata
 
         self.send(LoggerServer._update_method_stats_, [self.pid, DStats])
+
+    #=========================================================#
+    #                     Service Status                      #
+    #=========================================================#
+
+    def get_service_status(self):
+        return self.send(LoggerServer.get_service_status, [])
+
+    def set_service_status(self, status):
+        return self.send(LoggerServer.set_service_status, [status])
+
+    #=========================================================#
+    #                Service Time Series Data                 #
+    #=========================================================#
+
+    def get_average_over(self, from_time, to_time):
+        return self.send(LoggerServer.get_average_over, [from_time, to_time])
+
+    def add_pid(self, pid):
+        return self.send(LoggerServer.add_pid, [pid])
+
+    def remove_pid(self, pid):
+        return self.send(LoggerServer.remove_pid, [pid])
+
+    def start_collecting(self):
+        return self.send(LoggerServer.start_collecting, [])
 
     #=================================================================#
     #                      User-Callable Methods                      #
@@ -240,3 +259,7 @@ class LoggerClient(ClientMethodsBase):
         def write(self, s):
             self.old_stderr.write(s)
             self.logger_client(s, STDERR)
+
+    #=================================================================#
+    #                      User-Callable Methods                      #
+    #=================================================================#

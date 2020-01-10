@@ -1,4 +1,5 @@
-import math
+import os
+import signal
 from datetime import datetime
 from flask import render_template_string
 
@@ -88,7 +89,8 @@ class WebServiceManager:
         :param port:
         :return:
         """
-        raise NotImplementedError()  # TODO!
+        pid = self.DServices[port].proc.pid
+        os.kill(pid, signal.SIGINT)
 
     #=====================================================================#
     #                     Get All Service Status/Stats                    #

@@ -1,13 +1,10 @@
-import time
+import os
+import json
+import subprocess
 from multiprocessing import cpu_count
 
 from shmrpc.logger.std_logging.LoggerServer import LoggerServer
 from shmrpc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
-from shmrpc.rpc.network.NetworkServer import NetworkServer
-from shmrpc.rpc.shared_memory.SHMServer import SHMServer
-from shmrpc.service_managers.multi_process_manager.MultiProcessManager import \
-    MultiProcessServer
-from shmrpc.logger.time_series_data.ServiceTimeSeriesData import ServiceTimeSeriesData
 from shmrpc.toolkit.io.make_dirs import make_dirs
 from shmrpc.toolkit.py_ini.read.ReadIni import ReadIni
 from shmrpc.web_monitor.app import web_service_manager, run_server
@@ -16,49 +13,57 @@ from shmrpc.web_monitor.app import web_service_manager, run_server
 # A variable to make sure the servers stay
 # persistent, and won't be garbage-collected
 __LServers = []
+__LLoggerServers = []
 
 
-def run_multi_proc_server(server_methods,
+def run_multi_proc_server(server_methods, import_from, section,
                           log_dir='/tmp',
-                          tcp_bind='127.0.0.1',
+                          tcp_bind=None,
+                          tcp_compression=None,
+                          tcp_allow_insecure_serialisation=False,
+
                           max_proc_num=cpu_count(),
                           min_proc_num=1,
                           wait_until_completed=True,
-                          force_insecure_serialisation=False,
 
                           fifo_json_log_parent=None):
 
-    # TODO: Run this method in a separate process, so as to allow for
-
     print(f"{server_methods.name} parent: starting service")
-    #LOG_DIR = f'/tmp/langlynx_svc'
     make_dirs(f"{log_dir}/{server_methods.name}")
-
-    service_time_series_data = ServiceTimeSeriesData(
-        path=f'{log_dir}/{server_methods.name}/'
-             f'time_series_data.bin'
-    )
     logger_server = LoggerServer(
         log_dir=f'{log_dir}/{server_methods.name}/',
         server_methods=server_methods,
         fifo_json_log_parent=fifo_json_log_parent
     )
+    __LLoggerServers.append(logger_server)
 
-    __LServers.append(MultiProcessServer(
-        service_time_series_data,
-        logger_server,
-        server_methods,
-        NetworkServer(
-            server_methods,
-            tcp_bind_address=tcp_bind,
-            force_insecure_serialisation=force_insecure_serialisation
-        ), # TODO: What if TCP bind is None, indicating not to use a network server?
-        SHMServer(),
-        max_proc_num=max_proc_num,
-        min_proc_num=min_proc_num,
-        wait_until_completed=wait_until_completed
-    ))
-    web_service_manager.add_service(__LServers[-1])
+    DEnv = os.environ.copy()
+    DEnv["PATH"] = "/usr/sbin:/sbin:" + DEnv["PATH"]
+    DArgs = {
+        'import_from': import_from,
+        'section': section,
+        'tcp_bind': tcp_bind,
+        'tcp_compression': tcp_compression,
+        'tcp_allow_insecure_serialisation': tcp_allow_insecure_serialisation,
+
+        'min_proc_num': min_proc_num,
+        'max_proc_num': max_proc_num,
+        'max_proc_mem_bytes': None,
+
+        'new_proc_cpu_pc': 0.3,
+        'new_proc_avg_over_secs': 20,
+        'kill_proc_avg_over_secs': 240,
+
+        'wait_until_completed': wait_until_completed
+    }
+    proc = subprocess.Popen([
+        'python3', '-m',
+        'shmrpc.service_managers.multi_process_manager._service_worker',
+        json.dumps(DArgs)
+    ], env=DEnv)
+
+    logger_server.proc = proc # HACK!
+    web_service_manager.add_service(logger_server)
 
 
 if __name__ == '__main__':
@@ -82,6 +87,8 @@ if __name__ == '__main__':
     DArgKeys = {
         'log_dir': lambda x: x,
         'tcp_bind': lambda x : x,
+        'tcp_compression': lambda x: x,
+        'tcp_allow_insecure_serialisation': convert_bool,
         'max_proc_num': greater_than_0_int,
         'min_proc_num': greater_than_0_int,
         'wait_until_completed': convert_bool
@@ -109,7 +116,8 @@ if __name__ == '__main__':
         DArgs = DDefaults.copy()
         DArgs.update({k: DArgKeys[k](v) for k, v in DSection.items()})
         run_multi_proc_server(
-            server_methods, **DArgs,
+            server_methods, import_from, section,
+            **DArgs,
             fifo_json_log_parent=fifo_json_log_parent
         )
 

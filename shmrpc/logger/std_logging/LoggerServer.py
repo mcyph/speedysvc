@@ -6,6 +6,7 @@ from shmrpc.rpc_decorators import raw_method, json_method
 from shmrpc.logger.std_logging.log_entry_types import \
     dict_to_log_entry, STDERR, STDOUT
 from shmrpc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
+from shmrpc.logger.time_series_data.ServiceTimeSeriesData import ServiceTimeSeriesData
 
 
 FLUSH_EVERY_SECONDS = 1.0
@@ -50,6 +51,12 @@ class LoggerServer:
         self.fifo_json_log = FIFOJSONLog(
             path=f'{log_dir}/{self.name}.log.json',
             parent_logger=fifo_json_log_parent
+        )
+        # Create the time series statistics data instance
+        # (e.g. to record how much RAM etc each process is using)
+        self.service_time_series_data = ServiceTimeSeriesData(
+            path=f'{log_dir}/{server_methods.name}/'
+                 f'time_series_data.bin'
         )
 
         # Start the server
@@ -168,7 +175,70 @@ class LoggerServer:
             import warnings
             warnings.warn("Warning: message overflow in fifo_json_log")
 
+    #=========================================================#
+    #                     Service Status                      #
+    #=========================================================#
+
     @json_method
-    def _loaded_ok_signal_(self):
-        self.loaded_ok = True
-        return None
+    def get_service_status(self):
+        """
+
+        :return:
+        """
+        return self.status
+
+    @json_method
+    def set_service_status(self, status):
+        """
+
+        :param status:
+        :return:
+        """
+        if status == 'started':
+            self.loaded_ok = True
+        self.status = status
+
+    #=========================================================#
+    #                Service Time Series Data                 #
+    #=========================================================#
+
+    @json_method
+    def get_average_over(self, from_time, to_time):
+        """
+
+        :param from_time:
+        :param to_time:
+        :return:
+        """
+        return self.service_time_series_data.get_average_over(
+            from_time, to_time
+        )
+
+    @json_method
+    def add_pid(self, pid):
+        """
+
+        :param pid:
+        :return:
+        """
+        #self.LPIDs.append(pid)
+        self.service_time_series_data.add_pid(pid)
+
+    @json_method
+    def remove_pid(self, pid):
+        """
+
+        :param pid:
+        :return:
+        """
+        #self.LPIDs.pop(pid)
+        self.service_time_series_data.remove_pid(pid)
+        del self.DMethodStats[pid]
+
+    @json_method
+    def start_collecting(self):
+        """
+
+        :return:
+        """
+        self.service_time_series_data.start_collecting()
