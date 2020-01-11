@@ -1,5 +1,7 @@
+import sys
 import time
 import json
+import signal
 import importlib
 from sys import argv
 from os import getpid
@@ -48,10 +50,12 @@ def _service_worker(init_resources, server_methods,
     # if one depends on another.
     logger_client.set_service_status('started')
 
-    try:
-        while 1:
-            time.sleep(10)
-    except KeyboardInterrupt:
+    _handling_sigint = [False]
+    def signal_handler(sig, frame):
+        if _handling_sigint[0]:
+            return
+        _handling_sigint[0] = True
+
         print(f"Intercepted keyboard interrupt for {smi.name} [PID {getpid()}]")
         for inst in L:
             if hasattr(inst, 'shutdown'):
@@ -61,10 +65,11 @@ def _service_worker(init_resources, server_methods,
 
         time.sleep(2)
         print("_service_worker: exiting PID", getpid())
-        logger_client.shutdown()
-        #logger_client.client.client_lock.close()
-        #logger_client.client.server_lock.close()
-        raise SystemExit
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    while 1:
+        signal.pause()
 
 
 if __name__ == '__main__':

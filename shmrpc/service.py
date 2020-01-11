@@ -1,6 +1,8 @@
 import os
+import sys
 import json
 import time
+import signal
 import _thread
 import subprocess
 from multiprocessing import cpu_count
@@ -9,6 +11,7 @@ from shmrpc.logger.std_logging.LoggerServer import LoggerServer
 from shmrpc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
 from shmrpc.toolkit.io.make_dirs import make_dirs
 from shmrpc.toolkit.py_ini.read.ReadIni import ReadIni
+from shmrpc.kill_pid_and_children import kill_pid_and_children
 from shmrpc.web_monitor.app import web_service_manager, run_server
 
 
@@ -73,6 +76,40 @@ def run_multi_proc_server(server_methods, import_from, section,
             time.sleep(0.1)
 
 
+_handling_sigint = [False]
+
+
+def signal_handler(sig, frame):
+    """
+    SIGINT received, likely due to ctrl+c
+    try to exit as cleanly as possible,
+    recursively exiting child processes
+    """
+    if _handling_sigint[0]:
+        return
+    _handling_sigint[0] = True
+
+    waiting_num = [0]
+
+    def wait_to_exit(proc):
+        try:
+            print("Main service waiting for PID to exit:", proc.pid)
+            kill_pid_and_children(proc.pid)
+        finally:
+            waiting_num[0] -= 1
+
+    for proc in __LServers:
+        waiting_num[0] += 1
+        _thread.start_new_thread(wait_to_exit, (proc,))
+
+    while waiting_num[0]:
+        time.sleep(0.01)
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, signal_handler)
+
+
 if __name__ == '__main__':
     import importlib
     from sys import argv
@@ -115,51 +152,30 @@ if __name__ == '__main__':
     fifo_json_log_parent = FIFOJSONLog(f"{DDefaults['log_dir']}/global_log.json")
     web_service_manager.set_logger_parent(fifo_json_log_parent)
 
-    try:
-        for section, DSection in DValues.items():
-            #print("SECTION:", section)
-            import_from = DSection.pop('import_from')
-            server_methods = getattr(importlib.import_module(import_from), section) # Package?
+    for section, DSection in DValues.items():
+        #print("SECTION:", section)
+        import_from = DSection.pop('import_from')
+        server_methods = getattr(importlib.import_module(import_from), section) # Package?
 
-            DArgs = DDefaults.copy()
-            DArgs.update({k: DArgKeys[k](v) for k, v in DSection.items()})
-            run_multi_proc_server(
-                server_methods, import_from, section,
-                **DArgs,
-                fifo_json_log_parent=fifo_json_log_parent
-            )
+        DArgs = DDefaults.copy()
+        DArgs.update({k: DArgKeys[k](v) for k, v in DSection.items()})
+        run_multi_proc_server(
+            server_methods, import_from, section,
+            **DArgs,
+            fifo_json_log_parent=fifo_json_log_parent
+        )
 
-        print("Services started - starting web monitoring interface")
+    print("Services started - starting web monitoring interface")
 
-        # OPEN ISSUE: Allow binding to a specific address here? ====================================
-        # For security reasons, it's probably (in almost all cases)
-        # better to only allow on localhost, to prevent other people
-        # stopping services, etc
+    # OPEN ISSUE: Allow binding to a specific address here? ====================================
+    # For security reasons, it's probably (in almost all cases)
+    # better to only allow on localhost, to prevent other people
+    # stopping services, etc
 
-        # Note opening the web server from a different thread -
-        # this allows intercepting ctrl+c/SIGINT
-        # It may be that SIGINT is handled in the actual webserver code,
-        # but I want to make sure child processes clean up when SIGINT is called.
-        _thread.start_new_thread(run_server, (), {'debug': False})
-        while 1:
-            time.sleep(10)
-    except:
-        import traceback
-        traceback.print_exc()
-
-        for proc in __LServers:
-            print("Main service waiting for PID to exit:", proc.pid)
-            try:
-                proc.wait(15)
-            except subprocess.TimeoutExpired:
-                import signal
-                #os.kill(proc.pid, signal.SIGTERM)
-                try:
-                    proc.wait(10)
-                except subprocess.TimeoutExpired:
-                    os.kill(proc.pid, signal.SIGKILL)
-            try:
-                os.waitpid(proc.pid, 0)
-            except ChildProcessError:
-                pass
-        raise
+    # Note opening the web server from a different thread -
+    # this allows intercepting ctrl+c/SIGINT
+    # It may be that SIGINT is handled in the actual webserver code,
+    # but I want to make sure child processes clean up when SIGINT is called.
+    _thread.start_new_thread(run_server, (), {'debug': False})
+    while 1:
+        time.sleep(10)

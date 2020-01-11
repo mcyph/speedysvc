@@ -1,13 +1,15 @@
-import os
+import sys, os
 import time
 import json
 import signal
+from os import getpid
 import psutil
 import _thread
 import importlib
 import subprocess
 from sys import argv
 from multiprocessing import cpu_count
+from shmrpc.kill_pid_and_children import kill_pid_and_children
 
 from shmrpc.logger.std_logging.LoggerClient import LoggerClient
 
@@ -333,49 +335,7 @@ class MultiProcessServer:
             pass
 
         if psutil.pid_exists(pid):
-            MAX_SECS_TO_WAIT_AFTER_SIGINT = 100
-
-            # Try to end process cleanly
-            # SIGINT -> SIGTERM -> SIGKILL
-            os.kill(pid, signal.SIGINT)
-
-            # =Xsecs to finish current call
-            for x in range(MAX_SECS_TO_WAIT_AFTER_SIGINT * 10):
-                if not psutil.pid_exists(pid):
-                    break
-                try:
-                    proc = psutil.Process(pid)
-                    if proc.status() == psutil.STATUS_ZOMBIE:
-                        break
-                except:
-                    print(f"Can't get pid [{pid}] status - assuming it's exited?")
-                    break
-                time.sleep(0.1)
-
-            if psutil.pid_exists(pid):
-                print(f"Killing PID with SIGTERM [{pid}]")
-                os.kill(pid, signal.SIGTERM)
-
-            # =5secs to finish ending process
-            for x in range(50):
-                if not psutil.pid_exists(pid):
-                    break
-                time.sleep(0.1)
-
-            if psutil.pid_exists(pid) and self.shutting_down:
-                # Kill it good if it doesn't respond
-                # only if we're shutting down, as can have consequences
-                print(f"Killing PID with SIGKILL [{pid}]")
-                os.kill(pid, signal.SIGKILL)
-
-            # Clean up potential zombie in OS process table
-            try:
-                print(f"Waiting for PID {pid} to exit")
-                os.waitpid(pid, 0)
-                print(f"Process {pid} exited OK")
-            except:
-                import traceback
-                traceback.print_exc()
+            kill_pid_and_children(pid)
 
 
 if __name__ == '__main__':
@@ -385,13 +345,16 @@ if __name__ == '__main__':
         DArgs['section']
     )
     mps = MultiProcessServer(**DArgs)
-    try:
-        while True:
-            time.sleep(10)
-    except KeyboardInterrupt:
-        from os import getpid
 
-        print(f"MultiProcessManager [{getpid()}]: exiting PIDs {mps.LPIDs} from")
+    _handling_sigint = [False]
+    def signal_handler(sig, frame):
+        if _handling_sigint[0]: return
+        _handling_sigint[0] = True
+        print(f"MultiProcessManager [{getpid()}]: exiting PIDs {mps.LPIDs}")
         mps.stop_service()
         print("MultiProcesssManager: exiting", getpid())
-        raise SystemExit()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    while 1:
+        signal.pause()

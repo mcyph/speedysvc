@@ -136,7 +136,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                     break # OK
                 elif mmap[0] == INVALID:
                     # Size change - re-open the mmap!
-                    print(f"Server: memory map has been marked as invalid")
+                    #print(f"Server: memory map has been marked as invalid")
                     prev_len = len(mmap)
                     mmap = self.connect_to_pid_mmap(self.port, pid)
 
@@ -197,8 +197,8 @@ class SHMServer(SHMBase, ServerProviderBase):
 
             # Resize the mmap as needed
             if len(encoded) >= len(mmap)-1:
-                print(f"Server: Recreating memory map to be at "
-                      f"least {len(encoded) + 1} bytes")
+                #print(f"Server: Recreating memory map to be at "
+                #      f"least {len(encoded) + 1} bytes")
                 old_mmap = mmap
                 mmap = self.create_pid_mmap(
                     min_size=len(encoded)+1, port=self.port, pid=pid
@@ -214,9 +214,6 @@ class SHMServer(SHMBase, ServerProviderBase):
             if hasattr(fn, 'metadata'):
                 fn.metadata['num_calls'] += 1
                 fn.metadata['total_time'] += time.time() - t_from
-
-                if fn.metadata['num_calls'] > 10000:
-                    print("CALL WARNING:", fn)
 
         finally:
             server_lock.unlock()

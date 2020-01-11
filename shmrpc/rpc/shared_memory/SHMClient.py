@@ -1,3 +1,5 @@
+import time
+import _thread
 from os import getpid
 from hybrid_lock import CREATE_NEW_OVERWRITE
 from shmrpc.serialisation.RawSerialisation import RawSerialisation
@@ -6,6 +8,31 @@ from shmrpc.rpc.shared_memory.shared_params import \
     PENDING, INVALID, SERVER, CLIENT
 from shmrpc.ipc.JSONMMapList import JSONMMapList
 from shmrpc.rpc.base_classes.ClientProviderBase import ClientProviderBase
+
+
+_monitor_started = [False]
+_LSHMClients = []
+def _monitor_for_dead_conns():
+    # Try to recreate connections periodically
+    # if they no longer can be established
+    while True:
+        try:
+            for client in _LSHMClients:
+                if client.client_lock.get_destroyed() or client.server_lock.get_destroyed():
+                    print(f"Locks destroyed - trying to recreate client connection: "
+                          f"{client.server_methods.name}:{client.server_methods.port}")
+                    client.create_connections()
+
+                try:
+                    client.send(b'heartbeat', b'echo_me', timeout=5)
+                except:
+                    print(f"Heartbeat failed - trying to recreate client connection: "
+                          f"{client.server_methods.name}:{client.server_methods.port}")
+                    client.create_connections()
+        except:
+            import traceback
+            traceback.print_exc()
+        time.sleep(10)
 
 
 class SHMClient(ClientProviderBase, SHMBase):
@@ -17,7 +44,14 @@ class SHMClient(ClientProviderBase, SHMBase):
         # current processes which are associated with this service,
         # and add this process' PID.
         ClientProviderBase.__init__(self, server_methods, port)
+        self.create_connections()
 
+        if not _monitor_started[0]:
+            _monitor_started[0] = True
+            _thread.start_new(_monitor_for_dead_conns, ())
+        _LSHMClients.append(self)
+
+    def create_connections(self):
         self.mmap = self.create_pid_mmap(
             2048, self.port, getpid()
         )
@@ -44,6 +78,10 @@ class SHMClient(ClientProviderBase, SHMBase):
         return self.server_methods
 
     def send(self, cmd, args, timeout=-1):
+        if self.client_lock.get_destroyed() or self.server_lock.get_destroyed():
+            # If server no longer exists, try to recreate connection
+            self.create_connections()
+
         if isinstance(cmd, bytes):
             # cmd -> a bytes object, most likely heartbeat or shutdown
             serialiser = RawSerialisation
@@ -68,8 +106,8 @@ class SHMClient(ClientProviderBase, SHMBase):
 
             # Send the result to the server!
             if len(encoded_request) >= (len(mmap)-1):
-                print(f"Client: Recreating memory map to be at "
-                      f"least {len(encoded_request) + 1} bytes")
+                #print(f"Client: Recreating memory map to be at "
+                #      f"least {len(encoded_request) + 1} bytes")
                 old_mmap = mmap
                 mmap = self.create_pid_mmap(
                     len(encoded_request) + 1, self.port, getpid()
@@ -77,8 +115,8 @@ class SHMClient(ClientProviderBase, SHMBase):
                 mmap[0] = old_mmap[0]
                 self.mmap = mmap
                 old_mmap[0] = INVALID
-                print(f"Client: New mmap size is {len(mmap)} bytes "
-                      f"for encoded_request length {len(encoded_request)}")
+                #print(f"Client: New mmap size is {len(mmap)} bytes "
+                #      f"for encoded_request length {len(encoded_request)}")
 
             assert len(mmap) > len(encoded_request), \
                 (len(mmap), len(encoded_request))
@@ -91,13 +129,17 @@ class SHMClient(ClientProviderBase, SHMBase):
             #      self.client_lock.get_value())
             self.server_lock.unlock()
 
+            t_from = time.time()
             while mmap[0] == PENDING:
                 # TODO: Give up and try to reconnect if this goes on
                 #  for too long - in that case, chances are something's
                 #  gone wrong on the server end
+                # Preferably, this should be done in cython, if I find time to do it.
 
                 # Spin! - should check to make sure this isn't being called too often
-                pass
+                if timeout != -1:
+                    if time.time()-t_from > timeout:
+                        raise TimeoutError()
 
             self.server_lock.lock(timeout=-1, spin=self.use_spinlock)  # CHECK ME!!!!
             try:
@@ -108,7 +150,7 @@ class SHMClient(ClientProviderBase, SHMBase):
                         break  # OK
 
                     elif mmap[0] == INVALID:
-                        print(f"Client: memory map has been marked as invalid")
+                        #print(f"Client: memory map has been marked as invalid")
                         prev_len = len(mmap)
                         mmap = self.mmap = self.connect_to_pid_mmap(self.port, getpid())
 

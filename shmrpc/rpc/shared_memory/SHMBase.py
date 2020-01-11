@@ -38,7 +38,7 @@ class SHMBase:
 
     def get_pid_semaphores(self, port, pid, mode):
         assert mode in (CREATE_NEW_OVERWRITE, CONNECT_TO_EXISTING)
-        print("get_pid_semaphores:", port, pid, mode)
+        #print("get_pid_semaphores:", port, pid, mode)
         client_lock = HybridSpinSemaphore(
             f'client_{port}_pid_{pid}'.encode('ascii'), mode,
             initial_value=1
