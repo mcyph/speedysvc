@@ -30,11 +30,15 @@ class LoggerClient(ClientMethodsBase):
         # associated with the service itself.
         self.service_server_methods = service_server_methods
 
-        self.client = SHMClient(LoggerServer, port=f'{service_server_methods.port}_log')
+        self.client = SHMClient(LoggerServer, port=f'{service_server_methods.port}_log', use_spinlock=False)
         ClientMethodsBase.__init__(self, client_provider=self.client)
         self.stderr_logger = self._StdErrLogger(self)
         self.stdout_logger = self._StdOutLogger(self)
+        self.__shut_me_down = False
         start_new_thread(self.__log_thread, ())
+
+    def shutdown(self):
+        self.__shut_me_down = True
 
     #=================================================================#
     #                           RPC Methods                           #
@@ -55,7 +59,7 @@ class LoggerClient(ClientMethodsBase):
         cur_stdout_msg = None
         method_stats_last_updated = 0
 
-        while True:
+        while not self.__shut_me_down:
             try:
                 if cur_stderr_msg or cur_stdout_msg:
                     item = log_queue.get(timeout=0.01)

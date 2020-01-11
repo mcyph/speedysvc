@@ -34,6 +34,16 @@ cdef char UNLOCKED = 1
 cdef char DESTROYED = 127
 
 
+cdef long long get_current_time_ms() nogil:
+    # NOTE: This function may not be portable!
+    cdef timespec ts
+    cdef long long current
+    clock_gettime(CLOCK_REALTIME, &ts)
+    current = (ts.tv_sec*1000) + (ts.tv_nsec // 1000000)
+    #printf("%lld\n", current)
+    return current
+
+
 @cython.final
 cdef class HybridSpinSemaphore:
     cdef sem_t* _semaphore
@@ -314,19 +324,19 @@ cdef class HybridSpinSemaphore:
         # Use pthread calls for locking and unlocking.
         cdef int i
         cdef int retval = -1
-        cdef double from_t = self.get_current_time()
+        cdef long long from_t = get_current_time_ms()
         cdef timespec ts
 
-        if spin:
-            with nogil:
-                while 1:
-                    # The Linux kernel time slice is normally around 6ms max
-                    # (minimum 0.5ms) so doesn't (necessarily?) make sense to
-                    # consume more time busy waiting
-                    if self.get_current_time()-from_t > 1:
-                        break
-                    elif self._spin_lock_char[0] == UNLOCKED:
-                        break
+        if spin and False:
+            #with nogil:
+            while 1:
+                # The Linux kernel time slice is normally around 6ms max
+                # (minimum 0.5ms) so doesn't (necessarily?) make sense to
+                # consume more time busy waiting
+                if get_current_time_ms()-from_t > 6:
+                    break
+                elif self._spin_lock_char[0] == UNLOCKED:
+                    break
 
         if timeout == -1:
             # NOTE THIS: It seems that semaphore functions need to
@@ -372,13 +382,3 @@ cdef class HybridSpinSemaphore:
             retval = sem_post(self._semaphore)
         return retval
 
-    #===========================================================#
-    #                       Miscellaneous                       #
-    #===========================================================#
-
-    cdef double get_current_time(self) nogil:
-        cdef timespec ts
-        cdef double current
-        clock_gettime(CLOCK_REALTIME, &ts)
-        current = ts.tv_sec + (ts.tv_nsec / 1000000000.)
-        return current

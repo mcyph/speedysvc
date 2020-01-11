@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import _thread
 import subprocess
 from multiprocessing import cpu_count
 
@@ -58,12 +60,17 @@ def run_multi_proc_server(server_methods, import_from, section,
     }
     proc = subprocess.Popen([
         'python3', '-m',
-        'shmrpc.service_managers.multi_process_manager._service_worker',
+        'shmrpc.service_managers.multi_process_manager.MultiProcessManager',
         json.dumps(DArgs)
     ], env=DEnv)
+    __LServers.append(proc)
 
     logger_server.proc = proc # HACK!
     web_service_manager.add_service(logger_server)
+
+    if wait_until_completed:
+        while logger_server.get_service_status() != 'started':
+            time.sleep(0.1)
 
 
 if __name__ == '__main__':
@@ -108,23 +115,51 @@ if __name__ == '__main__':
     fifo_json_log_parent = FIFOJSONLog(f"{DDefaults['log_dir']}/global_log.json")
     web_service_manager.set_logger_parent(fifo_json_log_parent)
 
-    for section, DSection in DValues.items():
-        #print("SECTION:", section)
-        import_from = DSection.pop('import_from')
-        server_methods = getattr(importlib.import_module(import_from), section) # Package?
+    try:
+        for section, DSection in DValues.items():
+            #print("SECTION:", section)
+            import_from = DSection.pop('import_from')
+            server_methods = getattr(importlib.import_module(import_from), section) # Package?
 
-        DArgs = DDefaults.copy()
-        DArgs.update({k: DArgKeys[k](v) for k, v in DSection.items()})
-        run_multi_proc_server(
-            server_methods, import_from, section,
-            **DArgs,
-            fifo_json_log_parent=fifo_json_log_parent
-        )
+            DArgs = DDefaults.copy()
+            DArgs.update({k: DArgKeys[k](v) for k, v in DSection.items()})
+            run_multi_proc_server(
+                server_methods, import_from, section,
+                **DArgs,
+                fifo_json_log_parent=fifo_json_log_parent
+            )
 
-    print("Services started - starting web monitoring interface")
+        print("Services started - starting web monitoring interface")
 
-    # OPEN ISSUE: Allow binding to a specific address here? ====================================
-    # For security reasons, it's probably (in almost all cases)
-    # better to only allow on localhost, to prevent other people
-    # stopping services, etc
-    run_server(debug=False)
+        # OPEN ISSUE: Allow binding to a specific address here? ====================================
+        # For security reasons, it's probably (in almost all cases)
+        # better to only allow on localhost, to prevent other people
+        # stopping services, etc
+
+        # Note opening the web server from a different thread -
+        # this allows intercepting ctrl+c/SIGINT
+        # It may be that SIGINT is handled in the actual webserver code,
+        # but I want to make sure child processes clean up when SIGINT is called.
+        _thread.start_new_thread(run_server, (), {'debug': False})
+        while 1:
+            time.sleep(10)
+    except:
+        import traceback
+        traceback.print_exc()
+
+        for proc in __LServers:
+            print("Main service waiting for PID to exit:", proc.pid)
+            try:
+                proc.wait(15)
+            except subprocess.TimeoutExpired:
+                import signal
+                #os.kill(proc.pid, signal.SIGTERM)
+                try:
+                    proc.wait(10)
+                except subprocess.TimeoutExpired:
+                    os.kill(proc.pid, signal.SIGKILL)
+            try:
+                os.waitpid(proc.pid, 0)
+            except ChildProcessError:
+                pass
+        raise

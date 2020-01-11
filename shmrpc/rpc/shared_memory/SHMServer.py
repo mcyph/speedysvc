@@ -13,7 +13,7 @@ class SHMServer(SHMBase, ServerProviderBase):
     def __init__(self):
         pass
 
-    def __call__(self, server_methods, init_resources=True):
+    def __call__(self, server_methods, init_resources=True, use_spinlock=True):
         # TODO!
         print(f"{server_methods.name}:{server_methods.port}: "
               f"SHMServer __call__; init_resources:", init_resources)
@@ -26,6 +26,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         self.port = server_methods.port
         self.shut_me_down = False
         self.shutdown_ok = False
+        self.use_spinlock = use_spinlock
 
         # Add some default methods: heartbeat to make sure the service
         # is responding to requests; shutdown to cleanly exit.
@@ -42,9 +43,13 @@ class SHMServer(SHMBase, ServerProviderBase):
 
     def shutdown(self):
         self.shut_me_down = True
-        while not self.shutdown_ok:
-            time.sleep(0.05)
-            continue
+        while True:
+            try:
+                while not self.shutdown_ok:
+                    time.sleep(0.05)
+                    continue
+            except KeyboardInterrupt:
+                pass  # HACK!
 
     def init_pids_map_array(self, init_resources):
         self.LPIDs = JSONMMapList(
@@ -117,7 +122,7 @@ class SHMServer(SHMBase, ServerProviderBase):
 
     def handle_command(self, mmap, server_lock, pid, do_spin):
         try:
-            server_lock.lock(timeout=1, spin=do_spin)
+            server_lock.lock(timeout=1, spin=do_spin and self.use_spinlock)
             do_spin = True
         except TimeoutError:
             # Disable spinning for subsequent tries!
@@ -209,6 +214,9 @@ class SHMServer(SHMBase, ServerProviderBase):
             if hasattr(fn, 'metadata'):
                 fn.metadata['num_calls'] += 1
                 fn.metadata['total_time'] += time.time() - t_from
+
+                if fn.metadata['num_calls'] > 10000:
+                    print("CALL WARNING:", fn)
 
         finally:
             server_lock.unlock()

@@ -117,6 +117,7 @@ class MultiProcessServer:
         # Collect data periodically
         self.LPIDs = []
         self.last_proc_op_time = 0
+        self.shutting_down = False
         self.started_collecting_data = False
         self.logger_client = LoggerClient(server_methods)
 
@@ -136,7 +137,7 @@ class MultiProcessServer:
         """
         print(f"{self.server_methods.name}: Process monitor started")
 
-        while self.logger_client.get_service_status() == 'started':
+        while not self.shutting_down and self.logger_client.get_service_status() not in ('stopping', 'stopped'):
             for pid in self.LPIDs[:]:
                 try:
                     if not psutil.pid_exists(pid):
@@ -235,12 +236,11 @@ class MultiProcessServer:
             "Can't start a service that isn't stopped!"
         self.logger_client.set_service_status('starting')
 
-        if self.wait_until_completed:
-            for x in range(self.min_proc_num):
-                # Make sure the initial processes have booted up
-                # from the main thread, so it can block as necessary
-                # (assuming wait_until_completed is set)
-                self.new_child_process()
+        for x in range(self.min_proc_num):
+            # Make sure the initial processes have booted up
+            # from the main thread, so it can block as necessary
+            # (assuming wait_until_completed is set)
+            self.new_child_process()
 
         _thread.start_new_thread(self.__monitor_process_loop, ())
 
@@ -248,17 +248,15 @@ class MultiProcessServer:
         """
         Stop a started service.
         """
-        assert self.logger_client == 'started', \
+        assert self.logger_client.get_service_status() == 'started', \
             "Can't stop a service that isn't started!"
+        self.shutting_down = True
         self.logger_client.set_service_status('stopping')
 
         while self.LPIDs:
             self.remove_child_process()
         self.logger_client.set_service_status('stopped')
-
-        # NOTE ME - is this necessary?? =======================================================
-        time.sleep(2)
-        raise SystemExit()
+        self.logger_client.shutdown()
 
     def new_child_process(self):
         """
@@ -274,20 +272,34 @@ class MultiProcessServer:
             'tcp_compression':  self.tcp_compression,
             'tcp_allow_insecure_serialisation': self.tcp_allow_insecure_serialisation
         }
-        proc = subprocess.Popen([
-            'python3', '-m',
-            'shmrpc.service_managers.multi_process_manager._service_worker',
-            json.dumps(DArgs)
-        ], env=DEnv)
+        if True:
+            from shmrpc.service_managers.multi_process_manager._service_worker import _service_worker
+            from os import fork
 
-        pid = proc.pid
+            DArgs['server_methods'] = getattr(
+                importlib.import_module(DArgs.pop('import_from')),
+                DArgs.pop('section')
+            )
+
+            pid = fork()
+            if pid == 0:
+                # in child
+                _service_worker(**DArgs)
+        else:
+            proc = subprocess.Popen([
+                'python3', '-m',
+                'shmrpc.service_managers.multi_process_manager._service_worker',
+                json.dumps(DArgs)
+            ], env=DEnv)
+            pid = proc.pid
+
         self.logger_client.add_pid(pid)
         self.last_proc_op_time = time.time()
         self.LPIDs.append(pid)
 
         def start_collecting_data():
             while not self.logger_client.get_service_status() == 'started':
-                time.sleep(0.05)
+                time.sleep(0.1)
 
             if not self.started_collecting_data:
                 # The service time series data should only start
@@ -298,7 +310,7 @@ class MultiProcessServer:
         if self.wait_until_completed:
             print(f"{self.server_methods.name} parent: Waiting for child to initialise...")
             while not self.logger_client.get_service_status() == 'started':
-                time.sleep(0.05)
+                time.sleep(0.1)
             print(f"{self.server_methods.name} parent: child signaled it has initialised OK")
 
             start_collecting_data()
@@ -315,7 +327,10 @@ class MultiProcessServer:
 
         self.last_proc_op_time = time.time()
         self.LPIDs.remove(pid)
-        self.logger_client.remove_pid(pid)
+        try:
+            self.logger_client.remove_pid(pid)
+        except:
+            pass
 
         if psutil.pid_exists(pid):
             MAX_SECS_TO_WAIT_AFTER_SIGINT = 100
@@ -342,14 +357,16 @@ class MultiProcessServer:
                 os.kill(pid, signal.SIGTERM)
 
             # =5secs to finish ending process
-            #for x in range(50):
-            #    if not psutil.pid_exists(pid):
-            #        break
-            #    time.sleep(0.1)
+            for x in range(50):
+                if not psutil.pid_exists(pid):
+                    break
+                time.sleep(0.1)
 
-            #if psutil.pid_exists(pid):
-            #    # Kill it good if it doesn't respond
-            #    os.kill(pid, signal.SIGKILL)
+            if psutil.pid_exists(pid) and self.shutting_down:
+                # Kill it good if it doesn't respond
+                # only if we're shutting down, as can have consequences
+                print(f"Killing PID with SIGKILL [{pid}]")
+                os.kill(pid, signal.SIGKILL)
 
             # Clean up potential zombie in OS process table
             try:
@@ -372,4 +389,9 @@ if __name__ == '__main__':
         while True:
             time.sleep(10)
     except KeyboardInterrupt:
+        from os import getpid
+
+        print(f"MultiProcessManager [{getpid()}]: exiting PIDs {mps.LPIDs} from")
         mps.stop_service()
+        print("MultiProcesssManager: exiting", getpid())
+        raise SystemExit()

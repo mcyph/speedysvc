@@ -115,8 +115,9 @@ class TimeSeriesData(ABC):
                 if DSample: # WARNING!!! ======================================
                     self.__add_sample(**DSample)
             except:
-                import traceback
-                traceback.print_exc()
+                pass
+                #import traceback
+                #traceback.print_exc()
 
             sleep(self.sample_interval_secs)
 

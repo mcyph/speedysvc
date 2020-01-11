@@ -58,12 +58,20 @@ def _service_worker(init_resources, server_methods,
                 print(f"Calling shutdown for {smi.name} [PID {getpid()}]..")
                 inst.shutdown()
                 print(f"Shutdown OK for {smi.name} [PID {getpid()}]")
+
         time.sleep(2)
+        print("_service_worker: exiting PID", getpid())
+        logger_client.shutdown()
+        #logger_client.client.client_lock.close()
+        #logger_client.client.server_lock.close()
+        raise SystemExit
 
 
 if __name__ == '__main__':
     DArgs = json.loads(argv[-1])
-    server_methods = getattr(
+    #print("**CHILD WORKER DARGS:", DArgs)
+    DArgs['server_methods'] = getattr(
         importlib.import_module(DArgs.pop('import_from')),
         DArgs.pop('section')
     )
+    _service_worker(**DArgs)

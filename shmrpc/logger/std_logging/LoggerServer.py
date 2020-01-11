@@ -20,7 +20,9 @@ class LoggerServer:
         :param log_dir:
         :param server_methods:
         """
-        self.loaded_ok = False
+        self.original_server_methods = server_methods
+        self.status = 'stopped'
+        self.LPIDs = []
 
         # NOTE ME: I'm overriding the port so as to not have a
         #          collision with the existing (integer) port,
@@ -55,14 +57,14 @@ class LoggerServer:
         # Create the time series statistics data instance
         # (e.g. to record how much RAM etc each process is using)
         self.service_time_series_data = ServiceTimeSeriesData(
-            path=f'{log_dir}/{server_methods.name}/'
-                 f'time_series_data.bin'
+            path=f'{log_dir}/time_series_data.bin'
         )
 
         # Start the server
         self.shm_server(
             server_methods=self,
-            init_resources=True
+            init_resources=True,
+            use_spinlock=False # NOTE ME: This is normally called in the background, and performance shouldn't be a priority here
         )
 
         self.flush_needed = False
@@ -103,6 +105,7 @@ class LoggerServer:
         # effectively a communications system from worker
         # servers->worker manager - perhaps this class should be
         # renamed to reflect its broader scope?
+        #SHMServerprint("LOGGER SERVER UPDATE STATS:", pid)
 
         self.DMethodStats[pid] = DMethodStats
 
@@ -112,6 +115,7 @@ class LoggerServer:
 
         :return:
         """
+        #print("LOGGER SERVER GET METHOD STATS:")
         D = {}
 
         for pid, DMethodStats in self.DMethodStats.items():
@@ -185,6 +189,7 @@ class LoggerServer:
 
         :return:
         """
+        #print("LOGGER SERVER GET STATUS:")
         return self.status
 
     @json_method
@@ -194,6 +199,7 @@ class LoggerServer:
         :param status:
         :return:
         """
+        #print("LOGGER SERVER STATUS:", status)
         if status == 'started':
             self.loaded_ok = True
         self.status = status
@@ -221,7 +227,8 @@ class LoggerServer:
         :param pid:
         :return:
         """
-        #self.LPIDs.append(pid)
+        #print("LOGGER SERVER ADD PID", pid)
+        self.LPIDs.append(pid)
         self.service_time_series_data.add_pid(pid)
 
     @json_method
@@ -231,7 +238,8 @@ class LoggerServer:
         :param pid:
         :return:
         """
-        #self.LPIDs.pop(pid)
+        #print("LOGGER SERVER REMOVE PID", pid)
+        self.LPIDs.pop(pid)
         self.service_time_series_data.remove_pid(pid)
         del self.DMethodStats[pid]
 
@@ -241,4 +249,5 @@ class LoggerServer:
 
         :return:
         """
+        #print("LOGGER SERVER START COLLECTING:")
         self.service_time_series_data.start_collecting()

@@ -9,7 +9,8 @@ from shmrpc.rpc.base_classes.ClientProviderBase import ClientProviderBase
 
 
 class SHMClient(ClientProviderBase, SHMBase):
-    def __init__(self, server_methods, port=None):
+    def __init__(self, server_methods, port=None, use_spinlock=True):
+        self.use_spinlock = use_spinlock
         # Create the shared mmap space/client+server semaphores.
 
         # Connect to a shared shm/semaphore which stores the
@@ -60,7 +61,7 @@ class SHMClient(ClientProviderBase, SHMBase):
             len(cmd), len(args)
         ) + cmd + args
 
-        self.client_lock.lock(timeout=timeout)
+        self.client_lock.lock(timeout=timeout, spin=self.use_spinlock)
         try:
             # Next line must be in critical area!
             mmap = self.mmap
@@ -98,7 +99,7 @@ class SHMClient(ClientProviderBase, SHMBase):
                 # Spin! - should check to make sure this isn't being called too often
                 pass
 
-            self.server_lock.lock(timeout=-1)  # CHECK ME!!!!
+            self.server_lock.lock(timeout=-1, spin=self.use_spinlock)  # CHECK ME!!!!
             try:
                 # Make sure response state ok,
                 # reconnecting to mmap if resized

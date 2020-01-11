@@ -65,7 +65,7 @@ class WebServiceManager:
         :param service:
         :return:
         """
-        self.DServices[service.port] = service
+        self.DServices[service.original_server_methods.port] = service
 
     def remove_service(self, port):
         """
@@ -127,7 +127,7 @@ class WebServiceManager:
         """
         L = []
         for service in self.iter_services_by_name():
-            L.append(self.get_D_service_info(service.port))
+            L.append(self.get_D_service_info(service.original_server_methods.port))
         return L
 
     def get_overall_service_methods(self, max_methods=15):
@@ -139,12 +139,12 @@ class WebServiceManager:
         """
         L = []
         for service in self.iter_services_by_name():
-            DMethodStats = service.logger_server.get_D_method_stats()
+            DMethodStats = service.get_D_method_stats()
 
             L.extend([
                 (
-                    service.port,
-                    service.name,
+                    service.original_server_methods.port,
+                    service.original_server_methods.name,
                     method_name,
                     D['num_calls'],
                     D['avg_call_time'],
@@ -181,7 +181,7 @@ class WebServiceManager:
         service = self.DServices[port]
         stsd = service.service_time_series_data
         recent_values = stsd.get_recent_values()
-        offset, LHTML = service.logger_server.fifo_json_log.get_html_log(
+        offset, LHTML = service.fifo_json_log.get_html_log(
             offset=console_offset
         )
         method_stats_html = self.get_method_stats_html(port)
@@ -202,7 +202,7 @@ class WebServiceManager:
         :param port:
         :return:
         """
-        DMethodStats = self.DServices[port].logger_server.get_D_method_stats()
+        DMethodStats = self.DServices[port].get_D_method_stats()
 
         LMethodStats = [
             (method_name, D['num_calls'], D['avg_call_time'], D['total_time'])
@@ -225,13 +225,10 @@ class WebServiceManager:
         service = self.DServices[port]
         return {
             "port": port,
-            "name": service.name,
+            "name": service.original_server_methods.name,
             "implementations": [
-                implementation.__class__.__name__
-                for implementation
-                in service.server_providers
-            ],
-            "status": service.get_status_as_string(),
+            ], # TODO: UPDATE ME to include whether tcp_bind is set!!! ===============================================
+            "status": service.get_service_status(),
             'workers': len(service.LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
             'physical_mem': recent_values[-1]['physical_mem'] // 1024 // 1024,
             # We'll average over 3 iterations, as this can spike pretty quickly.
