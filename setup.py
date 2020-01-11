@@ -97,6 +97,7 @@ setup(
         #'pyarrow',
         'python-snappy',
         'flask',
+        'psutil',
     ],
 
     zip_safe=True

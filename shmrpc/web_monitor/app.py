@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask, send_from_directory, render_template, request
+from flask import Flask, send_from_directory, render_template, request, redirect, url_for
 from shmrpc.web_monitor.WebServiceManager import WebServiceManager
 
 
@@ -115,19 +115,11 @@ def poll_service_info():
 def start_service():
     port = int(request.args.get('port'))
     web_service_manager.start_service(port)
-    return "ok"
+    return redirect('/')
 
 
 @app.route('/stop_service')
 def stop_service():
     port = int(request.args.get('port'))
     web_service_manager.stop_service(port)
-    return "ok"
-
-
-@app.route('/restart_service')
-def restart_service():
-    port = int(request.args.get('port'))
-    web_service_manager.restart_service(port)
-    return "ok"
-
+    return redirect('/')

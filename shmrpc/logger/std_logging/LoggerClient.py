@@ -156,6 +156,9 @@ class LoggerClient(ClientMethodsBase):
     def start_collecting(self):
         return self.send(LoggerServer.start_collecting, [])
 
+    def stop_collecting(self):
+        return self.send(LoggerServer.stop_collecting, [])
+
     #=================================================================#
     #                      User-Callable Methods                      #
     #=================================================================#

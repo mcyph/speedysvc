@@ -1,7 +1,6 @@
-import os
-import signal
 from datetime import datetime
 from flask import render_template_string
+from shmrpc.kill_pid_and_children import kill_pid_and_children
 
 
 LColours = [
@@ -14,7 +13,10 @@ LColours = [
 
 class WebServiceManager:
     def __init__(self):
-        self.DServices = {}
+        self.DServices = {}  # TODO: Replace me, directly using the Services instance!
+
+    def set_services(self, services):
+        self.services = services
 
     def set_logger_parent(self, logger_parent):
         """
@@ -75,13 +77,13 @@ class WebServiceManager:
         """
         del self.DServices[port]
 
-    def restart_service(self, port):
+    def start_service(self, port):
         """
 
         :param port:
         :return:
         """
-        raise NotImplementedError()  # TODO!
+        self.services.start_service_by_port(port)
 
     def stop_service(self, port):
         """
@@ -89,8 +91,7 @@ class WebServiceManager:
         :param port:
         :return:
         """
-        pid = self.DServices[port].proc.pid
-        os.kill(pid, signal.SIGINT)
+        self.services.stop_service_by_port(port)
 
     #=====================================================================#
     #                     Get All Service Status/Stats                    #

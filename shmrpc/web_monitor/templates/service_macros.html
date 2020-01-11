@@ -38,7 +38,14 @@
         {% endif %}
         <td>{{ DService['port']|e }}</td>
         <td>{{ DService['implementations']|join(", ")|e }}</td>
-        <td>{{ DService['status']|e }}</td>
+        <td>
+            {{ DService['status']|e }}
+            {% if DService['status'] == 'started' %}
+                [<a href="/stop_service?port={{ DService['port'] }}">stop</a>]
+            {% elif DService['status'] == 'stopped' %}
+                [<a href="/start_service?port={{ DService['port'] }}">start</a>]
+            {% endif %}
+        </td>
         <td>{{ DService['physical_mem']|e }}</td>
         <td>{{ DService['cpu']|e }}</td>
         <td>{{ DService['workers']|e }}</td>

@@ -1,4 +1,5 @@
 import time
+import psutil
 from _thread import allocate_lock, start_new_thread
 
 from shmrpc.rpc.shared_memory.SHMServer import SHMServer
@@ -202,6 +203,17 @@ class LoggerServer:
         #print("LOGGER SERVER STATUS:", status)
         if status == 'started':
             self.loaded_ok = True
+        elif status == 'stopped':
+            self.loaded_ok = False
+
+            # Clean out previous PIDs
+            for pid in self.LPIDs:
+                if psutil.pid_exists(pid):
+                    import warnings
+                    warnings.warn(f"PID {pid} for service {self.name}:{self.port} "
+                                  f"still exists when it should have been killed!")
+            self.LPIDs = []
+
         self.status = status
 
     #=========================================================#
@@ -251,3 +263,11 @@ class LoggerServer:
         """
         #print("LOGGER SERVER START COLLECTING:")
         self.service_time_series_data.start_collecting()
+
+    @json_method
+    def stop_collecting(self):
+        """
+
+        :return:
+        """
+        self.service_time_series_data.stop_collecting()
