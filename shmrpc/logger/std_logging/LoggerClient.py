@@ -2,6 +2,7 @@ import sys
 import time
 from os import getpid
 from queue import Queue, Empty
+import traceback
 from _thread import allocate_lock, start_new_thread
 
 from shmrpc.logger.std_logging.LoggerServer import LoggerServer
@@ -15,6 +16,10 @@ from shmrpc.logger.std_logging.log_entry_types import \
 # than synchronous logging, so as to minimise the
 # risk of recursive log writes, etc
 log_queue = Queue()
+
+
+_old_stdout = sys.stdout
+_old_stderr = sys.stderr
 
 
 class LoggerClient(ClientMethodsBase):
@@ -104,7 +109,7 @@ class LoggerClient(ClientMethodsBase):
                 # I'm printing errors directly to the old stderr
                 # to prevent the risk of recursive exceptions
                 import traceback
-                self.stderr_logger.old_stderr.write(traceback.format_exc())
+                _old_stderr.write(traceback.format_exc())
                 time.sleep(1)
 
     def _write_to_log_(self, log_params):
@@ -243,30 +248,25 @@ class LoggerClient(ClientMethodsBase):
 
     class _StdOutLogger:
         def __init__(self, logger_client):
-            self.old_stdout = sys.stdout
             sys.stdout = self
             self.logger_client = logger_client
 
         def flush(self):
-            self.old_stdout.flush()
+            _old_stdout.flush()
 
         def write(self, s):
-            self.old_stdout.write(s)
+            _old_stdout.write(s)
             self.logger_client(s, STDOUT)
 
     class _StdErrLogger:
         def __init__(self, logger_client):
-            self.old_stderr = sys.stderr
             sys.stderr = self
             self.logger_client = logger_client
 
         def flush(self):
-            self.old_stderr.flush()
+            _old_stderr.flush()
 
         def write(self, s):
-            self.old_stderr.write(s)
+            _old_stderr.write(s)
             self.logger_client(s, STDERR)
 
-    #=================================================================#
-    #                      User-Callable Methods                      #
-    #=================================================================#

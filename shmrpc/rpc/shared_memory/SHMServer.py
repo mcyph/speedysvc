@@ -1,4 +1,5 @@
 import time
+import traceback
 from _thread import start_new_thread
 from shmrpc.rpc.base_classes.ServerProviderBase import ServerProviderBase
 from shmrpc.serialisation.RawSerialisation import RawSerialisation
@@ -188,6 +189,9 @@ class SHMServer(SHMBase, ServerProviderBase):
                 ) + result
 
             except Exception as exc:
+                # Output to stderr log for the service
+                traceback.print_exc()
+
                 # Just send a basic Exception instance for now, but would be nice
                 # if could recreate some kinds of exceptions on the other end
                 result = b'-' + repr(exc).encode('utf-8')

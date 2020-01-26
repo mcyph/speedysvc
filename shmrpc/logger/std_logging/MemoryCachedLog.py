@@ -17,7 +17,7 @@ class MemoryCachedLog:
         self.spindle = 0
         self.cache = BytesIO()
         self.max_cache = max_cache
-        self.f = open(path, 'wb+')
+        self.f = open(path, 'ab+')
 
     def __del__(self):
         """

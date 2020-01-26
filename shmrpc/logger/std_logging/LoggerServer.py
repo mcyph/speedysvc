@@ -10,7 +10,7 @@ from shmrpc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
 from shmrpc.logger.time_series_data.ServiceTimeSeriesData import ServiceTimeSeriesData
 
 
-FLUSH_EVERY_SECONDS = 1.0
+FLUSH_EVERY_SECONDS = 3.0
 
 
 class LoggerServer:
@@ -76,16 +76,17 @@ class LoggerServer:
         Only flush the files periodically, so as to
         reduce the amount IO affects performance
         """
-        if self.flush_needed:
-            with self.stderr_lock:
-                self.f_stderr.flush()
-            with self.stdout_lock:
-                self.f_stdout.flush()
-            with self.stdout_lock:
+        while True:
+            if self.flush_needed:
                 with self.stderr_lock:
-                    self.fifo_json_log.flush()
-            self.flush_needed = False
-        time.sleep(FLUSH_EVERY_SECONDS)
+                    self.f_stderr.flush()
+                with self.stdout_lock:
+                    self.f_stdout.flush()
+                with self.stdout_lock:
+                    with self.stderr_lock:
+                        self.fifo_json_log.flush()
+                self.flush_needed = False
+            time.sleep(FLUSH_EVERY_SECONDS)
 
     #=========================================================#
     #                Update Method Statistics                 #
@@ -176,6 +177,7 @@ class LoggerServer:
             self.fifo_json_log.write_to_log(
                 **log_entry.to_dict()
             )
+            self.flush_needed = True
         except OverflowError:
             import warnings
             warnings.warn("Warning: message overflow in fifo_json_log")
@@ -251,9 +253,18 @@ class LoggerServer:
         :return:
         """
         #print("LOGGER SERVER REMOVE PID", pid)
-        self.LPIDs.pop(pid)
-        self.service_time_series_data.remove_pid(pid)
-        del self.DMethodStats[pid]
+        try:
+            self.LPIDs.pop(pid)
+        except IndexError:
+            pass
+        try:
+            self.service_time_series_data.remove_pid(pid)
+        except KeyError:
+            pass
+        try:
+            del self.DMethodStats[pid]
+        except KeyError:
+            pass
 
     @json_method
     def start_collecting(self):

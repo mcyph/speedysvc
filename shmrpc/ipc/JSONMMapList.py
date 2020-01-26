@@ -11,8 +11,6 @@ class JSONMMapList(JSONMMapBase):
             with self:
                 self._encode([])
 
-                print(self._decode())
-
     def __enter__(self):
         # Allow for `with JSONMapArray(..)` syntax
         self.lock.lock()

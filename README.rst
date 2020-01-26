@@ -7,7 +7,7 @@ About
     breaking changes to the API.
 
 This module provides low-latency, high-throughput interprocess queues using
-`shared memory`_. It allows for basic client/server iterprocess method
+`shared memory`_. It allows for basic client/server interprocess method
 calls using these queues, with multiple server workers serving
 multiple clients. It is released under the MIT License.
 
@@ -24,7 +24,7 @@ not much less than if functions were called in-process.
 Other capabilities:
 
 * A management web interface based on flask, showing logs/performance data for each
-  service, and allowing restarting services.
+  service, and allowing stopping/starting services individually.
 * Multiple servers can serve to multiple clients: additional server worker processes
   can optionally start when overall CPU usage exceeds a certain %. This helps to work
   around the often-cited GIL_ limitations of python.
@@ -42,8 +42,8 @@ Type:
 
 This module has only been tested on Linux (specifically Ubuntu 18.04 LTS),
 but should work on other Linuxes, and potentially some other POSIX-compliant
-systems. It probably won't ever work on Windows, except for via the `Windows
-Subsystem for Linux`_ due to its reliance on POSIX semaphores and shared
+systems. It may never work on Windows except for via the `Windows
+Subsystem for Linux`_ due to its reliance on POSIX named semaphores and shared
 memory.
 
 It has the following dependencies:
@@ -52,6 +52,7 @@ It has the following dependencies:
 * flask - for the monitoring/management web interface
 * posix_ipc - for shared memory support
 * python-snappy - for fast compression in combination with remote TCP sockets
+* psutil - for monitoring child worker processes
 
 Example
 -----------------------
@@ -259,17 +260,6 @@ Different kinds of encoders/decoders:
   module. **Potentially insecure** as there could be potential buffer overflow
   vulnerabilities etc, but is fast.
 
-Benchmarks:
------------------------------------
-
-Different kinds of serialisation
-
-Many clients to single server
-
-Single client to many servers
-
-Many clients to many servers
-
 ==============================
 Hybrid Spin Semaphore
 ==============================
@@ -407,15 +397,10 @@ TODO
   may be worth referring to. Currently the spinlock is just a simple
   variable (not atomic/volatile) and it falls back to named semaphores
   whether it's acquired in time or not. The current one is relatively
-  simple in implementation which is a big advantage, and I'm not sure
-  much performance would be gained, except when there are lots of
+  simple in implementation which in my opinion is a big advantage, and
+  I'm not sure much performance would be gained, except when there are lots of
   servers for a single service (as each client has its own spinlock/
   named semaphore).
-
-* There's a basic JSON-based logging system and time series data collection
-  which can be viewed using the web interface, but it would be nice to be
-  able to (optionally) integrate them using something like Prometheus, and
-  allow for more advanced queries/metrics.
 
 * Add transparent compression support for NetworkServer/NetworkClient,
   with the client receiving the compression type before first commands.
@@ -427,9 +412,6 @@ Bugs/Limitations
 The shared spinlock implementation could probably be optimised,
 and there may be bugs when clients or servers try to
 reconnect through previously used "port"s.
-
-Please report any such bugs to [[FIXME...]]
-
 
 .. _separation of concerns: https://en.wikipedia.org/wiki/Separation_of_concerns
 .. _copy-on-write: https://en.wikipedia.org/wiki/Copy-on-write
