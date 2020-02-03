@@ -29,8 +29,8 @@ class SHMServer(SHMBase, ServerProviderBase):
         self.shutdown_ok = False
         self.use_spinlock = use_spinlock
 
-        # Add some default methods: heartbeat to make sure the service
-        # is responding to requests; shutdown to cleanly exit.
+        # Add a default method: heartbeat to make sure the service
+        # is responding to requests
         self.server_methods.heartbeat = lambda data: data
         self.server_methods.heartbeat.serialiser = RawSerialisation
 
@@ -117,6 +117,12 @@ class SHMServer(SHMBase, ServerProviderBase):
 
             try:
                 do_spin, mmap = self.handle_command(mmap, server_lock, pid, do_spin)
+            except SystemError:
+                # possibly SystemError: <built-in method lock of hybrid_lock.HybridSpinSemaphore object at 0xXXX>
+                # returned NULL without setting an error
+                # In this case, the lock was likely destroyed and should propogate the error,
+                # rather than forever logging
+                raise
             except:
                 import traceback
                 traceback.print_exc()
