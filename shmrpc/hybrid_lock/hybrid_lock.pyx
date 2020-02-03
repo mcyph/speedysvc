@@ -20,6 +20,9 @@ class SemaphoreExistsException(Exception):
 class NoSuchSemaphoreException(Exception):
     pass
 
+class SemaphoreDestroyedException(Exception):
+    pass
+
 
 CONNECT_OR_CREATE = 0
 CONNECT_TO_EXISTING = 1
@@ -186,13 +189,11 @@ cdef class HybridSpinSemaphore:
                 self.__exception_occurred("fchmod")
 
         if self._shm_fd == -1:
-            perror("shm_open")
-            return -1
+            raise SystemError("shm_open")
 
         # Truncate shared memory segment so it would contain char*
         if ftruncate(self._shm_fd, sizeof(char*)) == -1:
-            perror("ftruncate")
-            return -1
+            raise SystemError("ftruncate")
 
         # Map pthread mutex into the shared memory.
         cdef void *addr = mmap(
@@ -204,8 +205,7 @@ cdef class HybridSpinSemaphore:
             0
         )
         if addr == MAP_FAILED:
-            perror("mmap")
-            return -1
+            raise SystemError("mmap")
 
         # Create+set initial value for the spin lock char*, if provided
         self._spin_lock_char = <char *>addr # VOLATILE??? ===========================================
@@ -213,8 +213,7 @@ cdef class HybridSpinSemaphore:
             self._spin_lock_char[0] = set_value
 
         if self._spin_lock_char[0] == DESTROYED:
-            printf("Semaphore at %s already destroyed: shouldn't get here!\n", sem_loc)
-            return -1
+            raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!", sem_loc)
 
         return 0
 
@@ -232,19 +231,16 @@ cdef class HybridSpinSemaphore:
             free(self._sem_loc)
 
             if close(self._shm_fd) == -1:
-                perror("close")
-                return -1
+                raise Exception("close")
 
             if sem_close(self._semaphore) == -1:
-                perror("sem_close")
-                return -1
+                raise Exception("sem_close")
             return 0
 
     cpdef int destroy(self) except -1:
         # Mutex destruction completely cleans it from system memory.
         if self._cleaned_up:
-            printf("WARNING: Already cleaned up in HybridSpinSemaphore.destroy()!\n")
-            return -1
+            raise SemaphoreDestroyedException("WARNING: Already cleaned up in HybridSpinSemaphore.destroy()!")
         self._cleaned_up = 1
 
         #printf("Destroying semaphore %s\n", self._sem_loc)
@@ -258,8 +254,7 @@ cdef class HybridSpinSemaphore:
 
             if errno != ENOENT:
                 # If already unlinked, just ignore
-                perror("shm_unlink")
-                return -1
+                raise Exception("shm_unlink")
 
         # after calling sem_unlink, if there are no more
         # processes using it, it will cease to exist.
@@ -268,8 +263,7 @@ cdef class HybridSpinSemaphore:
 
             if errno != ENOENT:
                 # If already unlinked, just ignore
-                perror("sem_unlink")
-                return -1
+                raise Exception("sem_unlink")
 
         # Clean up - no need to keep _sem_loc any more
         free(self._sem_loc)
@@ -280,13 +274,11 @@ cdef class HybridSpinSemaphore:
 
         # Close the shared memory
         if close(self._shm_fd) == -1:
-            perror("close")
-            return -1
+            raise Exception("close")
 
         # Finally close the semaphore
         if sem_close(self._semaphore) == -1:
-            perror("sem_close")
-            return -1
+            raise Exception("sem_close")
         return 0
 
     #===========================================================#
@@ -300,7 +292,7 @@ cdef class HybridSpinSemaphore:
         # Just in case the semaphore value is -1,
         # we'll use -10 for the exception
         if self._spin_lock_char[0] == DESTROYED:
-            return -10
+            raise SemaphoreDestroyedException()
 
         cdef int value;
         cdef int* p_value = &value;
@@ -309,7 +301,7 @@ cdef class HybridSpinSemaphore:
         result = sem_getvalue(self._semaphore, p_value)
 
         if result == -1:
-            return -10
+            raise Exception("sem_getvalue")
         return p_value[0]
 
     #===========================================================#
@@ -318,8 +310,7 @@ cdef class HybridSpinSemaphore:
 
     cpdef int lock(self, int timeout=-1, int spin=1) except -1:
         if self._spin_lock_char[0] == DESTROYED:
-            printf("lock called on destroyed HybridSpinSemaphore!")
-            return -1
+            raise SemaphoreDestroyedException("lock called on destroyed HybridSpinSemaphore!")
 
         # Use pthread calls for locking and unlocking.
         cdef int i
@@ -328,7 +319,8 @@ cdef class HybridSpinSemaphore:
         cdef timespec ts
 
         if spin and False:
-            #with nogil:
+            #with nogil:  # NOTE ME: Uncommenting this line might increase performance,
+                          # at a cost of potentially having one process consuming many cores!
             while 1:
                 # The Linux kernel time slice is normally around 6ms max
                 # (minimum 0.5ms) so doesn't (necessarily?) make sense to
@@ -347,11 +339,10 @@ cdef class HybridSpinSemaphore:
             if retval != -1:
                 self._spin_lock_char[0] = LOCKED
             else:
-                perror("sem_wait")
+                raise Exception("sem_wait")
         else:
             if clock_gettime(CLOCK_REALTIME, &ts) == -1:
-                perror("clock_gettime")
-                return -1
+                raise Exception("clock_gettime")
 
             #ts.tv_nsec += timeout
             ts.tv_sec += timeout
@@ -364,15 +355,13 @@ cdef class HybridSpinSemaphore:
             else:
                 if errno == ETIMEDOUT:
                     raise TimeoutError()
-                    return -1
                 else:
-                    printf("TIMEOUT: %d\n", timeout)
-                    perror("sem_timedwait")
+                    raise Exception("sem_timedwait: %d" % timeout)
         return retval
 
     cpdef int unlock(self) except -1:
         if self._spin_lock_char[0] == DESTROYED:
-            return -1
+            raise SemaphoreDestroyedException()
 
         cdef int i
         cdef int retval = -1
@@ -381,4 +370,3 @@ cdef class HybridSpinSemaphore:
         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
             retval = sem_post(self._semaphore)
         return retval
-

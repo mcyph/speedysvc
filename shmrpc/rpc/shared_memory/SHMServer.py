@@ -7,7 +7,7 @@ from shmrpc.ipc.JSONMMapList import JSONMMapList
 from shmrpc.rpc.shared_memory.SHMBase import SHMBase
 from shmrpc.rpc.shared_memory.shared_params import \
     PENDING, INVALID, SERVER, CLIENT
-from hybrid_lock import CONNECT_TO_EXISTING
+from hybrid_lock import CONNECT_TO_EXISTING, SemaphoreDestroyedException
 
 
 class SHMServer(SHMBase, ServerProviderBase):
@@ -117,11 +117,9 @@ class SHMServer(SHMBase, ServerProviderBase):
 
             try:
                 do_spin, mmap = self.handle_command(mmap, server_lock, pid, do_spin)
-            except SystemError:
-                # possibly SystemError: <built-in method lock of hybrid_lock.HybridSpinSemaphore object at 0xXXX>
-                # returned NULL without setting an error
-                # In this case, the lock was likely destroyed and should propogate the error,
-                # rather than forever logging
+            except SemaphoreDestroyedException:
+                # In this case, the lock was likely destroyed by the client
+                # and should propogate the error, rather than forever logging
                 raise
             except:
                 import traceback

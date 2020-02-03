@@ -36,9 +36,16 @@ Other capabilities:
 Install/Dependencies
 ------------------------------
 
-Type:
+Use pip:
 
-    pip3 install git+[[TODO]]
+    pip3 install git+https://github.com/mcyph/shmrpc/shmrpc.git
+
+Or install manually:
+
+    git clone https://github.com/mcyph/shmrpc
+    cd shmrpc
+    python setup.py build_ext --inplace
+    python setup.py install
 
 This module has only been tested on Linux (specifically Ubuntu 18.04 LTS),
 but should work on other Linuxes, and potentially some other POSIX-compliant
