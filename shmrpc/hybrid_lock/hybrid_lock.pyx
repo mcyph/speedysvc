@@ -144,6 +144,8 @@ cdef class HybridSpinSemaphore:
                 del existing_semaphore
             except NoSuchSemaphoreException:
                 pass
+            except SemaphoreDestroyedException:
+                pass
 
             # Open the semaphore in exclusive mode
             self._semaphore = sem_open(
@@ -318,7 +320,7 @@ cdef class HybridSpinSemaphore:
         cdef long long from_t = get_current_time_ms()
         cdef timespec ts
 
-        if spin and False:
+        if spin:
             #with nogil:  # NOTE ME: Uncommenting this line might increase performance,
                           # at a cost of potentially having one process consuming many cores!
             while 1:

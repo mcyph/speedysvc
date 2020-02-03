@@ -852,7 +852,7 @@ static const char *__pyx_f[] = {
 struct __pyx_obj_11hybrid_lock_HybridSpinSemaphore;
 struct __pyx_opt_args_11hybrid_lock_19HybridSpinSemaphore_lock;
 
-/* "hybrid_lock.pyx":311
+/* "hybrid_lock.pyx":315
  *     #===========================================================#
  * 
  *     cpdef int lock(self, int timeout=-1, int spin=1) except -1:             # <<<<<<<<<<<<<<
@@ -1150,6 +1150,14 @@ static CYTHON_INLINE int __Pyx_PyErr_GivenExceptionMatches2(PyObject *err, PyObj
 #endif
 #define __Pyx_PyException_Check(obj) __Pyx_TypeCheck(obj, PyExc_Exception)
 
+/* GetException.proto */
+#if CYTHON_FAST_THREAD_STATE
+#define __Pyx_GetException(type, value, tb)  __Pyx__GetException(__pyx_tstate, type, value, tb)
+static int __Pyx__GetException(PyThreadState *tstate, PyObject **type, PyObject **value, PyObject **tb);
+#else
+static int __Pyx_GetException(PyObject **type, PyObject **value, PyObject **tb);
+#endif
+
 /* IncludeStringH.proto */
 #include <string.h>
 
@@ -1287,9 +1295,10 @@ extern int __pyx_module_is_main_hybrid_lock;
 int __pyx_module_is_main_hybrid_lock = 0;
 
 /* Implementation of 'hybrid_lock' */
+static PyObject *__pyx_builtin_print;
 static PyObject *__pyx_builtin_SystemError;
 static PyObject *__pyx_builtin_TypeError;
-static const char __pyx_k__4[] = ": ";
+static const char __pyx_k__7[] = ": ";
 static const char __pyx_k_doc[] = "__doc__";
 static const char __pyx_k_main[] = "__main__";
 static const char __pyx_k_mmap[] = "mmap";
@@ -1298,6 +1307,7 @@ static const char __pyx_k_name[] = "__name__";
 static const char __pyx_k_spin[] = "spin";
 static const char __pyx_k_test[] = "__test__";
 static const char __pyx_k_close[] = "close";
+static const char __pyx_k_print[] = "print";
 static const char __pyx_k_fchmod[] = "fchmod";
 static const char __pyx_k_module[] = "__module__";
 static const char __pyx_k_reduce[] = "__reduce__";
@@ -1328,9 +1338,11 @@ static const char __pyx_k_clock_gettime[] = "clock_gettime";
 static const char __pyx_k_initial_value[] = "initial_value";
 static const char __pyx_k_reduce_cython[] = "__reduce_cython__";
 static const char __pyx_k_Unknown_mode_s[] = "Unknown mode: %s";
+static const char __pyx_k_OTHER_EXCEPTION[] = "OTHER EXCEPTION!!!";
 static const char __pyx_k_sem_timedwait_d[] = "sem_timedwait: %d";
 static const char __pyx_k_setstate_cython[] = "__setstate_cython__";
 static const char __pyx_k_CONNECT_OR_CREATE[] = "CONNECT_OR_CREATE";
+static const char __pyx_k_NO_SUCH_SEMAPHORE[] = "NO SUCH SEMAPHORE!!!";
 static const char __pyx_k_cline_in_traceback[] = "cline_in_traceback";
 static const char __pyx_k_exception_occurred[] = "__exception_occurred";
 static const char __pyx_k_CONNECT_TO_EXISTING[] = "CONNECT_TO_EXISTING";
@@ -1342,8 +1354,9 @@ static const char __pyx_k_Error_occurred_calling[] = "Error occurred calling ";
 static const char __pyx_k_Error_allocating_memory[] = "Error allocating memory";
 static const char __pyx_k_NoSuchSemaphoreException[] = "NoSuchSemaphoreException";
 static const char __pyx_k_SemaphoreExistsException[] = "SemaphoreExistsException";
+static const char __pyx_k_SEMAPHORE_ALREADY_DESTROYED[] = "SEMAPHORE ALREADY DESTROYED!!!";
 static const char __pyx_k_SemaphoreDestroyedException[] = "SemaphoreDestroyedException";
-static const char __pyx_k_Semaphore_at_s_already_destroyed[] = "Semaphore at %s already destroyed: shouldn't get here!\n";
+static const char __pyx_k_Semaphore_at_s_already_destroyed[] = "Semaphore at %s already destroyed: shouldn't get here!";
 static const char __pyx_k_WARNING_Already_cleaned_up_in_Hy[] = "WARNING: Already cleaned up in HybridSpinSemaphore.destroy()!";
 static const char __pyx_k_lock_called_on_destroyed_HybridS[] = "lock called on destroyed HybridSpinSemaphore!";
 static const char __pyx_k_no_default___reduce___due_to_non[] = "no default __reduce__ due to non-trivial __cinit__";
@@ -1355,7 +1368,10 @@ static PyObject *__pyx_kp_u_Error_allocating_memory;
 static PyObject *__pyx_kp_u_Error_copying_memory;
 static PyObject *__pyx_kp_u_Error_occurred_calling;
 static PyObject *__pyx_n_s_HybridSpinSemaphore;
+static PyObject *__pyx_kp_u_NO_SUCH_SEMAPHORE;
 static PyObject *__pyx_n_s_NoSuchSemaphoreException;
+static PyObject *__pyx_kp_u_OTHER_EXCEPTION;
+static PyObject *__pyx_kp_u_SEMAPHORE_ALREADY_DESTROYED;
 static PyObject *__pyx_n_s_SemaphoreDestroyedException;
 static PyObject *__pyx_n_s_SemaphoreExistsException;
 static PyObject *__pyx_kp_u_Semaphore_at_s_already_destroyed;
@@ -1364,7 +1380,7 @@ static PyObject *__pyx_n_s_TimeoutError;
 static PyObject *__pyx_n_s_TypeError;
 static PyObject *__pyx_kp_u_Unknown_mode_s;
 static PyObject *__pyx_kp_u_WARNING_Already_cleaned_up_in_Hy;
-static PyObject *__pyx_kp_u__4;
+static PyObject *__pyx_kp_u__7;
 static PyObject *__pyx_n_s_cline_in_traceback;
 static PyObject *__pyx_n_u_clock_gettime;
 static PyObject *__pyx_n_u_close;
@@ -1386,6 +1402,7 @@ static PyObject *__pyx_n_s_name;
 static PyObject *__pyx_kp_s_no_default___reduce___due_to_non;
 static PyObject *__pyx_n_s_permissions;
 static PyObject *__pyx_n_s_prepare;
+static PyObject *__pyx_n_s_print;
 static PyObject *__pyx_n_s_pyx_vtable;
 static PyObject *__pyx_n_s_qualname;
 static PyObject *__pyx_n_s_reduce;
@@ -1424,9 +1441,9 @@ static PyObject *__pyx_int_3;
 static int __pyx_k_;
 static PyObject *__pyx_tuple__2;
 static PyObject *__pyx_tuple__3;
+static PyObject *__pyx_tuple__4;
 static PyObject *__pyx_tuple__5;
 static PyObject *__pyx_tuple__6;
-static PyObject *__pyx_tuple__7;
 static PyObject *__pyx_tuple__8;
 static PyObject *__pyx_tuple__9;
 static PyObject *__pyx_tuple__10;
@@ -1436,6 +1453,9 @@ static PyObject *__pyx_tuple__13;
 static PyObject *__pyx_tuple__14;
 static PyObject *__pyx_tuple__15;
 static PyObject *__pyx_tuple__16;
+static PyObject *__pyx_tuple__17;
+static PyObject *__pyx_tuple__18;
+static PyObject *__pyx_tuple__19;
 /* Late includes */
 
 /* "hybrid_lock.pyx":40
@@ -2302,7 +2322,7 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
  *                 existing_semaphore.destroy()
  *                 del existing_semaphore             # <<<<<<<<<<<<<<
  *             except NoSuchSemaphoreException:
- *                 pass
+ *                 print("NO SUCH SEMAPHORE!!!")
  */
         __Pyx_DECREF(((PyObject *)__pyx_v_existing_semaphore));
         __pyx_v_existing_semaphore = NULL;
@@ -2332,8 +2352,8 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
  *                 existing_semaphore.destroy()
  *                 del existing_semaphore
  *             except NoSuchSemaphoreException:             # <<<<<<<<<<<<<<
- *                 pass
- * 
+ *                 print("NO SUCH SEMAPHORE!!!")
+ *             except SemaphoreDestroyedException:
  */
       __Pyx_ErrFetch(&__pyx_t_5, &__pyx_t_4, &__pyx_t_3);
       __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_NoSuchSemaphoreException); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 145, __pyx_L11_except_error)
@@ -2343,10 +2363,94 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
       __Pyx_ErrRestore(__pyx_t_5, __pyx_t_4, __pyx_t_3);
       __pyx_t_5 = 0; __pyx_t_4 = 0; __pyx_t_3 = 0;
       if (__pyx_t_8) {
-        __Pyx_ErrRestore(0,0,0);
+        __Pyx_AddTraceback("hybrid_lock.HybridSpinSemaphore.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+        if (__Pyx_GetException(&__pyx_t_3, &__pyx_t_4, &__pyx_t_5) < 0) __PYX_ERR(0, 145, __pyx_L11_except_error)
+        __Pyx_GOTREF(__pyx_t_3);
+        __Pyx_GOTREF(__pyx_t_4);
+        __Pyx_GOTREF(__pyx_t_5);
+
+        /* "hybrid_lock.pyx":146
+ *                 del existing_semaphore
+ *             except NoSuchSemaphoreException:
+ *                 print("NO SUCH SEMAPHORE!!!")             # <<<<<<<<<<<<<<
+ *             except SemaphoreDestroyedException:
+ *                 print("SEMAPHORE ALREADY DESTROYED!!!")
+ */
+        __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__4, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 146, __pyx_L11_except_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+        __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
         goto __pyx_L10_exception_handled;
       }
-      goto __pyx_L11_except_error;
+
+      /* "hybrid_lock.pyx":147
+ *             except NoSuchSemaphoreException:
+ *                 print("NO SUCH SEMAPHORE!!!")
+ *             except SemaphoreDestroyedException:             # <<<<<<<<<<<<<<
+ *                 print("SEMAPHORE ALREADY DESTROYED!!!")
+ *             except:
+ */
+      __Pyx_ErrFetch(&__pyx_t_5, &__pyx_t_4, &__pyx_t_3);
+      __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 147, __pyx_L11_except_error)
+      __Pyx_GOTREF(__pyx_t_2);
+      __pyx_t_8 = __Pyx_PyErr_GivenExceptionMatches(__pyx_t_5, __pyx_t_2);
+      __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+      __Pyx_ErrRestore(__pyx_t_5, __pyx_t_4, __pyx_t_3);
+      __pyx_t_5 = 0; __pyx_t_4 = 0; __pyx_t_3 = 0;
+      if (__pyx_t_8) {
+        __Pyx_AddTraceback("hybrid_lock.HybridSpinSemaphore.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+        if (__Pyx_GetException(&__pyx_t_3, &__pyx_t_4, &__pyx_t_5) < 0) __PYX_ERR(0, 147, __pyx_L11_except_error)
+        __Pyx_GOTREF(__pyx_t_3);
+        __Pyx_GOTREF(__pyx_t_4);
+        __Pyx_GOTREF(__pyx_t_5);
+
+        /* "hybrid_lock.pyx":148
+ *                 print("NO SUCH SEMAPHORE!!!")
+ *             except SemaphoreDestroyedException:
+ *                 print("SEMAPHORE ALREADY DESTROYED!!!")             # <<<<<<<<<<<<<<
+ *             except:
+ *                 print("OTHER EXCEPTION!!!")
+ */
+        __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 148, __pyx_L11_except_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+        __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
+        goto __pyx_L10_exception_handled;
+      }
+
+      /* "hybrid_lock.pyx":149
+ *             except SemaphoreDestroyedException:
+ *                 print("SEMAPHORE ALREADY DESTROYED!!!")
+ *             except:             # <<<<<<<<<<<<<<
+ *                 print("OTHER EXCEPTION!!!")
+ * 
+ */
+      /*except:*/ {
+        __Pyx_AddTraceback("hybrid_lock.HybridSpinSemaphore.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+        if (__Pyx_GetException(&__pyx_t_5, &__pyx_t_4, &__pyx_t_3) < 0) __PYX_ERR(0, 149, __pyx_L11_except_error)
+        __Pyx_GOTREF(__pyx_t_5);
+        __Pyx_GOTREF(__pyx_t_4);
+        __Pyx_GOTREF(__pyx_t_3);
+
+        /* "hybrid_lock.pyx":150
+ *                 print("SEMAPHORE ALREADY DESTROYED!!!")
+ *             except:
+ *                 print("OTHER EXCEPTION!!!")             # <<<<<<<<<<<<<<
+ * 
+ *             # Open the semaphore in exclusive mode
+ */
+        __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_print, __pyx_tuple__6, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 150, __pyx_L11_except_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+        __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
+        __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
+        __Pyx_XDECREF(__pyx_t_3); __pyx_t_3 = 0;
+        goto __pyx_L10_exception_handled;
+      }
       __pyx_L11_except_error:;
 
       /* "hybrid_lock.pyx":138
@@ -2369,7 +2473,7 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
       __pyx_L14_try_end:;
     }
 
-    /* "hybrid_lock.pyx":149
+    /* "hybrid_lock.pyx":153
  * 
  *             # Open the semaphore in exclusive mode
  *             self._semaphore = sem_open(             # <<<<<<<<<<<<<<
@@ -2378,7 +2482,7 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
  */
     __pyx_v_self->_semaphore = sem_open(__pyx_v_sem_loc, (O_CREAT | O_EXCL), __pyx_v_permissions, __pyx_v_initial_value);
 
-    /* "hybrid_lock.pyx":153
+    /* "hybrid_lock.pyx":157
  *                 permissions, initial_value
  *             )
  *             if self._semaphore == NULL:             # <<<<<<<<<<<<<<
@@ -2388,16 +2492,16 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
     __pyx_t_1 = ((__pyx_v_self->_semaphore == NULL) != 0);
     if (unlikely(__pyx_t_1)) {
 
-      /* "hybrid_lock.pyx":155
+      /* "hybrid_lock.pyx":159
  *             if self._semaphore == NULL:
  *                 # Shouldn't get here! (in normal circumstances)
  *                 raise SemaphoreExistsException(sem_loc)             # <<<<<<<<<<<<<<
  * 
  *             self.init_mmap(
  */
-      __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_SemaphoreExistsException); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 155, __pyx_L1_error)
+      __Pyx_GetModuleGlobalName(__pyx_t_4, __pyx_n_s_SemaphoreExistsException); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 159, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_4);
-      __pyx_t_5 = __Pyx_PyBytes_FromString(__pyx_v_sem_loc); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 155, __pyx_L1_error)
+      __pyx_t_5 = __Pyx_PyBytes_FromString(__pyx_v_sem_loc); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 159, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_5);
       __pyx_t_2 = NULL;
       if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_4))) {
@@ -2412,14 +2516,14 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
       __pyx_t_3 = (__pyx_t_2) ? __Pyx_PyObject_Call2Args(__pyx_t_4, __pyx_t_2, __pyx_t_5) : __Pyx_PyObject_CallOneArg(__pyx_t_4, __pyx_t_5);
       __Pyx_XDECREF(__pyx_t_2); __pyx_t_2 = 0;
       __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 155, __pyx_L1_error)
+      if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 159, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
       __Pyx_Raise(__pyx_t_3, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-      __PYX_ERR(0, 155, __pyx_L1_error)
+      __PYX_ERR(0, 159, __pyx_L1_error)
 
-      /* "hybrid_lock.pyx":153
+      /* "hybrid_lock.pyx":157
  *                 permissions, initial_value
  *             )
  *             if self._semaphore == NULL:             # <<<<<<<<<<<<<<
@@ -2428,36 +2532,36 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
  */
     }
 
-    /* "hybrid_lock.pyx":157
+    /* "hybrid_lock.pyx":161
  *                 raise SemaphoreExistsException(sem_loc)
  * 
  *             self.init_mmap(             # <<<<<<<<<<<<<<
  *                 sem_loc, permissions,
  *                 set_value=initial_value
  */
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_init_mmap); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 157, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_init_mmap); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 161, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
 
-    /* "hybrid_lock.pyx":158
+    /* "hybrid_lock.pyx":162
  * 
  *             self.init_mmap(
  *                 sem_loc, permissions,             # <<<<<<<<<<<<<<
  *                 set_value=initial_value
  *             )
  */
-    __pyx_t_4 = __Pyx_PyBytes_FromString(__pyx_v_sem_loc); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 158, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyBytes_FromString(__pyx_v_sem_loc); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 162, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_permissions); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 158, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyInt_From_int(__pyx_v_permissions); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 162, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
 
-    /* "hybrid_lock.pyx":157
+    /* "hybrid_lock.pyx":161
  *                 raise SemaphoreExistsException(sem_loc)
  * 
  *             self.init_mmap(             # <<<<<<<<<<<<<<
  *                 sem_loc, permissions,
  *                 set_value=initial_value
  */
-    __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 157, __pyx_L1_error)
+    __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 161, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_GIVEREF(__pyx_t_4);
     PyTuple_SET_ITEM(__pyx_t_2, 0, __pyx_t_4);
@@ -2466,28 +2570,28 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
     __pyx_t_4 = 0;
     __pyx_t_5 = 0;
 
-    /* "hybrid_lock.pyx":159
+    /* "hybrid_lock.pyx":163
  *             self.init_mmap(
  *                 sem_loc, permissions,
  *                 set_value=initial_value             # <<<<<<<<<<<<<<
  *             )
  *         else:
  */
-    __pyx_t_5 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 159, __pyx_L1_error)
+    __pyx_t_5 = __Pyx_PyDict_NewPresized(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 163, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_initial_value); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 159, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_initial_value); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 163, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_set_value, __pyx_t_4) < 0) __PYX_ERR(0, 159, __pyx_L1_error)
+    if (PyDict_SetItem(__pyx_t_5, __pyx_n_s_set_value, __pyx_t_4) < 0) __PYX_ERR(0, 163, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
 
-    /* "hybrid_lock.pyx":157
+    /* "hybrid_lock.pyx":161
  *                 raise SemaphoreExistsException(sem_loc)
  * 
  *             self.init_mmap(             # <<<<<<<<<<<<<<
  *                 sem_loc, permissions,
  *                 set_value=initial_value
  */
-    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 157, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_2, __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 161, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -2504,7 +2608,7 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
     goto __pyx_L5;
   }
 
-  /* "hybrid_lock.pyx":162
+  /* "hybrid_lock.pyx":166
  *             )
  *         else:
  *             raise Exception("Unknown mode: %s" % mode)             # <<<<<<<<<<<<<<
@@ -2512,21 +2616,21 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
  *         self._cleaned_up = 0
  */
   /*else*/ {
-    __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_mode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 162, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyInt_From_int(__pyx_v_mode); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 166, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_5 = PyUnicode_Format(__pyx_kp_u_Unknown_mode_s, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 162, __pyx_L1_error)
+    __pyx_t_5 = PyUnicode_Format(__pyx_kp_u_Unknown_mode_s, __pyx_t_4); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 166, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __pyx_t_4 = __Pyx_PyObject_CallOneArg(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 162, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_CallOneArg(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_t_5); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 166, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
     __Pyx_Raise(__pyx_t_4, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __PYX_ERR(0, 162, __pyx_L1_error)
+    __PYX_ERR(0, 166, __pyx_L1_error)
   }
   __pyx_L5:;
 
-  /* "hybrid_lock.pyx":164
+  /* "hybrid_lock.pyx":168
  *             raise Exception("Unknown mode: %s" % mode)
  * 
  *         self._cleaned_up = 0             # <<<<<<<<<<<<<<
@@ -2562,7 +2666,7 @@ static int __pyx_pf_11hybrid_lock_19HybridSpinSemaphore___cinit__(struct __pyx_o
   return __pyx_r;
 }
 
-/* "hybrid_lock.pyx":166
+/* "hybrid_lock.pyx":170
  *         self._cleaned_up = 0
  * 
  *     def __exception_occurred(self, kind):             # <<<<<<<<<<<<<<
@@ -2592,33 +2696,33 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_2__exception_occur
   PyObject *__pyx_t_4 = NULL;
   __Pyx_RefNannySetupContext("__exception_occurred", 0);
 
-  /* "hybrid_lock.pyx":167
+  /* "hybrid_lock.pyx":171
  * 
  *     def __exception_occurred(self, kind):
  *         raise Exception('Error occurred calling '+kind+": "+strerror(errno).decode('utf-8', 'replace'))             # <<<<<<<<<<<<<<
  * 
  *     def init_mmap(self,
  */
-  __pyx_t_1 = PyNumber_Add(__pyx_kp_u_Error_occurred_calling, __pyx_v_kind); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_1 = PyNumber_Add(__pyx_kp_u_Error_occurred_calling, __pyx_v_kind); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 171, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_2 = PyNumber_Add(__pyx_t_1, __pyx_kp_u__4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_2 = PyNumber_Add(__pyx_t_1, __pyx_kp_u__7); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 171, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_3 = strerror(errno);
-  __pyx_t_1 = __Pyx_decode_c_string(__pyx_t_3, 0, strlen(__pyx_t_3), NULL, ((char const *)"replace"), PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_decode_c_string(__pyx_t_3, 0, strlen(__pyx_t_3), NULL, ((char const *)"replace"), PyUnicode_DecodeUTF8); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 171, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  __pyx_t_4 = PyNumber_Add(__pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_4 = PyNumber_Add(__pyx_t_2, __pyx_t_1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 171, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_4);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __pyx_t_1 = __Pyx_PyObject_CallOneArg(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 167, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_CallOneArg(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_t_4); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 171, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
   __Pyx_Raise(__pyx_t_1, 0, 0, 0);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-  __PYX_ERR(0, 167, __pyx_L1_error)
+  __PYX_ERR(0, 171, __pyx_L1_error)
 
-  /* "hybrid_lock.pyx":166
+  /* "hybrid_lock.pyx":170
  *         self._cleaned_up = 0
  * 
  *     def __exception_occurred(self, kind):             # <<<<<<<<<<<<<<
@@ -2638,7 +2742,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_2__exception_occur
   return __pyx_r;
 }
 
-/* "hybrid_lock.pyx":169
+/* "hybrid_lock.pyx":173
  *         raise Exception('Error occurred calling '+kind+": "+strerror(errno).decode('utf-8', 'replace'))
  * 
  *     def init_mmap(self,             # <<<<<<<<<<<<<<
@@ -2680,7 +2784,7 @@ static PyObject *__pyx_pw_11hybrid_lock_19HybridSpinSemaphore_5init_mmap(PyObjec
         case  1:
         if (likely((values[1] = __Pyx_PyDict_GetItemStr(__pyx_kwds, __pyx_n_s_permissions)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("init_mmap", 0, 2, 3, 1); __PYX_ERR(0, 169, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("init_mmap", 0, 2, 3, 1); __PYX_ERR(0, 173, __pyx_L3_error)
         }
         CYTHON_FALLTHROUGH;
         case  2:
@@ -2690,7 +2794,7 @@ static PyObject *__pyx_pw_11hybrid_lock_19HybridSpinSemaphore_5init_mmap(PyObjec
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "init_mmap") < 0)) __PYX_ERR(0, 169, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "init_mmap") < 0)) __PYX_ERR(0, 173, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -2702,17 +2806,17 @@ static PyObject *__pyx_pw_11hybrid_lock_19HybridSpinSemaphore_5init_mmap(PyObjec
         default: goto __pyx_L5_argtuple_error;
       }
     }
-    __pyx_v_sem_loc = __Pyx_PyObject_AsWritableString(values[0]); if (unlikely((!__pyx_v_sem_loc) && PyErr_Occurred())) __PYX_ERR(0, 170, __pyx_L3_error)
-    __pyx_v_permissions = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_permissions == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 171, __pyx_L3_error)
+    __pyx_v_sem_loc = __Pyx_PyObject_AsWritableString(values[0]); if (unlikely((!__pyx_v_sem_loc) && PyErr_Occurred())) __PYX_ERR(0, 174, __pyx_L3_error)
+    __pyx_v_permissions = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_permissions == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 175, __pyx_L3_error)
     if (values[2]) {
-      __pyx_v_set_value = __Pyx_PyInt_As_int(values[2]); if (unlikely((__pyx_v_set_value == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 172, __pyx_L3_error)
+      __pyx_v_set_value = __Pyx_PyInt_As_int(values[2]); if (unlikely((__pyx_v_set_value == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 176, __pyx_L3_error)
     } else {
       __pyx_v_set_value = ((int)-1);
     }
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("init_mmap", 0, 2, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 169, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("init_mmap", 0, 2, 3, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 173, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("hybrid_lock.HybridSpinSemaphore.init_mmap", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -2738,7 +2842,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
   PyObject *__pyx_t_7 = NULL;
   __Pyx_RefNannySetupContext("init_mmap", 0);
 
-  /* "hybrid_lock.pyx":178
+  /* "hybrid_lock.pyx":182
  *         # Two separate calls are needed here, to mark fact of creation
  *         # for later initialization of pthread mutex.
  *         self._shm_fd = shm_open(sem_loc, O_RDWR, permissions)             # <<<<<<<<<<<<<<
@@ -2747,7 +2851,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
   __pyx_v_self->_shm_fd = shm_open(__pyx_v_sem_loc, O_RDWR, __pyx_v_permissions);
 
-  /* "hybrid_lock.pyx":180
+  /* "hybrid_lock.pyx":184
  *         self._shm_fd = shm_open(sem_loc, O_RDWR, permissions)
  * 
  *         if errno == ENOENT:             # <<<<<<<<<<<<<<
@@ -2757,7 +2861,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
   __pyx_t_1 = ((errno == ENOENT) != 0);
   if (__pyx_t_1) {
 
-    /* "hybrid_lock.pyx":182
+    /* "hybrid_lock.pyx":186
  *         if errno == ENOENT:
  *             # Need to create a new shared memory item
  *             self._shm_fd = shm_open(             # <<<<<<<<<<<<<<
@@ -2766,7 +2870,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
     __pyx_v_self->_shm_fd = shm_open(__pyx_v_sem_loc, (O_RDWR | O_CREAT), __pyx_v_permissions);
 
-    /* "hybrid_lock.pyx":188
+    /* "hybrid_lock.pyx":192
  *             # Change permissions of shared memory, so every
  *             # body can access it. Avoiding the umask of shm_open
  *             if fchmod(self._shm_fd, permissions) == -1:             # <<<<<<<<<<<<<<
@@ -2776,14 +2880,14 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
     __pyx_t_1 = ((fchmod(__pyx_v_self->_shm_fd, __pyx_v_permissions) == -1L) != 0);
     if (__pyx_t_1) {
 
-      /* "hybrid_lock.pyx":189
+      /* "hybrid_lock.pyx":193
  *             # body can access it. Avoiding the umask of shm_open
  *             if fchmod(self._shm_fd, permissions) == -1:
  *                 self.__exception_occurred("fchmod")             # <<<<<<<<<<<<<<
  * 
  *         if self._shm_fd == -1:
  */
-      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_exception_occurred); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 189, __pyx_L1_error)
+      __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_exception_occurred); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 193, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_3);
       __pyx_t_4 = NULL;
       if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
@@ -2797,12 +2901,12 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
       }
       __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_n_u_fchmod) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_n_u_fchmod);
       __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 189, __pyx_L1_error)
+      if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 193, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
 
-      /* "hybrid_lock.pyx":188
+      /* "hybrid_lock.pyx":192
  *             # Change permissions of shared memory, so every
  *             # body can access it. Avoiding the umask of shm_open
  *             if fchmod(self._shm_fd, permissions) == -1:             # <<<<<<<<<<<<<<
@@ -2811,7 +2915,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
     }
 
-    /* "hybrid_lock.pyx":180
+    /* "hybrid_lock.pyx":184
  *         self._shm_fd = shm_open(sem_loc, O_RDWR, permissions)
  * 
  *         if errno == ENOENT:             # <<<<<<<<<<<<<<
@@ -2820,7 +2924,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
   }
 
-  /* "hybrid_lock.pyx":191
+  /* "hybrid_lock.pyx":195
  *                 self.__exception_occurred("fchmod")
  * 
  *         if self._shm_fd == -1:             # <<<<<<<<<<<<<<
@@ -2830,20 +2934,20 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
   __pyx_t_1 = ((__pyx_v_self->_shm_fd == -1L) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":192
+    /* "hybrid_lock.pyx":196
  * 
  *         if self._shm_fd == -1:
  *             raise SystemError("shm_open")             # <<<<<<<<<<<<<<
  * 
  *         # Truncate shared memory segment so it would contain char*
  */
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_SystemError, __pyx_tuple__5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 192, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_SystemError, __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 196, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 192, __pyx_L1_error)
+    __PYX_ERR(0, 196, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":191
+    /* "hybrid_lock.pyx":195
  *                 self.__exception_occurred("fchmod")
  * 
  *         if self._shm_fd == -1:             # <<<<<<<<<<<<<<
@@ -2852,7 +2956,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
   }
 
-  /* "hybrid_lock.pyx":195
+  /* "hybrid_lock.pyx":199
  * 
  *         # Truncate shared memory segment so it would contain char*
  *         if ftruncate(self._shm_fd, sizeof(char*)) == -1:             # <<<<<<<<<<<<<<
@@ -2862,20 +2966,20 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
   __pyx_t_1 = ((ftruncate(__pyx_v_self->_shm_fd, (sizeof(char *))) == -1L) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":196
+    /* "hybrid_lock.pyx":200
  *         # Truncate shared memory segment so it would contain char*
  *         if ftruncate(self._shm_fd, sizeof(char*)) == -1:
  *             raise SystemError("ftruncate")             # <<<<<<<<<<<<<<
  * 
  *         # Map pthread mutex into the shared memory.
  */
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_SystemError, __pyx_tuple__6, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 196, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_SystemError, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 200, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 196, __pyx_L1_error)
+    __PYX_ERR(0, 200, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":195
+    /* "hybrid_lock.pyx":199
  * 
  *         # Truncate shared memory segment so it would contain char*
  *         if ftruncate(self._shm_fd, sizeof(char*)) == -1:             # <<<<<<<<<<<<<<
@@ -2884,7 +2988,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
   }
 
-  /* "hybrid_lock.pyx":199
+  /* "hybrid_lock.pyx":203
  * 
  *         # Map pthread mutex into the shared memory.
  *         cdef void *addr = mmap(             # <<<<<<<<<<<<<<
@@ -2893,7 +2997,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
   __pyx_v_addr = mmap(NULL, (sizeof(char *)), (PROT_READ | PROT_WRITE), MAP_SHARED, __pyx_v_self->_shm_fd, 0);
 
-  /* "hybrid_lock.pyx":207
+  /* "hybrid_lock.pyx":211
  *             0
  *         )
  *         if addr == MAP_FAILED:             # <<<<<<<<<<<<<<
@@ -2903,20 +3007,20 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
   __pyx_t_1 = ((__pyx_v_addr == MAP_FAILED) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":208
+    /* "hybrid_lock.pyx":212
  *         )
  *         if addr == MAP_FAILED:
  *             raise SystemError("mmap")             # <<<<<<<<<<<<<<
  * 
  *         # Create+set initial value for the spin lock char*, if provided
  */
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_SystemError, __pyx_tuple__7, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 208, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_builtin_SystemError, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 212, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 208, __pyx_L1_error)
+    __PYX_ERR(0, 212, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":207
+    /* "hybrid_lock.pyx":211
  *             0
  *         )
  *         if addr == MAP_FAILED:             # <<<<<<<<<<<<<<
@@ -2925,7 +3029,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
   }
 
-  /* "hybrid_lock.pyx":211
+  /* "hybrid_lock.pyx":215
  * 
  *         # Create+set initial value for the spin lock char*, if provided
  *         self._spin_lock_char = <char *>addr # VOLATILE??? ===========================================             # <<<<<<<<<<<<<<
@@ -2934,7 +3038,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
   __pyx_v_self->_spin_lock_char = ((char *)__pyx_v_addr);
 
-  /* "hybrid_lock.pyx":212
+  /* "hybrid_lock.pyx":216
  *         # Create+set initial value for the spin lock char*, if provided
  *         self._spin_lock_char = <char *>addr # VOLATILE??? ===========================================
  *         if set_value != -1:             # <<<<<<<<<<<<<<
@@ -2944,7 +3048,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
   __pyx_t_1 = ((__pyx_v_set_value != -1L) != 0);
   if (__pyx_t_1) {
 
-    /* "hybrid_lock.pyx":213
+    /* "hybrid_lock.pyx":217
  *         self._spin_lock_char = <char *>addr # VOLATILE??? ===========================================
  *         if set_value != -1:
  *             self._spin_lock_char[0] = set_value             # <<<<<<<<<<<<<<
@@ -2953,7 +3057,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
     (__pyx_v_self->_spin_lock_char[0]) = __pyx_v_set_value;
 
-    /* "hybrid_lock.pyx":212
+    /* "hybrid_lock.pyx":216
  *         # Create+set initial value for the spin lock char*, if provided
  *         self._spin_lock_char = <char *>addr # VOLATILE??? ===========================================
  *         if set_value != -1:             # <<<<<<<<<<<<<<
@@ -2962,26 +3066,26 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
  */
   }
 
-  /* "hybrid_lock.pyx":215
+  /* "hybrid_lock.pyx":219
  *             self._spin_lock_char[0] = set_value
  * 
  *         if self._spin_lock_char[0] == DESTROYED:             # <<<<<<<<<<<<<<
- *             raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!\n", sem_loc)
+ *             raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!", sem_loc)
  * 
  */
   __pyx_t_1 = (((__pyx_v_self->_spin_lock_char[0]) == __pyx_v_11hybrid_lock_DESTROYED) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":216
+    /* "hybrid_lock.pyx":220
  * 
  *         if self._spin_lock_char[0] == DESTROYED:
- *             raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!\n", sem_loc)             # <<<<<<<<<<<<<<
+ *             raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!", sem_loc)             # <<<<<<<<<<<<<<
  * 
  *         return 0
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 216, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 220, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = __Pyx_PyBytes_FromString(__pyx_v_sem_loc); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 216, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyBytes_FromString(__pyx_v_sem_loc); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 220, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __pyx_t_5 = NULL;
     __pyx_t_6 = 0;
@@ -2998,7 +3102,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
     #if CYTHON_FAST_PYCALL
     if (PyFunction_Check(__pyx_t_3)) {
       PyObject *__pyx_temp[3] = {__pyx_t_5, __pyx_kp_u_Semaphore_at_s_already_destroyed, __pyx_t_4};
-      __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 216, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 220, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
@@ -3007,14 +3111,14 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
     #if CYTHON_FAST_PYCCALL
     if (__Pyx_PyFastCFunction_Check(__pyx_t_3)) {
       PyObject *__pyx_temp[3] = {__pyx_t_5, __pyx_kp_u_Semaphore_at_s_already_destroyed, __pyx_t_4};
-      __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 216, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyCFunction_FastCall(__pyx_t_3, __pyx_temp+1-__pyx_t_6, 2+__pyx_t_6); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 220, __pyx_L1_error)
       __Pyx_XDECREF(__pyx_t_5); __pyx_t_5 = 0;
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     } else
     #endif
     {
-      __pyx_t_7 = PyTuple_New(2+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 216, __pyx_L1_error)
+      __pyx_t_7 = PyTuple_New(2+__pyx_t_6); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 220, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_7);
       if (__pyx_t_5) {
         __Pyx_GIVEREF(__pyx_t_5); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_5); __pyx_t_5 = NULL;
@@ -3025,26 +3129,26 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
       __Pyx_GIVEREF(__pyx_t_4);
       PyTuple_SET_ITEM(__pyx_t_7, 1+__pyx_t_6, __pyx_t_4);
       __pyx_t_4 = 0;
-      __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_7, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 216, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_3, __pyx_t_7, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 220, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
     }
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 216, __pyx_L1_error)
+    __PYX_ERR(0, 220, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":215
+    /* "hybrid_lock.pyx":219
  *             self._spin_lock_char[0] = set_value
  * 
  *         if self._spin_lock_char[0] == DESTROYED:             # <<<<<<<<<<<<<<
- *             raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!\n", sem_loc)
+ *             raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!", sem_loc)
  * 
  */
   }
 
-  /* "hybrid_lock.pyx":218
- *             raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!\n", sem_loc)
+  /* "hybrid_lock.pyx":222
+ *             raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!", sem_loc)
  * 
  *         return 0             # <<<<<<<<<<<<<<
  * 
@@ -3055,7 +3159,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
   __pyx_r = __pyx_int_0;
   goto __pyx_L0;
 
-  /* "hybrid_lock.pyx":169
+  /* "hybrid_lock.pyx":173
  *         raise Exception('Error occurred calling '+kind+": "+strerror(errno).decode('utf-8', 'replace'))
  * 
  *     def init_mmap(self,             # <<<<<<<<<<<<<<
@@ -3078,7 +3182,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_4init_mmap(struct 
   return __pyx_r;
 }
 
-/* "hybrid_lock.pyx":224
+/* "hybrid_lock.pyx":228
  *     #===========================================================#
  * 
  *     def __del__(self):             # <<<<<<<<<<<<<<
@@ -3106,7 +3210,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
   PyObject *__pyx_t_2 = NULL;
   __Pyx_RefNannySetupContext("__del__", 0);
 
-  /* "hybrid_lock.pyx":225
+  /* "hybrid_lock.pyx":229
  * 
  *     def __del__(self):
  *         if not self._cleaned_up:             # <<<<<<<<<<<<<<
@@ -3116,7 +3220,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
   __pyx_t_1 = ((!(__pyx_v_self->_cleaned_up != 0)) != 0);
   if (__pyx_t_1) {
 
-    /* "hybrid_lock.pyx":228
+    /* "hybrid_lock.pyx":232
  *             # Closing is used to release local resources, used by
  *             # a mutex. It'll still be available to other processes
  *             self._cleaned_up = 1             # <<<<<<<<<<<<<<
@@ -3125,7 +3229,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
  */
     __pyx_v_self->_cleaned_up = 1;
 
-    /* "hybrid_lock.pyx":231
+    /* "hybrid_lock.pyx":235
  * 
  *             # Clean up
  *             free(self._sem_loc)             # <<<<<<<<<<<<<<
@@ -3134,7 +3238,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
  */
     free(__pyx_v_self->_sem_loc);
 
-    /* "hybrid_lock.pyx":233
+    /* "hybrid_lock.pyx":237
  *             free(self._sem_loc)
  * 
  *             if close(self._shm_fd) == -1:             # <<<<<<<<<<<<<<
@@ -3144,20 +3248,20 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
     __pyx_t_1 = ((close(__pyx_v_self->_shm_fd) == -1L) != 0);
     if (unlikely(__pyx_t_1)) {
 
-      /* "hybrid_lock.pyx":234
+      /* "hybrid_lock.pyx":238
  * 
  *             if close(self._shm_fd) == -1:
  *                 raise Exception("close")             # <<<<<<<<<<<<<<
  * 
  *             if sem_close(self._semaphore) == -1:
  */
-      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 234, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__11, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 238, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_Raise(__pyx_t_2, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __PYX_ERR(0, 234, __pyx_L1_error)
+      __PYX_ERR(0, 238, __pyx_L1_error)
 
-      /* "hybrid_lock.pyx":233
+      /* "hybrid_lock.pyx":237
  *             free(self._sem_loc)
  * 
  *             if close(self._shm_fd) == -1:             # <<<<<<<<<<<<<<
@@ -3166,7 +3270,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
  */
     }
 
-    /* "hybrid_lock.pyx":236
+    /* "hybrid_lock.pyx":240
  *                 raise Exception("close")
  * 
  *             if sem_close(self._semaphore) == -1:             # <<<<<<<<<<<<<<
@@ -3176,20 +3280,20 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
     __pyx_t_1 = ((sem_close(__pyx_v_self->_semaphore) == -1L) != 0);
     if (unlikely(__pyx_t_1)) {
 
-      /* "hybrid_lock.pyx":237
+      /* "hybrid_lock.pyx":241
  * 
  *             if sem_close(self._semaphore) == -1:
  *                 raise Exception("sem_close")             # <<<<<<<<<<<<<<
  *             return 0
  * 
  */
-      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 237, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 241, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_Raise(__pyx_t_2, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __PYX_ERR(0, 237, __pyx_L1_error)
+      __PYX_ERR(0, 241, __pyx_L1_error)
 
-      /* "hybrid_lock.pyx":236
+      /* "hybrid_lock.pyx":240
  *                 raise Exception("close")
  * 
  *             if sem_close(self._semaphore) == -1:             # <<<<<<<<<<<<<<
@@ -3198,7 +3302,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
  */
     }
 
-    /* "hybrid_lock.pyx":238
+    /* "hybrid_lock.pyx":242
  *             if sem_close(self._semaphore) == -1:
  *                 raise Exception("sem_close")
  *             return 0             # <<<<<<<<<<<<<<
@@ -3210,7 +3314,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
     __pyx_r = __pyx_int_0;
     goto __pyx_L0;
 
-    /* "hybrid_lock.pyx":225
+    /* "hybrid_lock.pyx":229
  * 
  *     def __del__(self):
  *         if not self._cleaned_up:             # <<<<<<<<<<<<<<
@@ -3219,7 +3323,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
  */
   }
 
-  /* "hybrid_lock.pyx":224
+  /* "hybrid_lock.pyx":228
  *     #===========================================================#
  * 
  *     def __del__(self):             # <<<<<<<<<<<<<<
@@ -3240,7 +3344,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_6__del__(struct __
   return __pyx_r;
 }
 
-/* "hybrid_lock.pyx":240
+/* "hybrid_lock.pyx":244
  *             return 0
  * 
  *     cpdef int destroy(self) except -1:             # <<<<<<<<<<<<<<
@@ -3259,7 +3363,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
   int __pyx_t_5;
   __Pyx_RefNannySetupContext("destroy", 0);
 
-  /* "hybrid_lock.pyx":242
+  /* "hybrid_lock.pyx":246
  *     cpdef int destroy(self) except -1:
  *         # Mutex destruction completely cleans it from system memory.
  *         if self._cleaned_up:             # <<<<<<<<<<<<<<
@@ -3269,14 +3373,14 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
   __pyx_t_1 = (__pyx_v_self->_cleaned_up != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":243
+    /* "hybrid_lock.pyx":247
  *         # Mutex destruction completely cleans it from system memory.
  *         if self._cleaned_up:
  *             raise SemaphoreDestroyedException("WARNING: Already cleaned up in HybridSpinSemaphore.destroy()!")             # <<<<<<<<<<<<<<
  *         self._cleaned_up = 1
  * 
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 243, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 247, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_t_4 = NULL;
     if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
@@ -3290,14 +3394,14 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
     }
     __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_kp_u_WARNING_Already_cleaned_up_in_Hy) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_kp_u_WARNING_Already_cleaned_up_in_Hy);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 243, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 247, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 243, __pyx_L1_error)
+    __PYX_ERR(0, 247, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":242
+    /* "hybrid_lock.pyx":246
  *     cpdef int destroy(self) except -1:
  *         # Mutex destruction completely cleans it from system memory.
  *         if self._cleaned_up:             # <<<<<<<<<<<<<<
@@ -3306,7 +3410,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   }
 
-  /* "hybrid_lock.pyx":244
+  /* "hybrid_lock.pyx":248
  *         if self._cleaned_up:
  *             raise SemaphoreDestroyedException("WARNING: Already cleaned up in HybridSpinSemaphore.destroy()!")
  *         self._cleaned_up = 1             # <<<<<<<<<<<<<<
@@ -3315,7 +3419,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   __pyx_v_self->_cleaned_up = 1;
 
-  /* "hybrid_lock.pyx":252
+  /* "hybrid_lock.pyx":256
  *         # accessible by name, but will still remain accessible
  *         # for processes currently using it.
  *         if shm_unlink(self._sem_loc) == -1 and \             # <<<<<<<<<<<<<<
@@ -3329,7 +3433,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
     goto __pyx_L5_bool_binop_done;
   }
 
-  /* "hybrid_lock.pyx":253
+  /* "hybrid_lock.pyx":257
  *         # for processes currently using it.
  *         if shm_unlink(self._sem_loc) == -1 and \
  *            self._spin_lock_char[0] != DESTROYED:             # <<<<<<<<<<<<<<
@@ -3340,7 +3444,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
   __pyx_t_1 = __pyx_t_5;
   __pyx_L5_bool_binop_done:;
 
-  /* "hybrid_lock.pyx":252
+  /* "hybrid_lock.pyx":256
  *         # accessible by name, but will still remain accessible
  *         # for processes currently using it.
  *         if shm_unlink(self._sem_loc) == -1 and \             # <<<<<<<<<<<<<<
@@ -3349,7 +3453,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   if (__pyx_t_1) {
 
-    /* "hybrid_lock.pyx":255
+    /* "hybrid_lock.pyx":259
  *            self._spin_lock_char[0] != DESTROYED:
  * 
  *             if errno != ENOENT:             # <<<<<<<<<<<<<<
@@ -3359,20 +3463,20 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
     __pyx_t_1 = ((errno != ENOENT) != 0);
     if (unlikely(__pyx_t_1)) {
 
-      /* "hybrid_lock.pyx":257
+      /* "hybrid_lock.pyx":261
  *             if errno != ENOENT:
  *                 # If already unlinked, just ignore
  *                 raise Exception("shm_unlink")             # <<<<<<<<<<<<<<
  * 
  *         # after calling sem_unlink, if there are no more
  */
-      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 257, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__13, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 261, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_Raise(__pyx_t_2, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __PYX_ERR(0, 257, __pyx_L1_error)
+      __PYX_ERR(0, 261, __pyx_L1_error)
 
-      /* "hybrid_lock.pyx":255
+      /* "hybrid_lock.pyx":259
  *            self._spin_lock_char[0] != DESTROYED:
  * 
  *             if errno != ENOENT:             # <<<<<<<<<<<<<<
@@ -3381,7 +3485,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
     }
 
-    /* "hybrid_lock.pyx":252
+    /* "hybrid_lock.pyx":256
  *         # accessible by name, but will still remain accessible
  *         # for processes currently using it.
  *         if shm_unlink(self._sem_loc) == -1 and \             # <<<<<<<<<<<<<<
@@ -3390,7 +3494,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   }
 
-  /* "hybrid_lock.pyx":261
+  /* "hybrid_lock.pyx":265
  *         # after calling sem_unlink, if there are no more
  *         # processes using it, it will cease to exist.
  *         if sem_unlink(self._sem_loc) == -1 and \             # <<<<<<<<<<<<<<
@@ -3404,7 +3508,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
     goto __pyx_L9_bool_binop_done;
   }
 
-  /* "hybrid_lock.pyx":262
+  /* "hybrid_lock.pyx":266
  *         # processes using it, it will cease to exist.
  *         if sem_unlink(self._sem_loc) == -1 and \
  *            self._spin_lock_char[0] != DESTROYED:             # <<<<<<<<<<<<<<
@@ -3415,7 +3519,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
   __pyx_t_1 = __pyx_t_5;
   __pyx_L9_bool_binop_done:;
 
-  /* "hybrid_lock.pyx":261
+  /* "hybrid_lock.pyx":265
  *         # after calling sem_unlink, if there are no more
  *         # processes using it, it will cease to exist.
  *         if sem_unlink(self._sem_loc) == -1 and \             # <<<<<<<<<<<<<<
@@ -3424,7 +3528,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   if (__pyx_t_1) {
 
-    /* "hybrid_lock.pyx":264
+    /* "hybrid_lock.pyx":268
  *            self._spin_lock_char[0] != DESTROYED:
  * 
  *             if errno != ENOENT:             # <<<<<<<<<<<<<<
@@ -3434,20 +3538,20 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
     __pyx_t_1 = ((errno != ENOENT) != 0);
     if (unlikely(__pyx_t_1)) {
 
-      /* "hybrid_lock.pyx":266
+      /* "hybrid_lock.pyx":270
  *             if errno != ENOENT:
  *                 # If already unlinked, just ignore
  *                 raise Exception("sem_unlink")             # <<<<<<<<<<<<<<
  * 
  *         # Clean up - no need to keep _sem_loc any more
  */
-      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__11, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 266, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__14, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 270, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_Raise(__pyx_t_2, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __PYX_ERR(0, 266, __pyx_L1_error)
+      __PYX_ERR(0, 270, __pyx_L1_error)
 
-      /* "hybrid_lock.pyx":264
+      /* "hybrid_lock.pyx":268
  *            self._spin_lock_char[0] != DESTROYED:
  * 
  *             if errno != ENOENT:             # <<<<<<<<<<<<<<
@@ -3456,7 +3560,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
     }
 
-    /* "hybrid_lock.pyx":261
+    /* "hybrid_lock.pyx":265
  *         # after calling sem_unlink, if there are no more
  *         # processes using it, it will cease to exist.
  *         if sem_unlink(self._sem_loc) == -1 and \             # <<<<<<<<<<<<<<
@@ -3465,7 +3569,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   }
 
-  /* "hybrid_lock.pyx":269
+  /* "hybrid_lock.pyx":273
  * 
  *         # Clean up - no need to keep _sem_loc any more
  *         free(self._sem_loc)             # <<<<<<<<<<<<<<
@@ -3474,7 +3578,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   free(__pyx_v_self->_sem_loc);
 
-  /* "hybrid_lock.pyx":273
+  /* "hybrid_lock.pyx":277
  *         # Set the spinlock char to indicate to other processes
  *         # that this semaphore should not be used any more
  *         self._spin_lock_char[0] = DESTROYED             # <<<<<<<<<<<<<<
@@ -3483,7 +3587,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   (__pyx_v_self->_spin_lock_char[0]) = __pyx_v_11hybrid_lock_DESTROYED;
 
-  /* "hybrid_lock.pyx":276
+  /* "hybrid_lock.pyx":280
  * 
  *         # Close the shared memory
  *         if close(self._shm_fd) == -1:             # <<<<<<<<<<<<<<
@@ -3493,20 +3597,20 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
   __pyx_t_1 = ((close(__pyx_v_self->_shm_fd) == -1L) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":277
+    /* "hybrid_lock.pyx":281
  *         # Close the shared memory
  *         if close(self._shm_fd) == -1:
  *             raise Exception("close")             # <<<<<<<<<<<<<<
  * 
  *         # Finally close the semaphore
  */
-    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__8, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 277, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__11, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 281, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 277, __pyx_L1_error)
+    __PYX_ERR(0, 281, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":276
+    /* "hybrid_lock.pyx":280
  * 
  *         # Close the shared memory
  *         if close(self._shm_fd) == -1:             # <<<<<<<<<<<<<<
@@ -3515,7 +3619,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   }
 
-  /* "hybrid_lock.pyx":280
+  /* "hybrid_lock.pyx":284
  * 
  *         # Finally close the semaphore
  *         if sem_close(self._semaphore) == -1:             # <<<<<<<<<<<<<<
@@ -3525,20 +3629,20 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
   __pyx_t_1 = ((sem_close(__pyx_v_self->_semaphore) == -1L) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":281
+    /* "hybrid_lock.pyx":285
  *         # Finally close the semaphore
  *         if sem_close(self._semaphore) == -1:
  *             raise Exception("sem_close")             # <<<<<<<<<<<<<<
  *         return 0
  * 
  */
-    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 281, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 285, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 281, __pyx_L1_error)
+    __PYX_ERR(0, 285, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":280
+    /* "hybrid_lock.pyx":284
  * 
  *         # Finally close the semaphore
  *         if sem_close(self._semaphore) == -1:             # <<<<<<<<<<<<<<
@@ -3547,7 +3651,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
  */
   }
 
-  /* "hybrid_lock.pyx":282
+  /* "hybrid_lock.pyx":286
  *         if sem_close(self._semaphore) == -1:
  *             raise Exception("sem_close")
  *         return 0             # <<<<<<<<<<<<<<
@@ -3557,7 +3661,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(struct __pyx_obj_
   __pyx_r = 0;
   goto __pyx_L0;
 
-  /* "hybrid_lock.pyx":240
+  /* "hybrid_lock.pyx":244
  *             return 0
  * 
  *     cpdef int destroy(self) except -1:             # <<<<<<<<<<<<<<
@@ -3597,8 +3701,8 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_8destroy(struct __
   PyObject *__pyx_t_2 = NULL;
   __Pyx_RefNannySetupContext("destroy", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 240, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 240, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_destroy(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 244, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 244, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
@@ -3615,7 +3719,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_8destroy(struct __
   return __pyx_r;
 }
 
-/* "hybrid_lock.pyx":288
+/* "hybrid_lock.pyx":292
  *     #===========================================================#
  * 
  *     cpdef int get_destroyed(self) except -1:             # <<<<<<<<<<<<<<
@@ -3629,7 +3733,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_destroyed(struct __py
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("get_destroyed", 0);
 
-  /* "hybrid_lock.pyx":289
+  /* "hybrid_lock.pyx":293
  * 
  *     cpdef int get_destroyed(self) except -1:
  *         return self._spin_lock_char[0] == DESTROYED             # <<<<<<<<<<<<<<
@@ -3639,7 +3743,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_destroyed(struct __py
   __pyx_r = ((__pyx_v_self->_spin_lock_char[0]) == __pyx_v_11hybrid_lock_DESTROYED);
   goto __pyx_L0;
 
-  /* "hybrid_lock.pyx":288
+  /* "hybrid_lock.pyx":292
  *     #===========================================================#
  * 
  *     cpdef int get_destroyed(self) except -1:             # <<<<<<<<<<<<<<
@@ -3673,8 +3777,8 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_10get_destroyed(st
   PyObject *__pyx_t_2 = NULL;
   __Pyx_RefNannySetupContext("get_destroyed", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_destroyed(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 288, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 288, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_destroyed(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 292, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 292, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
@@ -3691,7 +3795,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_10get_destroyed(st
   return __pyx_r;
 }
 
-/* "hybrid_lock.pyx":291
+/* "hybrid_lock.pyx":295
  *         return self._spin_lock_char[0] == DESTROYED
  * 
  *     cpdef int get_value(self) except -10:             # <<<<<<<<<<<<<<
@@ -3712,7 +3816,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(struct __pyx_ob
   PyObject *__pyx_t_4 = NULL;
   __Pyx_RefNannySetupContext("get_value", 0);
 
-  /* "hybrid_lock.pyx":294
+  /* "hybrid_lock.pyx":298
  *         # Just in case the semaphore value is -1,
  *         # we'll use -10 for the exception
  *         if self._spin_lock_char[0] == DESTROYED:             # <<<<<<<<<<<<<<
@@ -3722,14 +3826,14 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(struct __pyx_ob
   __pyx_t_1 = (((__pyx_v_self->_spin_lock_char[0]) == __pyx_v_11hybrid_lock_DESTROYED) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":295
+    /* "hybrid_lock.pyx":299
  *         # we'll use -10 for the exception
  *         if self._spin_lock_char[0] == DESTROYED:
  *             raise SemaphoreDestroyedException()             # <<<<<<<<<<<<<<
  * 
  *         cdef int value;
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 295, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 299, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_t_4 = NULL;
     if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
@@ -3743,14 +3847,14 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(struct __pyx_ob
     }
     __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 295, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 299, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 295, __pyx_L1_error)
+    __PYX_ERR(0, 299, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":294
+    /* "hybrid_lock.pyx":298
  *         # Just in case the semaphore value is -1,
  *         # we'll use -10 for the exception
  *         if self._spin_lock_char[0] == DESTROYED:             # <<<<<<<<<<<<<<
@@ -3759,7 +3863,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(struct __pyx_ob
  */
   }
 
-  /* "hybrid_lock.pyx":298
+  /* "hybrid_lock.pyx":302
  * 
  *         cdef int value;
  *         cdef int* p_value = &value;             # <<<<<<<<<<<<<<
@@ -3768,7 +3872,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(struct __pyx_ob
  */
   __pyx_v_p_value = (&__pyx_v_value);
 
-  /* "hybrid_lock.pyx":301
+  /* "hybrid_lock.pyx":305
  *         cdef int result
  * 
  *         result = sem_getvalue(self._semaphore, p_value)             # <<<<<<<<<<<<<<
@@ -3777,7 +3881,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(struct __pyx_ob
  */
   __pyx_v_result = sem_getvalue(__pyx_v_self->_semaphore, __pyx_v_p_value);
 
-  /* "hybrid_lock.pyx":303
+  /* "hybrid_lock.pyx":307
  *         result = sem_getvalue(self._semaphore, p_value)
  * 
  *         if result == -1:             # <<<<<<<<<<<<<<
@@ -3787,20 +3891,20 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(struct __pyx_ob
   __pyx_t_1 = ((__pyx_v_result == -1L) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":304
+    /* "hybrid_lock.pyx":308
  * 
  *         if result == -1:
  *             raise Exception("sem_getvalue")             # <<<<<<<<<<<<<<
  *         return p_value[0]
  * 
  */
-    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 304, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__15, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 308, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 304, __pyx_L1_error)
+    __PYX_ERR(0, 308, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":303
+    /* "hybrid_lock.pyx":307
  *         result = sem_getvalue(self._semaphore, p_value)
  * 
  *         if result == -1:             # <<<<<<<<<<<<<<
@@ -3809,7 +3913,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(struct __pyx_ob
  */
   }
 
-  /* "hybrid_lock.pyx":305
+  /* "hybrid_lock.pyx":309
  *         if result == -1:
  *             raise Exception("sem_getvalue")
  *         return p_value[0]             # <<<<<<<<<<<<<<
@@ -3819,7 +3923,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(struct __pyx_ob
   __pyx_r = (__pyx_v_p_value[0]);
   goto __pyx_L0;
 
-  /* "hybrid_lock.pyx":291
+  /* "hybrid_lock.pyx":295
  *         return self._spin_lock_char[0] == DESTROYED
  * 
  *     cpdef int get_value(self) except -10:             # <<<<<<<<<<<<<<
@@ -3859,8 +3963,8 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_12get_value(struct
   PyObject *__pyx_t_2 = NULL;
   __Pyx_RefNannySetupContext("get_value", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-10))) __PYX_ERR(0, 291, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 291, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-10))) __PYX_ERR(0, 295, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 295, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
@@ -3877,7 +3981,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_12get_value(struct
   return __pyx_r;
 }
 
-/* "hybrid_lock.pyx":311
+/* "hybrid_lock.pyx":315
  *     #===========================================================#
  * 
  *     cpdef int lock(self, int timeout=-1, int spin=1) except -1:             # <<<<<<<<<<<<<<
@@ -3898,7 +4002,6 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
   PyObject *__pyx_t_2 = NULL;
   PyObject *__pyx_t_3 = NULL;
   PyObject *__pyx_t_4 = NULL;
-  int __pyx_t_5;
   __Pyx_RefNannySetupContext("lock", 0);
   if (__pyx_optional_args) {
     if (__pyx_optional_args->__pyx_n > 0) {
@@ -3909,7 +4012,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
     }
   }
 
-  /* "hybrid_lock.pyx":312
+  /* "hybrid_lock.pyx":316
  * 
  *     cpdef int lock(self, int timeout=-1, int spin=1) except -1:
  *         if self._spin_lock_char[0] == DESTROYED:             # <<<<<<<<<<<<<<
@@ -3919,14 +4022,14 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
   __pyx_t_1 = (((__pyx_v_self->_spin_lock_char[0]) == __pyx_v_11hybrid_lock_DESTROYED) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":313
+    /* "hybrid_lock.pyx":317
  *     cpdef int lock(self, int timeout=-1, int spin=1) except -1:
  *         if self._spin_lock_char[0] == DESTROYED:
  *             raise SemaphoreDestroyedException("lock called on destroyed HybridSpinSemaphore!")             # <<<<<<<<<<<<<<
  * 
  *         # Use pthread calls for locking and unlocking.
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 313, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 317, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_t_4 = NULL;
     if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
@@ -3940,14 +4043,14 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
     }
     __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_Call2Args(__pyx_t_3, __pyx_t_4, __pyx_kp_u_lock_called_on_destroyed_HybridS) : __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_kp_u_lock_called_on_destroyed_HybridS);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 313, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 317, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 313, __pyx_L1_error)
+    __PYX_ERR(0, 317, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":312
+    /* "hybrid_lock.pyx":316
  * 
  *     cpdef int lock(self, int timeout=-1, int spin=1) except -1:
  *         if self._spin_lock_char[0] == DESTROYED:             # <<<<<<<<<<<<<<
@@ -3956,7 +4059,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
   }
 
-  /* "hybrid_lock.pyx":317
+  /* "hybrid_lock.pyx":321
  *         # Use pthread calls for locking and unlocking.
  *         cdef int i
  *         cdef int retval = -1             # <<<<<<<<<<<<<<
@@ -3965,7 +4068,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
   __pyx_v_retval = -1;
 
-  /* "hybrid_lock.pyx":318
+  /* "hybrid_lock.pyx":322
  *         cdef int i
  *         cdef int retval = -1
  *         cdef long long from_t = get_current_time_ms()             # <<<<<<<<<<<<<<
@@ -3974,24 +4077,17 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
   __pyx_v_from_t = __pyx_f_11hybrid_lock_get_current_time_ms();
 
-  /* "hybrid_lock.pyx":321
+  /* "hybrid_lock.pyx":325
  *         cdef timespec ts
  * 
- *         if spin and False:             # <<<<<<<<<<<<<<
+ *         if spin:             # <<<<<<<<<<<<<<
  *             #with nogil:  # NOTE ME: Uncommenting this line might increase performance,
  *                           # at a cost of potentially having one process consuming many cores!
  */
-  __pyx_t_5 = (__pyx_v_spin != 0);
-  if (__pyx_t_5) {
-  } else {
-    __pyx_t_1 = __pyx_t_5;
-    goto __pyx_L5_bool_binop_done;
-  }
-  __pyx_t_1 = 0;
-  __pyx_L5_bool_binop_done:;
+  __pyx_t_1 = (__pyx_v_spin != 0);
   if (__pyx_t_1) {
 
-    /* "hybrid_lock.pyx":324
+    /* "hybrid_lock.pyx":328
  *             #with nogil:  # NOTE ME: Uncommenting this line might increase performance,
  *                           # at a cost of potentially having one process consuming many cores!
  *             while 1:             # <<<<<<<<<<<<<<
@@ -4000,7 +4096,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
     while (1) {
 
-      /* "hybrid_lock.pyx":328
+      /* "hybrid_lock.pyx":332
  *                 # (minimum 0.5ms) so doesn't (necessarily?) make sense to
  *                 # consume more time busy waiting
  *                 if get_current_time_ms()-from_t > 6:             # <<<<<<<<<<<<<<
@@ -4010,16 +4106,16 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
       __pyx_t_1 = (((__pyx_f_11hybrid_lock_get_current_time_ms() - __pyx_v_from_t) > 6) != 0);
       if (__pyx_t_1) {
 
-        /* "hybrid_lock.pyx":329
+        /* "hybrid_lock.pyx":333
  *                 # consume more time busy waiting
  *                 if get_current_time_ms()-from_t > 6:
  *                     break             # <<<<<<<<<<<<<<
  *                 elif self._spin_lock_char[0] == UNLOCKED:
  *                     break
  */
-        goto __pyx_L8_break;
+        goto __pyx_L6_break;
 
-        /* "hybrid_lock.pyx":328
+        /* "hybrid_lock.pyx":332
  *                 # (minimum 0.5ms) so doesn't (necessarily?) make sense to
  *                 # consume more time busy waiting
  *                 if get_current_time_ms()-from_t > 6:             # <<<<<<<<<<<<<<
@@ -4028,7 +4124,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
       }
 
-      /* "hybrid_lock.pyx":330
+      /* "hybrid_lock.pyx":334
  *                 if get_current_time_ms()-from_t > 6:
  *                     break
  *                 elif self._spin_lock_char[0] == UNLOCKED:             # <<<<<<<<<<<<<<
@@ -4038,16 +4134,16 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
       __pyx_t_1 = (((__pyx_v_self->_spin_lock_char[0]) == __pyx_v_11hybrid_lock_UNLOCKED) != 0);
       if (__pyx_t_1) {
 
-        /* "hybrid_lock.pyx":331
+        /* "hybrid_lock.pyx":335
  *                     break
  *                 elif self._spin_lock_char[0] == UNLOCKED:
  *                     break             # <<<<<<<<<<<<<<
  * 
  *         if timeout == -1:
  */
-        goto __pyx_L8_break;
+        goto __pyx_L6_break;
 
-        /* "hybrid_lock.pyx":330
+        /* "hybrid_lock.pyx":334
  *                 if get_current_time_ms()-from_t > 6:
  *                     break
  *                 elif self._spin_lock_char[0] == UNLOCKED:             # <<<<<<<<<<<<<<
@@ -4056,18 +4152,18 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
       }
     }
-    __pyx_L8_break:;
+    __pyx_L6_break:;
 
-    /* "hybrid_lock.pyx":321
+    /* "hybrid_lock.pyx":325
  *         cdef timespec ts
  * 
- *         if spin and False:             # <<<<<<<<<<<<<<
+ *         if spin:             # <<<<<<<<<<<<<<
  *             #with nogil:  # NOTE ME: Uncommenting this line might increase performance,
  *                           # at a cost of potentially having one process consuming many cores!
  */
   }
 
-  /* "hybrid_lock.pyx":333
+  /* "hybrid_lock.pyx":337
  *                     break
  * 
  *         if timeout == -1:             # <<<<<<<<<<<<<<
@@ -4077,7 +4173,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
   __pyx_t_1 = ((__pyx_v_timeout == -1L) != 0);
   if (__pyx_t_1) {
 
-    /* "hybrid_lock.pyx":336
+    /* "hybrid_lock.pyx":340
  *             # NOTE THIS: It seems that semaphore functions need to
  *             # have the GIL disabled, or it will result in a deadlock
  *             with nogil:             # <<<<<<<<<<<<<<
@@ -4092,7 +4188,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
         #endif
         /*try:*/ {
 
-          /* "hybrid_lock.pyx":337
+          /* "hybrid_lock.pyx":341
  *             # have the GIL disabled, or it will result in a deadlock
  *             with nogil:
  *                 retval = sem_wait(self._semaphore)             # <<<<<<<<<<<<<<
@@ -4102,7 +4198,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
           __pyx_v_retval = sem_wait(__pyx_v_self->_semaphore);
         }
 
-        /* "hybrid_lock.pyx":336
+        /* "hybrid_lock.pyx":340
  *             # NOTE THIS: It seems that semaphore functions need to
  *             # have the GIL disabled, or it will result in a deadlock
  *             with nogil:             # <<<<<<<<<<<<<<
@@ -4115,13 +4211,13 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
             __Pyx_FastGIL_Forget();
             Py_BLOCK_THREADS
             #endif
-            goto __pyx_L13;
+            goto __pyx_L11;
           }
-          __pyx_L13:;
+          __pyx_L11:;
         }
     }
 
-    /* "hybrid_lock.pyx":339
+    /* "hybrid_lock.pyx":343
  *                 retval = sem_wait(self._semaphore)
  * 
  *             if retval != -1:             # <<<<<<<<<<<<<<
@@ -4131,7 +4227,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
     __pyx_t_1 = ((__pyx_v_retval != -1L) != 0);
     if (likely(__pyx_t_1)) {
 
-      /* "hybrid_lock.pyx":340
+      /* "hybrid_lock.pyx":344
  * 
  *             if retval != -1:
  *                 self._spin_lock_char[0] = LOCKED             # <<<<<<<<<<<<<<
@@ -4140,17 +4236,17 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
       (__pyx_v_self->_spin_lock_char[0]) = __pyx_v_11hybrid_lock_LOCKED;
 
-      /* "hybrid_lock.pyx":339
+      /* "hybrid_lock.pyx":343
  *                 retval = sem_wait(self._semaphore)
  * 
  *             if retval != -1:             # <<<<<<<<<<<<<<
  *                 self._spin_lock_char[0] = LOCKED
  *             else:
  */
-      goto __pyx_L14;
+      goto __pyx_L12;
     }
 
-    /* "hybrid_lock.pyx":342
+    /* "hybrid_lock.pyx":346
  *                 self._spin_lock_char[0] = LOCKED
  *             else:
  *                 raise Exception("sem_wait")             # <<<<<<<<<<<<<<
@@ -4158,25 +4254,25 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  *             if clock_gettime(CLOCK_REALTIME, &ts) == -1:
  */
     /*else*/ {
-      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__13, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 342, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__16, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 346, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_Raise(__pyx_t_2, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __PYX_ERR(0, 342, __pyx_L1_error)
+      __PYX_ERR(0, 346, __pyx_L1_error)
     }
-    __pyx_L14:;
+    __pyx_L12:;
 
-    /* "hybrid_lock.pyx":333
+    /* "hybrid_lock.pyx":337
  *                     break
  * 
  *         if timeout == -1:             # <<<<<<<<<<<<<<
  *             # NOTE THIS: It seems that semaphore functions need to
  *             # have the GIL disabled, or it will result in a deadlock
  */
-    goto __pyx_L10;
+    goto __pyx_L8;
   }
 
-  /* "hybrid_lock.pyx":344
+  /* "hybrid_lock.pyx":348
  *                 raise Exception("sem_wait")
  *         else:
  *             if clock_gettime(CLOCK_REALTIME, &ts) == -1:             # <<<<<<<<<<<<<<
@@ -4187,20 +4283,20 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
     __pyx_t_1 = ((clock_gettime(CLOCK_REALTIME, (&__pyx_v_ts)) == -1L) != 0);
     if (unlikely(__pyx_t_1)) {
 
-      /* "hybrid_lock.pyx":345
+      /* "hybrid_lock.pyx":349
  *         else:
  *             if clock_gettime(CLOCK_REALTIME, &ts) == -1:
  *                 raise Exception("clock_gettime")             # <<<<<<<<<<<<<<
  * 
  *             #ts.tv_nsec += timeout
  */
-      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__14, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 345, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__17, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 349, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_Raise(__pyx_t_2, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __PYX_ERR(0, 345, __pyx_L1_error)
+      __PYX_ERR(0, 349, __pyx_L1_error)
 
-      /* "hybrid_lock.pyx":344
+      /* "hybrid_lock.pyx":348
  *                 raise Exception("sem_wait")
  *         else:
  *             if clock_gettime(CLOCK_REALTIME, &ts) == -1:             # <<<<<<<<<<<<<<
@@ -4209,7 +4305,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
     }
 
-    /* "hybrid_lock.pyx":348
+    /* "hybrid_lock.pyx":352
  * 
  *             #ts.tv_nsec += timeout
  *             ts.tv_sec += timeout             # <<<<<<<<<<<<<<
@@ -4218,7 +4314,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
     __pyx_v_ts.tv_sec = (__pyx_v_ts.tv_sec + __pyx_v_timeout);
 
-    /* "hybrid_lock.pyx":350
+    /* "hybrid_lock.pyx":354
  *             ts.tv_sec += timeout
  * 
  *             with nogil:             # <<<<<<<<<<<<<<
@@ -4233,7 +4329,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
         #endif
         /*try:*/ {
 
-          /* "hybrid_lock.pyx":351
+          /* "hybrid_lock.pyx":355
  * 
  *             with nogil:
  *                 retval = sem_timedwait(self._semaphore, &ts)             # <<<<<<<<<<<<<<
@@ -4243,7 +4339,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
           __pyx_v_retval = sem_timedwait(__pyx_v_self->_semaphore, (&__pyx_v_ts));
         }
 
-        /* "hybrid_lock.pyx":350
+        /* "hybrid_lock.pyx":354
  *             ts.tv_sec += timeout
  * 
  *             with nogil:             # <<<<<<<<<<<<<<
@@ -4256,13 +4352,13 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
             __Pyx_FastGIL_Forget();
             Py_BLOCK_THREADS
             #endif
-            goto __pyx_L18;
+            goto __pyx_L16;
           }
-          __pyx_L18:;
+          __pyx_L16:;
         }
     }
 
-    /* "hybrid_lock.pyx":353
+    /* "hybrid_lock.pyx":357
  *                 retval = sem_timedwait(self._semaphore, &ts)
  * 
  *             if retval != -1:             # <<<<<<<<<<<<<<
@@ -4272,7 +4368,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
     __pyx_t_1 = ((__pyx_v_retval != -1L) != 0);
     if (__pyx_t_1) {
 
-      /* "hybrid_lock.pyx":354
+      /* "hybrid_lock.pyx":358
  * 
  *             if retval != -1:
  *                 self._spin_lock_char[0] = LOCKED             # <<<<<<<<<<<<<<
@@ -4281,17 +4377,17 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
       (__pyx_v_self->_spin_lock_char[0]) = __pyx_v_11hybrid_lock_LOCKED;
 
-      /* "hybrid_lock.pyx":353
+      /* "hybrid_lock.pyx":357
  *                 retval = sem_timedwait(self._semaphore, &ts)
  * 
  *             if retval != -1:             # <<<<<<<<<<<<<<
  *                 self._spin_lock_char[0] = LOCKED
  *             else:
  */
-      goto __pyx_L19;
+      goto __pyx_L17;
     }
 
-    /* "hybrid_lock.pyx":356
+    /* "hybrid_lock.pyx":360
  *                 self._spin_lock_char[0] = LOCKED
  *             else:
  *                 if errno == ETIMEDOUT:             # <<<<<<<<<<<<<<
@@ -4302,23 +4398,23 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
       __pyx_t_1 = ((errno == ETIMEDOUT) != 0);
       if (unlikely(__pyx_t_1)) {
 
-        /* "hybrid_lock.pyx":357
+        /* "hybrid_lock.pyx":361
  *             else:
  *                 if errno == ETIMEDOUT:
  *                     raise TimeoutError()             # <<<<<<<<<<<<<<
  *                 else:
  *                     raise Exception("sem_timedwait: %d" % timeout)
  */
-        __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_TimeoutError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 357, __pyx_L1_error)
+        __Pyx_GetModuleGlobalName(__pyx_t_2, __pyx_n_s_TimeoutError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 361, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
-        __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 357, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 361, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
         __Pyx_Raise(__pyx_t_3, 0, 0, 0);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        __PYX_ERR(0, 357, __pyx_L1_error)
+        __PYX_ERR(0, 361, __pyx_L1_error)
 
-        /* "hybrid_lock.pyx":356
+        /* "hybrid_lock.pyx":360
  *                 self._spin_lock_char[0] = LOCKED
  *             else:
  *                 if errno == ETIMEDOUT:             # <<<<<<<<<<<<<<
@@ -4327,7 +4423,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  */
       }
 
-      /* "hybrid_lock.pyx":359
+      /* "hybrid_lock.pyx":363
  *                     raise TimeoutError()
  *                 else:
  *                     raise Exception("sem_timedwait: %d" % timeout)             # <<<<<<<<<<<<<<
@@ -4335,24 +4431,24 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
  * 
  */
       /*else*/ {
-        __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_timeout); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 359, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_v_timeout); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 363, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
-        __pyx_t_2 = PyUnicode_Format(__pyx_kp_u_sem_timedwait_d, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 359, __pyx_L1_error)
+        __pyx_t_2 = PyUnicode_Format(__pyx_kp_u_sem_timedwait_d, __pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 363, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_2);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        __pyx_t_3 = __Pyx_PyObject_CallOneArg(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 359, __pyx_L1_error)
+        __pyx_t_3 = __Pyx_PyObject_CallOneArg(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_t_2); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 363, __pyx_L1_error)
         __Pyx_GOTREF(__pyx_t_3);
         __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
         __Pyx_Raise(__pyx_t_3, 0, 0, 0);
         __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-        __PYX_ERR(0, 359, __pyx_L1_error)
+        __PYX_ERR(0, 363, __pyx_L1_error)
       }
     }
-    __pyx_L19:;
+    __pyx_L17:;
   }
-  __pyx_L10:;
+  __pyx_L8:;
 
-  /* "hybrid_lock.pyx":360
+  /* "hybrid_lock.pyx":364
  *                 else:
  *                     raise Exception("sem_timedwait: %d" % timeout)
  *         return retval             # <<<<<<<<<<<<<<
@@ -4362,7 +4458,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_lock(struct __pyx_obj_11h
   __pyx_r = __pyx_v_retval;
   goto __pyx_L0;
 
-  /* "hybrid_lock.pyx":311
+  /* "hybrid_lock.pyx":315
  *     #===========================================================#
  * 
  *     cpdef int lock(self, int timeout=-1, int spin=1) except -1:             # <<<<<<<<<<<<<<
@@ -4419,7 +4515,7 @@ static PyObject *__pyx_pw_11hybrid_lock_19HybridSpinSemaphore_15lock(PyObject *_
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "lock") < 0)) __PYX_ERR(0, 311, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "lock") < 0)) __PYX_ERR(0, 315, __pyx_L3_error)
       }
     } else {
       switch (PyTuple_GET_SIZE(__pyx_args)) {
@@ -4432,19 +4528,19 @@ static PyObject *__pyx_pw_11hybrid_lock_19HybridSpinSemaphore_15lock(PyObject *_
       }
     }
     if (values[0]) {
-      __pyx_v_timeout = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_timeout == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 311, __pyx_L3_error)
+      __pyx_v_timeout = __Pyx_PyInt_As_int(values[0]); if (unlikely((__pyx_v_timeout == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 315, __pyx_L3_error)
     } else {
       __pyx_v_timeout = ((int)-1);
     }
     if (values[1]) {
-      __pyx_v_spin = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_spin == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 311, __pyx_L3_error)
+      __pyx_v_spin = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_spin == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 315, __pyx_L3_error)
     } else {
       __pyx_v_spin = ((int)1);
     }
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("lock", 0, 0, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 311, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("lock", 0, 0, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 315, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("hybrid_lock.HybridSpinSemaphore.lock", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
@@ -4468,8 +4564,8 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_14lock(struct __py
   __pyx_t_2.__pyx_n = 2;
   __pyx_t_2.timeout = __pyx_v_timeout;
   __pyx_t_2.spin = __pyx_v_spin;
-  __pyx_t_1 = __pyx_vtabptr_11hybrid_lock_HybridSpinSemaphore->lock(__pyx_v_self, 1, &__pyx_t_2); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 311, __pyx_L1_error)
-  __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 311, __pyx_L1_error)
+  __pyx_t_1 = __pyx_vtabptr_11hybrid_lock_HybridSpinSemaphore->lock(__pyx_v_self, 1, &__pyx_t_2); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 315, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 315, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __pyx_r = __pyx_t_3;
   __pyx_t_3 = 0;
@@ -4486,7 +4582,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_14lock(struct __py
   return __pyx_r;
 }
 
-/* "hybrid_lock.pyx":362
+/* "hybrid_lock.pyx":366
  *         return retval
  * 
  *     cpdef int unlock(self) except -1:             # <<<<<<<<<<<<<<
@@ -4506,7 +4602,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(struct __pyx_obj_1
   int __pyx_t_5;
   __Pyx_RefNannySetupContext("unlock", 0);
 
-  /* "hybrid_lock.pyx":363
+  /* "hybrid_lock.pyx":367
  * 
  *     cpdef int unlock(self) except -1:
  *         if self._spin_lock_char[0] == DESTROYED:             # <<<<<<<<<<<<<<
@@ -4516,14 +4612,14 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(struct __pyx_obj_1
   __pyx_t_1 = (((__pyx_v_self->_spin_lock_char[0]) == __pyx_v_11hybrid_lock_DESTROYED) != 0);
   if (unlikely(__pyx_t_1)) {
 
-    /* "hybrid_lock.pyx":364
+    /* "hybrid_lock.pyx":368
  *     cpdef int unlock(self) except -1:
  *         if self._spin_lock_char[0] == DESTROYED:
  *             raise SemaphoreDestroyedException()             # <<<<<<<<<<<<<<
  * 
  *         cdef int i
  */
-    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 364, __pyx_L1_error)
+    __Pyx_GetModuleGlobalName(__pyx_t_3, __pyx_n_s_SemaphoreDestroyedException); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 368, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
     __pyx_t_4 = NULL;
     if (CYTHON_UNPACK_METHODS && unlikely(PyMethod_Check(__pyx_t_3))) {
@@ -4537,14 +4633,14 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(struct __pyx_obj_1
     }
     __pyx_t_2 = (__pyx_t_4) ? __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4) : __Pyx_PyObject_CallNoArg(__pyx_t_3);
     __Pyx_XDECREF(__pyx_t_4); __pyx_t_4 = 0;
-    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 364, __pyx_L1_error)
+    if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 368, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 364, __pyx_L1_error)
+    __PYX_ERR(0, 368, __pyx_L1_error)
 
-    /* "hybrid_lock.pyx":363
+    /* "hybrid_lock.pyx":367
  * 
  *     cpdef int unlock(self) except -1:
  *         if self._spin_lock_char[0] == DESTROYED:             # <<<<<<<<<<<<<<
@@ -4553,7 +4649,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(struct __pyx_obj_1
  */
   }
 
-  /* "hybrid_lock.pyx":367
+  /* "hybrid_lock.pyx":371
  * 
  *         cdef int i
  *         cdef int retval = -1             # <<<<<<<<<<<<<<
@@ -4562,7 +4658,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(struct __pyx_obj_1
  */
   __pyx_v_retval = -1;
 
-  /* "hybrid_lock.pyx":369
+  /* "hybrid_lock.pyx":373
  *         cdef int retval = -1
  * 
  *         self._spin_lock_char[0] = UNLOCKED             # <<<<<<<<<<<<<<
@@ -4571,18 +4667,18 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(struct __pyx_obj_1
  */
   (__pyx_v_self->_spin_lock_char[0]) = __pyx_v_11hybrid_lock_UNLOCKED;
 
-  /* "hybrid_lock.pyx":370
+  /* "hybrid_lock.pyx":374
  * 
  *         self._spin_lock_char[0] = UNLOCKED
  *         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore             # <<<<<<<<<<<<<<
  *             retval = sem_post(self._semaphore)
  *         return retval
  */
-  __pyx_t_5 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(__pyx_v_self, 0); if (unlikely(__pyx_t_5 == ((int)-10))) __PYX_ERR(0, 370, __pyx_L1_error)
+  __pyx_t_5 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_get_value(__pyx_v_self, 0); if (unlikely(__pyx_t_5 == ((int)-10))) __PYX_ERR(0, 374, __pyx_L1_error)
   __pyx_t_1 = ((__pyx_t_5 == 0) != 0);
   if (__pyx_t_1) {
 
-    /* "hybrid_lock.pyx":371
+    /* "hybrid_lock.pyx":375
  *         self._spin_lock_char[0] = UNLOCKED
  *         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
  *             retval = sem_post(self._semaphore)             # <<<<<<<<<<<<<<
@@ -4590,7 +4686,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(struct __pyx_obj_1
  */
     __pyx_v_retval = sem_post(__pyx_v_self->_semaphore);
 
-    /* "hybrid_lock.pyx":370
+    /* "hybrid_lock.pyx":374
  * 
  *         self._spin_lock_char[0] = UNLOCKED
  *         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore             # <<<<<<<<<<<<<<
@@ -4599,7 +4695,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(struct __pyx_obj_1
  */
   }
 
-  /* "hybrid_lock.pyx":372
+  /* "hybrid_lock.pyx":376
  *         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
  *             retval = sem_post(self._semaphore)
  *         return retval             # <<<<<<<<<<<<<<
@@ -4607,7 +4703,7 @@ static int __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(struct __pyx_obj_1
   __pyx_r = __pyx_v_retval;
   goto __pyx_L0;
 
-  /* "hybrid_lock.pyx":362
+  /* "hybrid_lock.pyx":366
  *         return retval
  * 
  *     cpdef int unlock(self) except -1:             # <<<<<<<<<<<<<<
@@ -4647,8 +4743,8 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_16unlock(struct __
   PyObject *__pyx_t_2 = NULL;
   __Pyx_RefNannySetupContext("unlock", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 362, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 362, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_11hybrid_lock_19HybridSpinSemaphore_unlock(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 366, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 366, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
@@ -4696,7 +4792,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_18__reduce_cython_
  * def __setstate_cython__(self, __pyx_state):
  *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_TypeError, __pyx_tuple__15, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 2, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_TypeError, __pyx_tuple__18, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 2, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_Raise(__pyx_t_1, 0, 0, 0);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -4749,7 +4845,7 @@ static PyObject *__pyx_pf_11hybrid_lock_19HybridSpinSemaphore_20__setstate_cytho
  * def __setstate_cython__(self, __pyx_state):
  *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")             # <<<<<<<<<<<<<<
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_TypeError, __pyx_tuple__16, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 4, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(__pyx_builtin_TypeError, __pyx_tuple__19, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(1, 4, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_Raise(__pyx_t_1, 0, 0, 0);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
@@ -4928,7 +5024,10 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_u_Error_copying_memory, __pyx_k_Error_copying_memory, sizeof(__pyx_k_Error_copying_memory), 0, 1, 0, 0},
   {&__pyx_kp_u_Error_occurred_calling, __pyx_k_Error_occurred_calling, sizeof(__pyx_k_Error_occurred_calling), 0, 1, 0, 0},
   {&__pyx_n_s_HybridSpinSemaphore, __pyx_k_HybridSpinSemaphore, sizeof(__pyx_k_HybridSpinSemaphore), 0, 0, 1, 1},
+  {&__pyx_kp_u_NO_SUCH_SEMAPHORE, __pyx_k_NO_SUCH_SEMAPHORE, sizeof(__pyx_k_NO_SUCH_SEMAPHORE), 0, 1, 0, 0},
   {&__pyx_n_s_NoSuchSemaphoreException, __pyx_k_NoSuchSemaphoreException, sizeof(__pyx_k_NoSuchSemaphoreException), 0, 0, 1, 1},
+  {&__pyx_kp_u_OTHER_EXCEPTION, __pyx_k_OTHER_EXCEPTION, sizeof(__pyx_k_OTHER_EXCEPTION), 0, 1, 0, 0},
+  {&__pyx_kp_u_SEMAPHORE_ALREADY_DESTROYED, __pyx_k_SEMAPHORE_ALREADY_DESTROYED, sizeof(__pyx_k_SEMAPHORE_ALREADY_DESTROYED), 0, 1, 0, 0},
   {&__pyx_n_s_SemaphoreDestroyedException, __pyx_k_SemaphoreDestroyedException, sizeof(__pyx_k_SemaphoreDestroyedException), 0, 0, 1, 1},
   {&__pyx_n_s_SemaphoreExistsException, __pyx_k_SemaphoreExistsException, sizeof(__pyx_k_SemaphoreExistsException), 0, 0, 1, 1},
   {&__pyx_kp_u_Semaphore_at_s_already_destroyed, __pyx_k_Semaphore_at_s_already_destroyed, sizeof(__pyx_k_Semaphore_at_s_already_destroyed), 0, 1, 0, 0},
@@ -4937,7 +5036,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
   {&__pyx_kp_u_Unknown_mode_s, __pyx_k_Unknown_mode_s, sizeof(__pyx_k_Unknown_mode_s), 0, 1, 0, 0},
   {&__pyx_kp_u_WARNING_Already_cleaned_up_in_Hy, __pyx_k_WARNING_Already_cleaned_up_in_Hy, sizeof(__pyx_k_WARNING_Already_cleaned_up_in_Hy), 0, 1, 0, 0},
-  {&__pyx_kp_u__4, __pyx_k__4, sizeof(__pyx_k__4), 0, 1, 0, 0},
+  {&__pyx_kp_u__7, __pyx_k__7, sizeof(__pyx_k__7), 0, 1, 0, 0},
   {&__pyx_n_s_cline_in_traceback, __pyx_k_cline_in_traceback, sizeof(__pyx_k_cline_in_traceback), 0, 0, 1, 1},
   {&__pyx_n_u_clock_gettime, __pyx_k_clock_gettime, sizeof(__pyx_k_clock_gettime), 0, 1, 0, 1},
   {&__pyx_n_u_close, __pyx_k_close, sizeof(__pyx_k_close), 0, 1, 0, 1},
@@ -4959,6 +5058,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_kp_s_no_default___reduce___due_to_non, __pyx_k_no_default___reduce___due_to_non, sizeof(__pyx_k_no_default___reduce___due_to_non), 0, 0, 1, 0},
   {&__pyx_n_s_permissions, __pyx_k_permissions, sizeof(__pyx_k_permissions), 0, 0, 1, 1},
   {&__pyx_n_s_prepare, __pyx_k_prepare, sizeof(__pyx_k_prepare), 0, 0, 1, 1},
+  {&__pyx_n_s_print, __pyx_k_print, sizeof(__pyx_k_print), 0, 0, 1, 1},
   {&__pyx_n_s_pyx_vtable, __pyx_k_pyx_vtable, sizeof(__pyx_k_pyx_vtable), 0, 0, 1, 1},
   {&__pyx_n_s_qualname, __pyx_k_qualname, sizeof(__pyx_k_qualname), 0, 0, 1, 1},
   {&__pyx_n_s_reduce, __pyx_k_reduce, sizeof(__pyx_k_reduce), 0, 0, 1, 1},
@@ -4981,7 +5081,8 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static CYTHON_SMALL_CODE int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_SystemError = __Pyx_GetBuiltinName(__pyx_n_s_SystemError); if (!__pyx_builtin_SystemError) __PYX_ERR(0, 192, __pyx_L1_error)
+  __pyx_builtin_print = __Pyx_GetBuiltinName(__pyx_n_s_print); if (!__pyx_builtin_print) __PYX_ERR(0, 146, __pyx_L1_error)
+  __pyx_builtin_SystemError = __Pyx_GetBuiltinName(__pyx_n_s_SystemError); if (!__pyx_builtin_SystemError) __PYX_ERR(0, 196, __pyx_L1_error)
   __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(1, 2, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
@@ -5014,115 +5115,148 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__3);
   __Pyx_GIVEREF(__pyx_tuple__3);
 
-  /* "hybrid_lock.pyx":192
+  /* "hybrid_lock.pyx":146
+ *                 del existing_semaphore
+ *             except NoSuchSemaphoreException:
+ *                 print("NO SUCH SEMAPHORE!!!")             # <<<<<<<<<<<<<<
+ *             except SemaphoreDestroyedException:
+ *                 print("SEMAPHORE ALREADY DESTROYED!!!")
+ */
+  __pyx_tuple__4 = PyTuple_Pack(1, __pyx_kp_u_NO_SUCH_SEMAPHORE); if (unlikely(!__pyx_tuple__4)) __PYX_ERR(0, 146, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__4);
+  __Pyx_GIVEREF(__pyx_tuple__4);
+
+  /* "hybrid_lock.pyx":148
+ *                 print("NO SUCH SEMAPHORE!!!")
+ *             except SemaphoreDestroyedException:
+ *                 print("SEMAPHORE ALREADY DESTROYED!!!")             # <<<<<<<<<<<<<<
+ *             except:
+ *                 print("OTHER EXCEPTION!!!")
+ */
+  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_kp_u_SEMAPHORE_ALREADY_DESTROYED); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 148, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__5);
+  __Pyx_GIVEREF(__pyx_tuple__5);
+
+  /* "hybrid_lock.pyx":150
+ *                 print("SEMAPHORE ALREADY DESTROYED!!!")
+ *             except:
+ *                 print("OTHER EXCEPTION!!!")             # <<<<<<<<<<<<<<
+ * 
+ *             # Open the semaphore in exclusive mode
+ */
+  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_kp_u_OTHER_EXCEPTION); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(0, 150, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__6);
+  __Pyx_GIVEREF(__pyx_tuple__6);
+
+  /* "hybrid_lock.pyx":196
  * 
  *         if self._shm_fd == -1:
  *             raise SystemError("shm_open")             # <<<<<<<<<<<<<<
  * 
  *         # Truncate shared memory segment so it would contain char*
  */
-  __pyx_tuple__5 = PyTuple_Pack(1, __pyx_n_u_shm_open); if (unlikely(!__pyx_tuple__5)) __PYX_ERR(0, 192, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__5);
-  __Pyx_GIVEREF(__pyx_tuple__5);
+  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_n_u_shm_open); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 196, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__8);
+  __Pyx_GIVEREF(__pyx_tuple__8);
 
-  /* "hybrid_lock.pyx":196
+  /* "hybrid_lock.pyx":200
  *         # Truncate shared memory segment so it would contain char*
  *         if ftruncate(self._shm_fd, sizeof(char*)) == -1:
  *             raise SystemError("ftruncate")             # <<<<<<<<<<<<<<
  * 
  *         # Map pthread mutex into the shared memory.
  */
-  __pyx_tuple__6 = PyTuple_Pack(1, __pyx_n_u_ftruncate); if (unlikely(!__pyx_tuple__6)) __PYX_ERR(0, 196, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__6);
-  __Pyx_GIVEREF(__pyx_tuple__6);
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_n_u_ftruncate); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 200, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__9);
+  __Pyx_GIVEREF(__pyx_tuple__9);
 
-  /* "hybrid_lock.pyx":208
+  /* "hybrid_lock.pyx":212
  *         )
  *         if addr == MAP_FAILED:
  *             raise SystemError("mmap")             # <<<<<<<<<<<<<<
  * 
  *         # Create+set initial value for the spin lock char*, if provided
  */
-  __pyx_tuple__7 = PyTuple_Pack(1, __pyx_n_u_mmap); if (unlikely(!__pyx_tuple__7)) __PYX_ERR(0, 208, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__7);
-  __Pyx_GIVEREF(__pyx_tuple__7);
+  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_n_u_mmap); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 212, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__10);
+  __Pyx_GIVEREF(__pyx_tuple__10);
 
-  /* "hybrid_lock.pyx":234
+  /* "hybrid_lock.pyx":238
  * 
  *             if close(self._shm_fd) == -1:
  *                 raise Exception("close")             # <<<<<<<<<<<<<<
  * 
  *             if sem_close(self._semaphore) == -1:
  */
-  __pyx_tuple__8 = PyTuple_Pack(1, __pyx_n_u_close); if (unlikely(!__pyx_tuple__8)) __PYX_ERR(0, 234, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__8);
-  __Pyx_GIVEREF(__pyx_tuple__8);
+  __pyx_tuple__11 = PyTuple_Pack(1, __pyx_n_u_close); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 238, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__11);
+  __Pyx_GIVEREF(__pyx_tuple__11);
 
-  /* "hybrid_lock.pyx":237
+  /* "hybrid_lock.pyx":241
  * 
  *             if sem_close(self._semaphore) == -1:
  *                 raise Exception("sem_close")             # <<<<<<<<<<<<<<
  *             return 0
  * 
  */
-  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_n_u_sem_close); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 237, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__9);
-  __Pyx_GIVEREF(__pyx_tuple__9);
+  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_n_u_sem_close); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 241, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__12);
+  __Pyx_GIVEREF(__pyx_tuple__12);
 
-  /* "hybrid_lock.pyx":257
+  /* "hybrid_lock.pyx":261
  *             if errno != ENOENT:
  *                 # If already unlinked, just ignore
  *                 raise Exception("shm_unlink")             # <<<<<<<<<<<<<<
  * 
  *         # after calling sem_unlink, if there are no more
  */
-  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_n_u_shm_unlink); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 257, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__10);
-  __Pyx_GIVEREF(__pyx_tuple__10);
+  __pyx_tuple__13 = PyTuple_Pack(1, __pyx_n_u_shm_unlink); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 261, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__13);
+  __Pyx_GIVEREF(__pyx_tuple__13);
 
-  /* "hybrid_lock.pyx":266
+  /* "hybrid_lock.pyx":270
  *             if errno != ENOENT:
  *                 # If already unlinked, just ignore
  *                 raise Exception("sem_unlink")             # <<<<<<<<<<<<<<
  * 
  *         # Clean up - no need to keep _sem_loc any more
  */
-  __pyx_tuple__11 = PyTuple_Pack(1, __pyx_n_u_sem_unlink); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 266, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__11);
-  __Pyx_GIVEREF(__pyx_tuple__11);
+  __pyx_tuple__14 = PyTuple_Pack(1, __pyx_n_u_sem_unlink); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 270, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__14);
+  __Pyx_GIVEREF(__pyx_tuple__14);
 
-  /* "hybrid_lock.pyx":304
+  /* "hybrid_lock.pyx":308
  * 
  *         if result == -1:
  *             raise Exception("sem_getvalue")             # <<<<<<<<<<<<<<
  *         return p_value[0]
  * 
  */
-  __pyx_tuple__12 = PyTuple_Pack(1, __pyx_n_u_sem_getvalue); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 304, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__12);
-  __Pyx_GIVEREF(__pyx_tuple__12);
+  __pyx_tuple__15 = PyTuple_Pack(1, __pyx_n_u_sem_getvalue); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(0, 308, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__15);
+  __Pyx_GIVEREF(__pyx_tuple__15);
 
-  /* "hybrid_lock.pyx":342
+  /* "hybrid_lock.pyx":346
  *                 self._spin_lock_char[0] = LOCKED
  *             else:
  *                 raise Exception("sem_wait")             # <<<<<<<<<<<<<<
  *         else:
  *             if clock_gettime(CLOCK_REALTIME, &ts) == -1:
  */
-  __pyx_tuple__13 = PyTuple_Pack(1, __pyx_n_u_sem_wait); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 342, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__13);
-  __Pyx_GIVEREF(__pyx_tuple__13);
+  __pyx_tuple__16 = PyTuple_Pack(1, __pyx_n_u_sem_wait); if (unlikely(!__pyx_tuple__16)) __PYX_ERR(0, 346, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__16);
+  __Pyx_GIVEREF(__pyx_tuple__16);
 
-  /* "hybrid_lock.pyx":345
+  /* "hybrid_lock.pyx":349
  *         else:
  *             if clock_gettime(CLOCK_REALTIME, &ts) == -1:
  *                 raise Exception("clock_gettime")             # <<<<<<<<<<<<<<
  * 
  *             #ts.tv_nsec += timeout
  */
-  __pyx_tuple__14 = PyTuple_Pack(1, __pyx_n_u_clock_gettime); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 345, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__14);
-  __Pyx_GIVEREF(__pyx_tuple__14);
+  __pyx_tuple__17 = PyTuple_Pack(1, __pyx_n_u_clock_gettime); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(0, 349, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__17);
+  __Pyx_GIVEREF(__pyx_tuple__17);
 
   /* "(tree fragment)":2
  * def __reduce_cython__(self):
@@ -5130,18 +5264,18 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
  * def __setstate_cython__(self, __pyx_state):
  *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
  */
-  __pyx_tuple__15 = PyTuple_Pack(1, __pyx_kp_s_no_default___reduce___due_to_non); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(1, 2, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__15);
-  __Pyx_GIVEREF(__pyx_tuple__15);
+  __pyx_tuple__18 = PyTuple_Pack(1, __pyx_kp_s_no_default___reduce___due_to_non); if (unlikely(!__pyx_tuple__18)) __PYX_ERR(1, 2, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__18);
+  __Pyx_GIVEREF(__pyx_tuple__18);
 
   /* "(tree fragment)":4
  *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")
  * def __setstate_cython__(self, __pyx_state):
  *     raise TypeError("no default __reduce__ due to non-trivial __cinit__")             # <<<<<<<<<<<<<<
  */
-  __pyx_tuple__16 = PyTuple_Pack(1, __pyx_kp_s_no_default___reduce___due_to_non); if (unlikely(!__pyx_tuple__16)) __PYX_ERR(1, 4, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__16);
-  __Pyx_GIVEREF(__pyx_tuple__16);
+  __pyx_tuple__19 = PyTuple_Pack(1, __pyx_kp_s_no_default___reduce___due_to_non); if (unlikely(!__pyx_tuple__19)) __PYX_ERR(1, 4, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__19);
+  __Pyx_GIVEREF(__pyx_tuple__19);
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -6471,6 +6605,80 @@ static CYTHON_INLINE int __Pyx_PyErr_GivenExceptionMatches2(PyObject *err, PyObj
     return (PyErr_GivenExceptionMatches(err, exc_type1) || PyErr_GivenExceptionMatches(err, exc_type2));
 }
 #endif
+
+/* GetException */
+#if CYTHON_FAST_THREAD_STATE
+static int __Pyx__GetException(PyThreadState *tstate, PyObject **type, PyObject **value, PyObject **tb)
+#else
+static int __Pyx_GetException(PyObject **type, PyObject **value, PyObject **tb)
+#endif
+{
+    PyObject *local_type, *local_value, *local_tb;
+#if CYTHON_FAST_THREAD_STATE
+    PyObject *tmp_type, *tmp_value, *tmp_tb;
+    local_type = tstate->curexc_type;
+    local_value = tstate->curexc_value;
+    local_tb = tstate->curexc_traceback;
+    tstate->curexc_type = 0;
+    tstate->curexc_value = 0;
+    tstate->curexc_traceback = 0;
+#else
+    PyErr_Fetch(&local_type, &local_value, &local_tb);
+#endif
+    PyErr_NormalizeException(&local_type, &local_value, &local_tb);
+#if CYTHON_FAST_THREAD_STATE
+    if (unlikely(tstate->curexc_type))
+#else
+    if (unlikely(PyErr_Occurred()))
+#endif
+        goto bad;
+    #if PY_MAJOR_VERSION >= 3
+    if (local_tb) {
+        if (unlikely(PyException_SetTraceback(local_value, local_tb) < 0))
+            goto bad;
+    }
+    #endif
+    Py_XINCREF(local_tb);
+    Py_XINCREF(local_type);
+    Py_XINCREF(local_value);
+    *type = local_type;
+    *value = local_value;
+    *tb = local_tb;
+#if CYTHON_FAST_THREAD_STATE
+    #if CYTHON_USE_EXC_INFO_STACK
+    {
+        _PyErr_StackItem *exc_info = tstate->exc_info;
+        tmp_type = exc_info->exc_type;
+        tmp_value = exc_info->exc_value;
+        tmp_tb = exc_info->exc_traceback;
+        exc_info->exc_type = local_type;
+        exc_info->exc_value = local_value;
+        exc_info->exc_traceback = local_tb;
+    }
+    #else
+    tmp_type = tstate->exc_type;
+    tmp_value = tstate->exc_value;
+    tmp_tb = tstate->exc_traceback;
+    tstate->exc_type = local_type;
+    tstate->exc_value = local_value;
+    tstate->exc_traceback = local_tb;
+    #endif
+    Py_XDECREF(tmp_type);
+    Py_XDECREF(tmp_value);
+    Py_XDECREF(tmp_tb);
+#else
+    PyErr_SetExcInfo(local_type, local_value, local_tb);
+#endif
+    return 0;
+bad:
+    *type = 0;
+    *value = 0;
+    *tb = 0;
+    Py_XDECREF(local_type);
+    Py_XDECREF(local_value);
+    Py_XDECREF(local_tb);
+    return -1;
+}
 
 /* decode_c_string */
 static CYTHON_INLINE PyObject* __Pyx_decode_c_string(

@@ -2,6 +2,7 @@ import time
 import socket
 from _thread import start_new_thread
 
+from shmrpc.rpc.shared_memory.SHMClient import SHMClient
 from shmrpc.rpc.base_classes.ServerProviderBase import ServerProviderBase
 from shmrpc.rpc.network.consts import len_packer, response_packer
 from shmrpc.compression.NullCompression import NullCompression
@@ -57,9 +58,10 @@ class NetworkServer(ServerProviderBase):
             server.listen(4)
             print("Multithreaded server: waiting for connections...")
             conn, (ip, port) = server.accept()
-            start_new_thread(self.run, (conn,))
+            shm_client = SHMClient(self.server_methods)
+            start_new_thread(self.run, (conn, shm_client,))
 
-    def run(self, conn):
+    def run(self, conn, shm_client):
         # TODO: Provide basic support for REST-based RPC
         #       if the client starts with an HTTP header! =============================================================
 
@@ -90,7 +92,7 @@ class NetworkServer(ServerProviderBase):
 
             try:
                 send_data = self.compression_inst.compress(
-                    self.handle_fn(cmd, args)
+                    shm_client.send(cmd, args)
                 )
                 send_data = (
                     response_packer.pack(len(send_data), b'+') +

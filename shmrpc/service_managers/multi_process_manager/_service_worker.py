@@ -11,9 +11,7 @@ from shmrpc.rpc.network.NetworkServer import NetworkServer
 from shmrpc.rpc.shared_memory.SHMServer import SHMServer
 
 
-def _service_worker(init_resources, server_methods,
-                    tcp_bind=None, tcp_compression=None,
-                    tcp_allow_insecure_serialisation=False):
+def _service_worker(server_methods):
     """
     In child processes of MultiProcessManager
     """
@@ -25,25 +23,7 @@ def _service_worker(init_resources, server_methods,
           f"Server methods created, starting implementations")
 
     L = []
-
-    if tcp_bind and False:
-        if tcp_compression == FIXME:
-            pass
-        else:
-            raise Exception()
-
-        L.append(NetworkServer(
-            tcp_bind_address=tcp_bind,
-            server_methods=smi,  # TODO: REUSE THE SAME SOCKET!!!! ====================================================
-            # https://stackoverflow.com/questions/2989823/how-to-pass-file-descriptors-from-parent-to-child-in-python
-            sock=FIXME,
-            force_insecure_serialisation=tcp_allow_insecure_serialisation
-        ))
-
-    L.append(SHMServer()(
-        server_methods=smi,
-        init_resources=init_resources
-    ))
+    L.append(SHMServer()(server_methods=smi))
 
     # Tell the logger server that a child has properly loaded:
     # this helps to make sure if processes are loaded properly,

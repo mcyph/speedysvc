@@ -26,13 +26,19 @@ def _monitor_for_dead_conns():
                 try:
                     client.send(b'heartbeat', b'echo_me', timeout=5)
                 except:
-                    print(f"Heartbeat failed - trying to recreate client connection: "
+                    print(f"[SHMClient PID {getpid()}] Heartbeat failed - trying to recreate client connection: "
                           f"{client.server_methods.name}:{client.server_methods.port}")
                     client.create_connections()
         except:
             import traceback
             traceback.print_exc()
         time.sleep(10)
+
+
+# Make sure more than one lock can't be
+# created for a given port per process(!)
+_DLocks = {}
+_process_wide_lock = _thread.allocate_lock()
 
 
 class SHMClient(ClientProviderBase, SHMBase):
@@ -52,27 +58,26 @@ class SHMClient(ClientProviderBase, SHMBase):
         _LSHMClients.append(self)
 
     def create_connections(self):
-        self.mmap = self.create_pid_mmap(
-            2048, self.port, getpid()
-        )
-        self.client_lock, self.server_lock = self.get_pid_semaphores(
-            self.port, getpid(), CREATE_NEW_OVERWRITE
-        )
+        with _process_wide_lock:
+            self.pids_array = pids_array = JSONMMapList(self.port, create=False)
 
-        # Make myself known to the server (my PID)
-        #
-        # TODO: Figure out what to do in the case
-        #  of the PID already being in the array!
-        # In that case, we will be overwriting the resources
-        # previously allocated by SHMClient, and so either
-        # we won't be able to connect properly, or will make
-        # the previous resources invalid
+            if not self.port in _DLocks:
+                _mmap = self.create_pid_mmap(2048, self.port, getpid())
+                self.client_lock, self.server_lock = self.get_pid_semaphores(
+                    self.port, getpid(), CREATE_NEW_OVERWRITE
+                )
+                _DLocks[self.port] = [_mmap, self.client_lock, self.server_lock]
 
-        self.pids_array = pids_array = JSONMMapList(
-            self.port, create=False
-        )
-        with pids_array:
-            pids_array.append(getpid())
+                # Make myself known to the server (my PID)
+                with pids_array:
+                    pids_array.append(getpid())
+
+            else:
+                # The way things are currently implemented,
+                # can only have a request per client at once.
+                # OPEN ISSUE: Should this be changed to allow multiple
+                # client connections to servers, so as to work around the GIL???? ============================================================
+                _, self.client_lock, self.server_lock = _DLocks[self.port]
 
     def get_server_methods(self):
         return self.server_methods
@@ -102,7 +107,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         self.client_lock.lock(timeout=timeout, spin=self.use_spinlock)
         try:
             # Next line must be in critical area!
-            mmap = self.mmap
+            mmap = _DLocks[self.port][0]
 
             # Send the result to the server!
             if len(encoded_request) >= (len(mmap)-1):
@@ -113,7 +118,7 @@ class SHMClient(ClientProviderBase, SHMBase):
                     len(encoded_request) + 1, self.port, getpid()
                 )
                 mmap[0] = old_mmap[0]
-                self.mmap = mmap
+                _DLocks[self.port][0] = mmap
                 old_mmap[0] = INVALID
                 #print(f"Client: New mmap size is {len(mmap)} bytes "
                 #      f"for encoded_request length {len(encoded_request)}")
@@ -152,7 +157,8 @@ class SHMClient(ClientProviderBase, SHMBase):
                     elif mmap[0] == INVALID:
                         #print(f"Client: memory map has been marked as invalid")
                         prev_len = len(mmap)
-                        mmap = self.mmap = self.connect_to_pid_mmap(self.port, getpid())
+                        mmap = self.connect_to_pid_mmap(self.port, getpid())
+                        _DLocks[self.port][0] = mmap
 
                         # Make sure it actually is larger than the previous one,
                         # so as to reduce the risk of an infinite loop

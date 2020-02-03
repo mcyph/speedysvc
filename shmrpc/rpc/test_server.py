@@ -2,7 +2,7 @@ from shmrpc.rpc.base_classes.ServerMethodsBase import \
     ServerMethodsBase
 from shmrpc.rpc_decorators import \
     json_method, raw_method, pickle_method, \
-    msgpack_method, marshal_method, arrow_method
+    msgpack_method, marshal_method#, arrow_method
 
 
 class TestServerMethods(ServerMethodsBase):
@@ -41,9 +41,9 @@ class TestServerMethods(ServerMethodsBase):
     def test_msgpack_method(self, data):
         return data
 
-    @arrow_method
-    def test_arrow_method(self, data):
-        return data
+    #@arrow_method
+    #def test_arrow_method(self, data):
+    #    return data
 
 
 if __name__ == '__main__':

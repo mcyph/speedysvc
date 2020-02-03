@@ -12,6 +12,7 @@ from multiprocessing import cpu_count
 from shmrpc.kill_pid_and_children import kill_pid_and_children
 
 from shmrpc.logger.std_logging.LoggerClient import LoggerClient
+from shmrpc.rpc.network.NetworkServer import NetworkServer
 
 
 MONITOR_PROCESS_EVERY_SECS = 5
@@ -238,12 +239,29 @@ class MultiProcessServer:
             "Can't start a service that isn't stopped!"
         self.logger_client.set_service_status('starting')
 
+        # Reset the state of the client PIDs
+        from shmrpc.ipc.JSONMMapList import JSONMMapList
+        self.__LPIDs = JSONMMapList(port=self.port, create=True)
+
         for x in range(self.min_proc_num):
             # Make sure the initial processes have booted up
             # from the main thread, so it can block as necessary
             # (assuming wait_until_completed is set)
             self.new_child_process()
 
+        if self.tcp_bind:
+            def start_network_server():
+                while not self.logger_client.get_service_status() == 'started':
+                    # Wait till the SHMServer can be connected to
+                    time.sleep(0.1)
+
+                self.network_server = NetworkServer(
+                    tcp_bind_address=self.tcp_bind,
+                    server_methods=self.server_methods,
+                    force_insecure_serialisation=self.tcp_allow_insecure_serialisation
+                )(self.server_methods)
+
+            _thread.start_new_thread(start_network_server, ())
         _thread.start_new_thread(self.__monitor_process_loop, ())
 
     def stop_service(self):
@@ -267,12 +285,11 @@ class MultiProcessServer:
         DEnv = os.environ.copy()
         DEnv["PATH"] = "/usr/sbin:/sbin:" + DEnv["PATH"]
         DArgs = {
-            'init_resources': not len(self.LPIDs),
             'import_from': self.import_from,
             'section': self.section,
-            'tcp_bind': self.tcp_bind,
-            'tcp_compression':  self.tcp_compression,
-            'tcp_allow_insecure_serialisation': self.tcp_allow_insecure_serialisation
+            #'tcp_bind': self.tcp_bind,
+            #'tcp_compression':  self.tcp_compression,
+            #'tcp_allow_insecure_serialisation': self.tcp_allow_insecure_serialisation
         }
         if True:
             from shmrpc.service_managers.multi_process_manager._service_worker import _service_worker

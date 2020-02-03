@@ -14,16 +14,14 @@ class SHMServer(SHMBase, ServerProviderBase):
     def __init__(self):
         pass
 
-    def __call__(self, server_methods, init_resources=True, use_spinlock=True):
+    def __call__(self, server_methods, use_spinlock=True):
         # TODO!
-        print(f"{server_methods.name}:{server_methods.port}: "
-              f"SHMServer __call__; init_resources:", init_resources)
+        print(f"{server_methods.name}:{server_methods.port}: SHMServer __call__")
         # NOTE: init_resources should only be called if creating from scratch -
         # if connecting to an existing socket, init_resources should be False!
         ServerProviderBase.__call__(self, server_methods)
 
-        print('Starting new SHMServer on port:',
-              server_methods.port, init_resources)
+        print('Starting new SHMServer on port:', server_methods.port)
         self.port = server_methods.port
         self.shut_me_down = False
         self.shutdown_ok = False
@@ -38,7 +36,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         TODO: Create or connect to a shared shm/semaphore which stores the
          current processes which are associated with this service.
         """
-        self.init_pids_map_array(init_resources)
+        self.init_pids_map_array()
         start_new_thread(self.monitor_pids, ())
         return self
 
@@ -52,9 +50,12 @@ class SHMServer(SHMBase, ServerProviderBase):
             except KeyboardInterrupt:
                 pass  # HACK!
 
-    def init_pids_map_array(self, init_resources):
+    def init_pids_map_array(self):
         self.LPIDs = JSONMMapList(
-            port=self.port, create=init_resources
+            # Note, the resource is created in MultiProcessManager,
+            # so that we can be sure it's properly intialised before any
+            # of the child workers start (and not have race conditions)
+            port=self.port, create=False
         )
         self.SPIDThreads = set()
 
@@ -119,7 +120,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                 do_spin, mmap = self.handle_command(mmap, server_lock, pid, do_spin)
             except SemaphoreDestroyedException:
                 # In this case, the lock was likely destroyed by the client
-                # and should propogate the error, rather than forever logging
+                # and should propagate the error, rather than forever logging
                 raise
             except:
                 import traceback
