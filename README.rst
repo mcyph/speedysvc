@@ -38,9 +38,13 @@ Install/Dependencies
 
 Use pip:
 
+.. code-block:: bash
+
     pip3 install git+https://github.com/mcyph/shmrpc/shmrpc.git
 
 Or install manually:
+
+.. code-block:: bash
 
     git clone https://github.com/mcyph/shmrpc
     cd shmrpc
@@ -166,7 +170,7 @@ port can be either an integer or bytes for the shared memory server, it's
 normally best to keep this as a number, to allow compatibility with
 network sockets.
 
-A management interface (by default on 127.0.0.1:5000) can allow viewing each
+A management interface (by default on 127.0.0.1:5155) can allow viewing each
 service's status as defined in the .ini file, and view memory, io and cpu usage over
 time, as well as stdout/stderr logs.
 
@@ -204,6 +208,11 @@ Reference
 * ``.ini`` file format
 
 .. code-block:: ini
+
+    # Flask web monitor related
+    [web monitor]
+    port=5155
+    host=127.0.0.1
 
     # The values in "defaults" will be used if they aren't
     # overridden in individual methods

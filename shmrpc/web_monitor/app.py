@@ -13,7 +13,7 @@ app = Flask(
 web_service_manager = WebServiceManager()
 
 
-def run_server(services=(), debug=False):
+def run_server(services=(), debug=False, host='127.0.0.1', port=5155):
     """
     Should be called with a list of
     MultiProcessManager's and/or InProcessManager's
@@ -23,7 +23,7 @@ def run_server(services=(), debug=False):
 
     app.jinja_env.auto_reload = True
     app.config['TEMPLATES_AUTO_RELOAD'] = True
-    app.run(debug=debug)
+    app.run(debug=debug, host=host, port=port)
 
 
 #================================================#

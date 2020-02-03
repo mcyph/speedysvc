@@ -72,6 +72,11 @@ class Services:
             'wait_until_completed': self.__convert_bool
         }
 
+        if 'web monitor' in self.DValues:
+            self.DWebMonitor = self.DValues.pop('web monitor')
+        else:
+            self.DWebMonitor = {}
+
         if 'defaults' in self.DValues:
             DDefaults = self.DValues.pop('defaults')
             self.DDefaults = DDefaults = {
@@ -293,6 +298,11 @@ if __name__ == '__main__':
     # this allows intercepting ctrl+c/SIGINT
     # It may be that SIGINT is handled in the actual webserver code,
     # but I want to make sure child processes clean up when SIGINT is called.
-    _thread.start_new_thread(run_server, (), {'debug': False})
+
+    _thread.start_new_thread(run_server, (), {
+        'debug': False,
+        'host': services.DWebMonitor.get('host', '127.0.0.1'),
+        'port': int(services.DWebMonitor.get('port', '5155')),
+    })
     while 1:
         time.sleep(10)
