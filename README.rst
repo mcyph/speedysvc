@@ -95,7 +95,7 @@ echoclient.py:
 .. code-block:: python
 
     from shmrpc import ClientMethodsBase, SHMClient
-    from test_server import TestServerMethods
+    from echoserver import EchoServer
 
     class EchoClient(ClientMethodsBase):
         def __init__(self, client_provider):
@@ -104,19 +104,19 @@ echoclient.py:
         # echo_raw = TestServerMethods.echo_raw.as_rpc()
         # can also do the same as the below code.
         def echo_raw(self, data):
-            return self.send(TestServerMethods.echo_raw, data)
+            return self.send(EchoServer.echo_raw, data)
 
         # Note that "data" is actually a list of arguments
         # for non-raw serialisers.
         def echo_json(self, data):
-            return self.send(TestServerMethods.echo_json, [data])
+            return self.send(EchoServer.echo_json, [data])
 
     if __name__ == '__main__':
         # client can be replaced with NetworkClient(host_address)
         # to allow for remote connections. The bind_tcp ini setting
         # must be set in this case: see below.
         client = SHMClient()
-        methods = TestClientMethods(client)
+        methods = EchoClient(client)
         print("Received data:", methods.echo_raw(b"Lorem ipsum"))
 
 service.ini:
@@ -179,7 +179,7 @@ License
 
 Licensed under the MIT License.
 
-Copyright 2020 David L Morrissey
+Copyright 2020 Dave Morrissey
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this
 software and associated documentation files (the "Software"), to deal in the Software
