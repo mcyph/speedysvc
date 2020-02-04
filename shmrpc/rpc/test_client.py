@@ -14,7 +14,6 @@ class TestClientMethods(ClientMethodsBase):
     test_pickle_echo = srv.test_pickle_echo.as_rpc()
     test_marshal_echo = srv.test_marshal_echo.as_rpc()
     test_msgpack_method = srv.test_msgpack_method.as_rpc()
-    test_arrow_method = srv.test_arrow_method.as_rpc()
 
 
 NUM_ITERATIONS = 100000
@@ -30,10 +29,17 @@ if __name__ == '__main__':
     import multiprocessing
     from shmrpc.rpc.network.NetworkClient import NetworkClient
     from shmrpc.rpc.shared_memory.SHMClient import SHMClient
+    from shmrpc.rpc.connect import connect
     MSG_SIZE = 5000 # HACK!
 
     def run_test():
-        client = TestClientMethods(SHMClient(srv))
+        client = TestClientMethods(
+            connect(srv, address=(
+               'tcp://192.168.0.44', # Shouldn't work
+               #'tcp://127.0.0.1',
+               'shm://',
+            )
+        ))
 
         LClients = []
         #for x in range(10):
@@ -68,7 +74,7 @@ if __name__ == '__main__':
             ("pickle:", "client.test_pickle_echo(SERIALISE_ME)"),
             ("marshal:", "client.test_marshal_echo(SERIALISE_ME)"),
             ("msgpack:", "client.test_msgpack_method(SERIALISE_ME)"),
-            ("arrow:", "client.test_arrow_method(SERIALISE_ME)"),
+            #("arrow:", "client.test_arrow_method(SERIALISE_ME)"),
         ):
             print(text, timeit.timeit(
                 stmt,

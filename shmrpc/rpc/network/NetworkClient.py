@@ -6,14 +6,14 @@ from shmrpc.toolkit.documentation.copydoc import copydoc
 
 from shmrpc.rpc.base_classes.ClientProviderBase import ClientProviderBase
 from shmrpc.rpc.network.consts import len_packer, response_packer
-from shmrpc.compression.NullCompression import NullCompression
+from shmrpc.compression.compression_types import snappy_compression
 
 
 class NetworkClient(ClientProviderBase):
     def __init__(self,
                  server_methods,
-                 host='127.0.0.1',
-                 compression_inst=None):
+                 host='127.0.0.1', port=None,
+                 compression_inst=snappy_compression):
         """
 
         :param server_methods:
@@ -25,12 +25,11 @@ class NetworkClient(ClientProviderBase):
         conn_to_server.setsockopt(
             socket.SOL_TCP, socket.TCP_NODELAY, 1
         )
-        conn_to_server.connect((host, server_methods.port))
-        ClientProviderBase.__init__(self, server_methods)
+        port = port if port is not None else server_methods.port
+        conn_to_server.connect((host, port))
+        conn_to_server.send(compression_inst.typecode)
 
-        if compression_inst is None:
-            # TODO: Make it so that compression is actually specified by the server!!!! ===============================
-            compression_inst = NullCompression()
+        ClientProviderBase.__init__(self, server_methods)
         self.compression_inst = compression_inst
 
     def __del__(self):
@@ -38,13 +37,11 @@ class NetworkClient(ClientProviderBase):
 
     @copydoc(ClientProviderBase.send)
     def send(self, fn, data):
-        data = self.compression_inst.compress(fn.serialiser.dumps(data))
+        actually_compressed, data = \
+            self.compression_inst.compress(fn.serialiser.dumps(data))
         cmd = fn.__name__.encode('ascii')
-        prefix = len_packer.pack(len(data), len(cmd))
-
-        self.conn_to_server.send(
-            prefix + cmd + data
-        )
+        prefix = len_packer.pack(int(actually_compressed), len(data), len(cmd))
+        self.conn_to_server.send(prefix + cmd + data)
 
         def recv(amount):
             # Note string concatenation is slower in earlier versions
@@ -55,12 +52,11 @@ class NetworkClient(ClientProviderBase):
                 r += self.conn_to_server.recv(amount)
             return r
 
-        data_len, status = response_packer.unpack(
-            recv(response_packer.size)
-        )
-        data = self.compression_inst.decompress(
-            recv(data_len)
-        )
+        actually_compressed, data_len, status = \
+            response_packer.unpack(recv(response_packer.size))
+        data = recv(data_len)
+        if actually_compressed:
+            data = self.compression_inst.decompress(data)
 
         if status == b'+':
             return fn.serialiser.loads(data)

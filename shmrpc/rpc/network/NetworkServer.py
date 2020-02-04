@@ -8,13 +8,13 @@ from shmrpc.rpc.network.consts import len_packer, response_packer
 from shmrpc.compression.NullCompression import NullCompression
 from shmrpc.serialisation.MarshalSerialisation import MarshalSerialisation
 from shmrpc.serialisation.PickleSerialisation import PickleSerialisation
+from shmrpc.compression import compression_types
 
 
 class NetworkServer(ServerProviderBase):
     def __init__(self,
                  server_methods,
                  tcp_bind_address='127.0.0.1',
-                 compression_inst=None,  # TODO: Make a string =======================================
                  force_insecure_serialisation=False):
         """
         Create a network TCP/IP server which can be used in
@@ -28,10 +28,6 @@ class NetworkServer(ServerProviderBase):
         sock.bind((tcp_bind_address, server_methods.port))
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.listen(0)
-
-        if compression_inst is None:
-            compression_inst = NullCompression()
-        self.compression_inst = compression_inst
 
     def __check_security(self):
         for name in dir(self):
@@ -80,25 +76,30 @@ class NetworkServer(ServerProviderBase):
                 r += conn.recv(amount)
             return r
 
+        # Client tells the server whether to use
+        # compression, as currently implemented
+        compression_inst = compression_types.get_by_type_code(recv(1))
+
         while True:
-            data_len, cmd_len = len_packer.unpack(
-                recv(len_packer.size)
-            )
+            actually_compressed, data_len, cmd_len = \
+                len_packer.unpack(recv(len_packer.size))
             cmd = recv(cmd_len)
-            args = self.compression_inst.decompress(
-                recv(data_len)
-            )
+            args = recv(data_len)
+            if actually_compressed:
+                args = compression_inst.decompress(args)
             #print(data_len, cmd_len, cmd, args)
 
             try:
-                send_data = self.compression_inst.compress(
-                    shm_client.send(cmd, args)
-                )
+                send_data = shm_client.send(cmd, args)
+                actually_compressed, send_data = \
+                    compression_inst.compress(send_data)
                 send_data = (
-                    response_packer.pack(len(send_data), b'+') +
-                    send_data
+                    response_packer.pack(
+                        actually_compressed,
+                        len(send_data),
+                        b'+'
+                    ) + send_data
                 )
-
             except Exception as exc:
                 # Just send a basic Exception instance for now, but would be nice
                 # if could recreate some kinds of exceptions on the other end
@@ -106,8 +107,12 @@ class NetworkServer(ServerProviderBase):
                 traceback.print_exc()
                 send_data = repr(exc).encode('utf-8')
                 send_data = (
-                    response_packer.pack(len(send_data), b'-') +
-                    send_data
+                    # Won't compress exceptions, for now
+                    response_packer.pack(
+                        False,
+                        len(send_data),
+                        b'-'
+                    ) + send_data
                 )
 
             #print("SEND:", send_data)

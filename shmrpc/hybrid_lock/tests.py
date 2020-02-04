@@ -1,4 +1,4 @@
-from hybrid_lock import HybridSpinSemaphore, \
+from hybrid_lock import HybridLock, \
     CONNECT_OR_CREATE, \
     CONNECT_TO_EXISTING, \
     CREATE_NEW_OVERWRITE, \
@@ -10,8 +10,8 @@ from hybrid_lock import HybridSpinSemaphore, \
 def test1():
     # First try to create, overwriting+destroying
     print("Creating new overwrite!")
-    created = HybridSpinSemaphore(b'test', CREATE_NEW_OVERWRITE)
-    created = HybridSpinSemaphore(b'test', CREATE_NEW_OVERWRITE)
+    created = HybridLock(b'test', CREATE_NEW_OVERWRITE)
+    created = HybridLock(b'test', CREATE_NEW_OVERWRITE)
     print(created.get_value())
     created.destroy()
     del created
@@ -20,9 +20,9 @@ def test1():
 def test2():
     # Then try to create exclusive, making sure
     # successive exclusive requests don't work
-    exclusive = HybridSpinSemaphore(b'test', CREATE_NEW_EXCLUSIVE)
+    exclusive = HybridLock(b'test', CREATE_NEW_EXCLUSIVE)
     try:
-        HybridSpinSemaphore(b'test', CREATE_NEW_EXCLUSIVE)
+        HybridLock(b'test', CREATE_NEW_EXCLUSIVE)
         raise Exception("Shouldn't get here")
     except SemaphoreExistsException:
         pass
@@ -30,8 +30,8 @@ def test2():
         raise
 
     # Then try to connect to an existing one
-    existing = HybridSpinSemaphore(b'test', CONNECT_TO_EXISTING)
-    existing_2 = HybridSpinSemaphore(b'test', CONNECT_OR_CREATE)
+    existing = HybridLock(b'test', CONNECT_TO_EXISTING)
+    existing_2 = HybridLock(b'test', CONNECT_OR_CREATE)
 
     # Make sure locking/unlocking one does the same to the other
     assert existing.get_value() == \
@@ -51,14 +51,14 @@ def test2():
 
     # Make sure we can't connect to it
     try:
-        HybridSpinSemaphore(b'test', CONNECT_TO_EXISTING)
+        HybridLock(b'test', CONNECT_TO_EXISTING)
         raise Exception("Shouldn't get here!")
     except NoSuchSemaphoreException:
         pass
 
 def test3():
     # Try killing one process, then reconnecting to the server
-    created = HybridSpinSemaphore(b'test', CREATE_NEW_OVERWRITE)
+    created = HybridLock(b'test', CREATE_NEW_OVERWRITE)
 
 
 test1()

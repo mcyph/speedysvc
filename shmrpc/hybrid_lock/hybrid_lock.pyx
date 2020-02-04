@@ -48,7 +48,7 @@ cdef long long get_current_time_ms() nogil:
 
 
 @cython.final
-cdef class HybridSpinSemaphore:
+cdef class HybridLock:
     cdef sem_t* _semaphore
     cdef int _cleaned_up
     cdef char* _spin_lock_char
@@ -136,7 +136,7 @@ cdef class HybridSpinSemaphore:
             # accessing the mmapped location
 
             try:
-                existing_semaphore = HybridSpinSemaphore(
+                existing_semaphore = HybridLock(
                     sem_loc, CONNECT_TO_EXISTING,
                     initial_value, permissions
                 )
@@ -242,7 +242,7 @@ cdef class HybridSpinSemaphore:
     cpdef int destroy(self) except -1:
         # Mutex destruction completely cleans it from system memory.
         if self._cleaned_up:
-            raise SemaphoreDestroyedException("WARNING: Already cleaned up in HybridSpinSemaphore.destroy()!")
+            raise SemaphoreDestroyedException("WARNING: Already cleaned up in HybridLock.destroy()!")
         self._cleaned_up = 1
 
         #printf("Destroying semaphore %s\n", self._sem_loc)
@@ -312,7 +312,7 @@ cdef class HybridSpinSemaphore:
 
     cpdef int lock(self, int timeout=-1, int spin=1) except -1:
         if self._spin_lock_char[0] == DESTROYED:
-            raise SemaphoreDestroyedException("lock called on destroyed HybridSpinSemaphore!")
+            raise SemaphoreDestroyedException("lock called on destroyed HybridLock!")
 
         # Use pthread calls for locking and unlocking.
         cdef int i

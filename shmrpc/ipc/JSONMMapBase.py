@@ -1,13 +1,13 @@
 import json
 from abc import ABC
 from struct import Struct
-from hybrid_lock import HybridSpinSemaphore, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE
+from hybrid_lock import HybridLock, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE
 from shmrpc.rpc.shared_memory.shared_params import get_mmap
 
 
 class JSONMMapBase(ABC):
     def __init__(self, port, create):
-        self.lock = HybridSpinSemaphore(
+        self.lock = HybridLock(
             f'sem_{port}_pids'.encode('ascii'),
             CREATE_NEW_OVERWRITE
             if create

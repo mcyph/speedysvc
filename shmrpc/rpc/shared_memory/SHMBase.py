@@ -1,5 +1,5 @@
 from struct import Struct
-from hybrid_lock import HybridSpinSemaphore, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE
+from hybrid_lock import HybridLock, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE
 from shmrpc.rpc.shared_memory.shared_params import get_mmap
 
 
@@ -42,11 +42,11 @@ class SHMBase:
         #if mode == CREATE_NEW_OVERWRITE:
         #    print("OVERWRITING:", port, pid)
 
-        client_lock = HybridSpinSemaphore(
+        client_lock = HybridLock(
             f'client_{port}_pid_{pid}'.encode('ascii'), mode,
             initial_value=1
         )
-        server_lock = HybridSpinSemaphore(
+        server_lock = HybridLock(
             f'server_{port}_pid_{pid}'.encode('ascii'), mode,
             initial_value=0
         )

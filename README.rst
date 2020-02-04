@@ -113,9 +113,9 @@ echoclient.py:
 
     if __name__ == '__main__':
         # client can be replaced with NetworkClient(host_address)
-        # to allow for remote connections. The bind_tcp ini setting
+        # to allow for remote connections. The tcp_bind ini setting
         # must be set in this case: see below.
-        client = SHMClient()
+        client = connect()
         methods = EchoClient(client)
         print("Received data:", methods.echo_raw(b"Lorem ipsum"))
 
@@ -124,6 +124,7 @@ service.ini:
 .. code-block:: ini
 
     [defaults]
+    #tcp_bind=127.0.0.1
     log_dir=/tmp/test_server_logs/
 
     [EchoServer]

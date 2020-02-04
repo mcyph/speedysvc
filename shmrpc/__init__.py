@@ -1,4 +1,4 @@
-from hybrid_lock import HybridSpinSemaphore
+from hybrid_lock import HybridLock
 from hybrid_lock import \
     CONNECT_OR_CREATE, CONNECT_TO_EXISTING, \
     CREATE_NEW_OVERWRITE, CREATE_NEW_EXCLUSIVE
@@ -13,3 +13,4 @@ from shmrpc.logger.std_logging.LoggerServer import LoggerServer
 from shmrpc.logger.std_logging.LoggerClient import LoggerClient
 from shmrpc.logger.time_series_data.ServiceTimeSeriesData import \
     ServiceTimeSeriesData
+from shmrpc.rpc.connect import connect
