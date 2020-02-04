@@ -26,11 +26,14 @@ Other capabilities:
 * A management web interface based on flask, showing logs/performance data for each
   service, and allowing stopping/starting services individually.
 
-    .. image:: docs/web_index_screenshot.png
+  .. image:: docs/web_index_screenshot.png
 
 * Multiple servers can serve to multiple clients: additional server worker processes
   can optionally start when overall CPU usage exceeds a certain %. This helps to work
-  around the often-cited GIL_ limitations of python.
+  around the often-cited GIL_ limitations of python. (Note: currently, only a single
+  connection to a service can be made for each client process, but I plan to remove
+  this limitation soon.)
+
 * Not much boilerplate code required, with the server only requiring an encoding type
   decorator, like ``@json_method``. Clients verify all their method names match with
   the server's. They copy the port/name from the server, so as to reduce the amount of
@@ -229,11 +232,14 @@ Reference
     # If you don't, a NetworkServer will not be created.
     tcp_bind=127.0.0.1
 
-    # The maximum number of worker processes
-    # Defaults to the number of CPU cores
-    max_proc_num=X
+    # The maximum number of worker processes. Defaults to the
+    # number of CPU cores when not specified.
+    # Some services which need exclusive access to a resource,
+    # e.g. write access to a SQLite database may need this to
+    # be set to 1 only.
+    max_proc_num=1
     # The minumum number of workers. Defaults to 1
-    min_proc_num=X
+    min_proc_num=1
     # Whether to wait for the service to boot before moving on to the next
     # entry: each entry is executed in sequential order if True
     wait_until_completed=True
