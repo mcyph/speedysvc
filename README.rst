@@ -25,6 +25,9 @@ Other capabilities:
 
 * A management web interface based on flask, showing logs/performance data for each
   service, and allowing stopping/starting services individually.
+
+    .. image:: docs/web_index_screenshot.png
+
 * Multiple servers can serve to multiple clients: additional server worker processes
   can optionally start when overall CPU usage exceeds a certain %. This helps to work
   around the often-cited GIL_ limitations of python.
