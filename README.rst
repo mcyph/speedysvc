@@ -94,7 +94,7 @@ echoclient.py:
 
 .. code-block:: python
 
-    from shmrpc import ClientMethodsBase, SHMClient
+    from shmrpc import ClientMethodsBase, connect
     from echoserver import EchoServer
 
     class EchoClient(ClientMethodsBase):
@@ -115,7 +115,8 @@ echoclient.py:
         # client can be replaced with NetworkClient(host_address)
         # to allow for remote connections. The tcp_bind ini setting
         # must be set in this case: see below.
-        client = connect()
+        client = connect(EchoServer, 'shm://')
+        #client = connect(EchoServer, 'tcp://127.0.0.1')
         methods = EchoClient(client)
         print("Received data:", methods.echo_raw(b"Lorem ipsum"))
 
