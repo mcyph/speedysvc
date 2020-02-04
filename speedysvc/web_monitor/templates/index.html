@@ -1,0 +1,36 @@
+{% from "service_macros.html" import service_status_table, console_log, overall_method_stats_html %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SHMRPC Service Web Monitor</title>
+
+    <script src="/static/chart.min.js"></script>
+    <script src="/static/AjaxRequest.js"></script>
+    <script src="/static/LineChart.js"></script>
+    <script src="/static/Services.js"></script>
+</head>
+<body style="font-family: monospace; font-size: 15px">
+
+<div style="width: 920px; padding: 10px; margin: 0 auto">
+    <h1>speedysvc monitor</h1>
+
+    <h2>Services</h2>
+    <div id="service_status_table_cont">
+        {{ service_status_table(LServices, add_links=True) }}
+    </div>
+
+    <h2>Calls Sorted by Total Time</h2>
+    <div id="overall_service_methods_cont">
+        {{ overall_method_stats_html(LOverallServiceMethods) }}
+    </div>
+
+    <h2>Console Log</h2>
+    {{ console_log(console_offset, console_text) }}
+</div>
+
+<script type="text/javascript">
+    new Services({{ services_json|tojson }});
+</script>
+
+</body>
+</html>

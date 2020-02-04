@@ -1,0 +1,28 @@
+{% from "service_macros.html" import service %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Network Tools Service Web Monitor</title>
+
+    <script src="/static/chart.min.js"></script>
+    <script src="/static/AjaxRequest.js"></script>
+    <script src="/static/LineChart.js"></script>
+    <script src="/static/Service.js"></script>
+</head>
+<body style="font-family: monospace; font-size: 15px">
+
+<div style="width: 920px; padding: 10px; margin: 0 auto">
+    <h1><a href="/">speedysvc monitor</a> / {{ service_name|e }}:{{ port }}</h1>
+
+    {{ service(DService) }}
+</div>
+
+<script type="text/javascript">
+    (function() {
+        const elm = document.getElementById(`service_cont_div_{{port}}`);
+        new Service({{ service_name|tojson }}, {{ port }}, elm);
+    })();
+</script>
+
+</body>
+</html>

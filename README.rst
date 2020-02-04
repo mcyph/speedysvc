@@ -46,14 +46,14 @@ Use pip:
 
 .. code-block:: bash
 
-    pip3 install git+https://github.com/mcyph/shmrpc/shmrpc.git
+    pip3 install git+https://github.com/mcyph/speedysvc/speedysvc.git
 
 Or install manually:
 
 .. code-block:: bash
 
-    git clone https://github.com/mcyph/shmrpc
-    cd shmrpc
+    git clone https://github.com/mcyph/speedysvc
+    cd speedysvc
     python setup.py build_ext --inplace
     python setup.py install
 
@@ -61,7 +61,8 @@ This module has only been tested on Linux (specifically Ubuntu 18.04 LTS),
 but should work on other Linuxes, and potentially some other POSIX-compliant
 systems. It may never work on Windows except for via the `Windows
 Subsystem for Linux`_ due to its reliance on POSIX named semaphores and shared
-memory.
+memory, but it might be possible to allow for Windows clients using
+NetworkClient (tcp).
 
 It has the following dependencies:
 
@@ -78,7 +79,7 @@ echoserver.py:
 
 .. code-block:: python
 
-    from shmrpc import ServerMethodsBase, raw_method, json_method
+    from speedysvc import ServerMethodsBase, raw_method, json_method
 
     class EchoServer(ServerMethodsBase):
         port = 5555
@@ -100,7 +101,7 @@ echoclient.py:
 
 .. code-block:: python
 
-    from shmrpc import ClientMethodsBase, connect
+    from speedysvc import ClientMethodsBase, connect
     from echoserver import EchoServer
 
     class EchoClient(ClientMethodsBase):
@@ -137,7 +138,7 @@ service.ini:
     [EchoServer]
     import_from=echoserver
 
-Then type ``python3 -m shmrpc.service service.ini &``
+Then type ``python3 -m speedysvc.service service.ini &``
 from the same directory to start the server; and
 ``python3 echoclient.py`` to test a connection to it.
 
