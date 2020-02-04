@@ -139,7 +139,7 @@ service.ini:
 
 Then type ``python3 -m shmrpc.service service.ini &``
 from the same directory to start the server; and
-``python3 test_client.py`` to test a connection to it.
+``python3 echoclient.py`` to test a connection to it.
 
 Implementation details
 ------------------------
