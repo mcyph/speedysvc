@@ -10,10 +10,9 @@ This module for python 3.6+ on Linux allows separating larger, more complex
 applications into smaller components (microservices). For example, you could 
 build a text-to-speech service, a fulltext search service,
 an optical character recognition service, etc. Then, you could 
-have web frontends or other clients communicate with these services. Each service 
-is started separately in individual processes and has individual logs so as 
-to be able to track down events and errors without being overwhelmed with 
-too much information. 
+have web frontends or other clients communicate with these services. 
+This can often require less RAM, as there is no need to load the components 
+in every web worker process.
 
 Unlike other similar modules for client-server communication
 (which typically use sockets or HTTP REST), this module uses local shared
@@ -29,7 +28,10 @@ or reduce worker processes as needed, depending on CPU usage. This helps
 to make sure server resources are more effectively utilised.
 
 There is a service management web interface, showing logs/performance data for each
-service, and allowing stopping/starting services individually:
+service, and allowing stopping/starting services individually.
+Each service is started separately in individual processes and has individual 
+logs so as to be able to track down events and errors without being overwhelmed 
+with too much information:
 
   .. image:: docs/web_index_screenshot.png
 
