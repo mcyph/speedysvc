@@ -19,19 +19,19 @@ Unlike other similar modules for client-server communication
 memory, which typically performs around 5-20 times faster with much lower latency.
 ``speedysvc`` servers can also be remotely communicated with over the network 
 using TCP sockets. A fast and efficient protocol that optionally compresses 
-traffic using snappy_/zlib minimises bandwidth.
+traffic using snappy_/zlib minimises bandwidth for remote connections.
 
 In order to work around limitations of python's `Global Interpreter Lock`_ 
 which normally restricts applications from using more than a single CPU core,
-services can have multiple worker processes. They optionally can create more 
-or reduce worker processes as needed, depending on CPU usage. This helps
+services can have multiple worker processes. They optionally can increase 
+or decrease worker processes as needed, depending on CPU usage. This helps
 to make sure server resources are more effectively utilised.
 
-There is a service management web interface, showing logs/performance data for each
-service, and allowing stopping/starting services individually.
-Each service is started separately in individual processes and has individual 
+There is a service management web interface that shows logs/performance data for each
+service and allows stopping/starting services individually.
+Each service is started separately in individual processes with individual 
 logs so as to be able to track down events and errors without being overwhelmed 
-with too much information:
+with too much information.
 
   .. image:: docs/web_index_screenshot.png
 
