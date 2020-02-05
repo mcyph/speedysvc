@@ -64,17 +64,13 @@ echoclient.py:
     from echoserver import EchoServer
 
     class EchoClient(ClientMethodsBase):
-        def __init__(self, client_provider):
-            ClientMethodsBase.__init__(self, client_provider)
-
         def echo_json(self, data):
             return self.send(EchoServer.echo_json, [data])
 
     if __name__ == '__main__':
         # Note: Replace 'shm://' with 'tcp://(host)' for remote services
-        client = connect(EchoServer, 'shm://')
-        methods = EchoClient(client)
-        print("Received data:", methods.echo_json("Hello World!"))
+        methods = EchoClient(connect(EchoServer, 'shm://'))
+        print(methods.echo_json("Hello World!"))
 
 service.ini:
 
