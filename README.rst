@@ -18,9 +18,9 @@ too much information.
 Unlike other similar modules for client-server communication
 (which typically use sockets or HTTP REST), this module uses local shared
 memory, which typically performs around 5-20 times faster with much lower latency.
-``speedysvc`` servers can also be remotely communicated with using TCP sockets,
-using a fast and efficient protocol that optionally compresses traffic with
-snappy_/zlib.
+``speedysvc`` servers can also be remotely communicated with over the network 
+using TCP sockets. A fast and efficient protocol that optionally compresses 
+traffic using snappy_/zlib minimises bandwidth.
 
 In order to work around limitations of python's `Global Interpreter Lock`_ 
 which normally restricts applications from using more than a single CPU core,
@@ -28,13 +28,13 @@ services can have multiple worker processes. They optionally can create more
 or reduce worker processes as needed, depending on CPU usage. This helps
 to make sure server resources are more effectively utilised.
 
-See also `Implementation Considerations`_ for more information on why 
-speedysvc has been designed in the way it has.
-
 There is a service management web interface, showing logs/performance data for each
 service, and allowing stopping/starting services individually:
 
   .. image:: docs/web_index_screenshot.png
+
+See also `Implementation Considerations`_.
+
 
 Requirements
 -------------------
