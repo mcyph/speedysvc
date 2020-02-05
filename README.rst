@@ -7,11 +7,10 @@ About
     breaking changes to the API.
 
 This module for python 3.6+ on Linux allows separating larger, more complex 
-applications into smaller components (microservices). 
-
-For example, you could have a text-to-speech service, a fulltext service,
+applications into smaller components (microservices). For example, you could 
+have a text-to-speech service, a fulltext service,
 a machine learning-based part-of-speech tagger..building many kinds of 
-client-server software services is straightforward. Each service is started 
+client-server services is straightforward. Each service is started 
 separately in individual processes and has individual logs so as to be able 
 to track down events and errors without being overwhelmed with too much 
 information. 
