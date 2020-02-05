@@ -8,8 +8,8 @@ About
 
 This module for python 3.6+ on Linux allows separating larger, more complex 
 applications into smaller components (microservices). For example, you could 
-build a text-to-speech service, a fulltext service,
-a machine learning-based part-of-speech tagger service etc. Then, you could 
+build a text-to-speech service, a fulltext search service,
+an optical character recognition service, etc. Then, you could 
 have web or other frontends communicate with these services. Each service 
 is started separately in individual processes and has individual logs so as 
 to be able to track down events and errors without being overwhelmed with 
