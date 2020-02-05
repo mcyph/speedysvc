@@ -15,18 +15,18 @@ is started separately in individual processes and has individual logs so as
 to be able to track down events and errors without being overwhelmed with 
 too much information. 
 
-In order to work around limitations of python's `Global Interpreter Lock`_ 
-which normally restricts applications from using more than a single CPU core,
-services can have multiple worker processes. They optionally can create more 
-or reduce worker processes as needed, depending on CPU usage. This helps
-to make sure server resources are more effectively utilised.
-
 Unlike other similar modules for client-server communication
 (which typically use sockets or HTTP REST), this module uses local shared
 memory, which typically performs around 5-20 times faster with much lower latency.
 ``speedysvc`` servers can also be remotely communicated with using TCP sockets,
 using a fast and efficient protocol that optionally compresses traffic with
 snappy_/zlib.
+
+In order to work around limitations of python's `Global Interpreter Lock`_ 
+which normally restricts applications from using more than a single CPU core,
+services can have multiple worker processes. They optionally can create more 
+or reduce worker processes as needed, depending on CPU usage. This helps
+to make sure server resources are more effectively utilised.
 
 There is a service management web interface, showing logs/performance data for each
 service, and allowing stopping/starting services individually:
