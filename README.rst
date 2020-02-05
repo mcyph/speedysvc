@@ -6,10 +6,10 @@ About
     is still under active development. There are likely bugs and there will be
     breaking changes to the API.
 
-This module allows separating bigger, more complex applications into smaller
-components (microservices). Services can have multiple worker processes,
-optionally scaling up or down depending on CPU usage. This works around
-limitations of python's `Global Interpreter Lock`_, which normally restricts
+This module for python 3.6+ on Linux allows separating bigger, more complex 
+applications into smaller components (microservices). Services can have multiple 
+worker processes, optionally scaling up or down depending on CPU usage. This works 
+around limitations of python's `Global Interpreter Lock`_, which normally restricts
 applications from using more than a single CPU core.
 
 Unlike other similar modules for client-server communication
