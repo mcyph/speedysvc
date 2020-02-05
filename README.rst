@@ -18,8 +18,8 @@ Unlike other similar modules for client-server communication
 (which typically use sockets or HTTP REST), this module uses local shared
 memory, which typically performs around 5-20 times faster with much lower latency.
 ``speedysvc`` servers can also be remotely communicated with over the network 
-using TCP sockets. A fast and efficient protocol that optionally compresses 
-traffic using snappy_/zlib minimises bandwidth for remote connections.
+using TCP sockets. The TCP protocol is fast and efficient, and optionally compresses 
+traffic using snappy_/zlib minimises bandwidth.
 
 In order to work around limitations of python's `Global Interpreter Lock`_ 
 which normally restricts applications from using more than a single CPU core,
