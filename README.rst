@@ -15,8 +15,8 @@ This can often require less RAM, as there is no need to load the components
 in every web worker process.
 
 Unlike other similar modules for client-server communication
-(which typically use sockets or HTTP REST), this module uses local shared
-memory, which typically performs around 5-20 times faster with much lower latency.
+(which typically use sockets or HTTP REST), this module uses local `shared
+memory`_, which typically performs around 5-20 times faster with much lower latency.
 ``speedysvc`` servers can also be remotely communicated with over the network 
 using TCP sockets. The TCP protocol is fast and efficient, and optionally compresses 
 traffic using snappy_/zlib minimises bandwidth.
@@ -149,3 +149,4 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 .. _TODO: https://github.com/mcyph/speedysvc/wiki/TODO
 .. _Global Interpreter Lock: https://wiki.python.org/moin/GlobalInterpreterLock
 .. _snappy: https://github.com/google/snappy
+.. _shared memory: https://developer.ibm.com/articles/au-spunix_sharedmemory/
