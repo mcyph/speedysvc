@@ -32,6 +32,13 @@ Requirements
 * Python: 3.6 or above
 * Module Dependencies: cython, msgpack, posix_ipc, python-snappy, flask, psutil
 
+Install
+-------------------
+
+.. code-block:: bash
+
+    pip3 install git+https://github.com/mcyph/speedysvc/speedysvc.git
+
 Quick Example
 -------------------
 
@@ -92,7 +99,6 @@ Then, type ``python3 echoclient.py`` to test a connection to the server.
 See Also
 --------
 
-* `Detailed feature list`_
 * `Install/Dependencies`_
 * `Example`_
 * `Client/Server API Reference`_
