@@ -322,6 +322,7 @@ cdef class HybridLock:
 
         # Unfortunately, this code seems to cause random
         # instability in some cases, for reasons I'm not sure!
+        spin = 0
         if spin:
             #with nogil:  # NOTE ME: Uncommenting this line might increase performance,
                           # at a cost of potentially having one process consuming many cores!
