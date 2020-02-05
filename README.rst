@@ -2,18 +2,18 @@
 About
 ===========================
 
-    NOTE: ``speedysvc``'s status is still alpha - I'm using it in my projects, but
-    is still under active development. There are likely bugs and there will be
-    breaking changes to the API.
+    NOTE: ``speedysvc``'s status is still alpha - I'm using it in my project 
+    https://langlynx.com, but is still under active development. There are 
+    likely bugs and there will be breaking changes to the API.
 
 This module for python 3.6+ on Linux allows separating larger, more complex 
 applications into smaller components (microservices). For example, you could 
-have a text-to-speech service, a fulltext service,
-a machine learning-based part-of-speech tagger service.., and then have a web 
-frontend communicate with each of these services. Each service is started 
-separately in individual processes and has individual logs so as to be able 
-to track down events and errors without being overwhelmed with too much 
-information. 
+build a text-to-speech service, a fulltext service,
+a machine learning-based part-of-speech tagger service etc. Then, you could 
+have web or other frontends communicate with these services. Each service 
+is started separately in individual processes and has individual logs so as 
+to be able to track down events and errors without being overwhelmed with 
+too much information. 
 
 In order to work around limitations of python's `Global Interpreter Lock`_ 
 which normally restricts applications from using more than a single CPU core,
