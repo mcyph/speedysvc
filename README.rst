@@ -11,9 +11,10 @@ applications into smaller components (microservices).
 
 For example, you could have a text-to-speech service, a fulltext service,
 a machine learning-based part-of-speech tagger..building many kinds of 
-client-server software services is easy. Each service is started separately 
-in individual processes and has individual logs so as to be able to track down 
-events and errors without being overwhelmed with too much information. 
+client-server software services is straightforward. Each service is started 
+separately in individual processes and has individual logs so as to be able 
+to track down events and errors without being overwhelmed with too much 
+information. 
 
 In order to work around limitations of python's `Global Interpreter Lock`_ 
 which normally restricts applications from using more than a single CPU core,
