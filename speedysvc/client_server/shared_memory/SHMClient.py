@@ -22,14 +22,16 @@ def _monitor_for_dead_conns():
             for client in _LSHMClients:
                 if client.client_lock.get_destroyed() or client.server_lock.get_destroyed():
                     print(f"Locks destroyed - trying to recreate client connection: "
-                          f"{client.server_methods.__dict__.get('name')}:{client.server_methods.__dict__.get('port')}")
+                          f"{client.server_methods.__dict__.get('name')}:"
+                          f"{client.server_methods.__dict__.get('port')}")
                     client.create_connections()
 
                 try:
                     client.send(b'heartbeat', b'echo_me', timeout=5)
                 except:
                     print(f"[SHMClient PID {getpid()}] Heartbeat failed - trying to recreate client connection: "
-                          f"{client.server_methods.__dict__.get('name')}:{client.server_methods.__dict__.get('port')}")
+                          f"{client.server_methods.__dict__.get('name')}:"
+                          f"{client.server_methods.__dict__.get('port')}")
                     client.create_connections()
         except:
             import traceback
@@ -37,10 +39,17 @@ def _monitor_for_dead_conns():
         time.sleep(10)
 
 
-# Make sure more than one lock can't be
-# created for a given port per process(!)
-_DLocks = {}
-_process_wide_lock = _thread.allocate_lock()
+_qid_lock = _thread.allocate_lock()
+_DQIds = {}
+
+def new_qid(port):
+    # The "q" in qid doesn't stand for anything
+    # it just means it's a "sub"-id within a p(rocess)id
+    with _qid_lock:
+        if not port in _DQIds:
+            _DQIds[port] = 0
+        _DQIds[port] += 1
+        return _DQIds[port]
 
 
 class SHMClient(ClientProviderBase, SHMBase):
@@ -60,26 +69,17 @@ class SHMClient(ClientProviderBase, SHMBase):
         _LSHMClients.append(self)
 
     def create_connections(self):
-        with _process_wide_lock:
-            self.pids_array = pids_array = JSONMMapList(self.port, create=False)
+        self.qid = qid = new_qid(self.port)
+        self.pids_array = pids_array = JSONMMapList(self.port, create=False)
 
-            if not self.port in _DLocks:
-                _mmap = self.create_pid_mmap(2048, self.port, getpid())
-                self.client_lock, self.server_lock = self.get_pid_semaphores(
-                    self.port, getpid(), CREATE_NEW_OVERWRITE
-                )
-                _DLocks[self.port] = [_mmap, self.client_lock, self.server_lock]
+        self.mmap = self.create_pid_mmap(2048, self.port, getpid(), qid)
+        self.client_lock, self.server_lock = self.get_pid_semaphores(
+            self.port, getpid(), qid, CREATE_NEW_OVERWRITE
+        )
 
-                # Make myself known to the server (my PID)
-                with pids_array:
-                    pids_array.append(getpid())
-
-            else:
-                # The way things are currently implemented,
-                # can only have a request per client at once.
-                # OPEN ISSUE: Should this be changed to allow multiple
-                # client connections to servers, so as to work around the GIL???? ============================================================
-                _, self.client_lock, self.server_lock = _DLocks[self.port]
+        # Make myself known to the server (my PID)
+        with pids_array:
+            pids_array.append((getpid(), qid))
 
     def get_server_methods(self):
         return self.server_methods
@@ -109,7 +109,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         self.client_lock.lock(timeout=timeout, spin=self.use_spinlock)
         try:
             # Next line must be in critical area!
-            mmap = _DLocks[self.port][0]
+            mmap = self.mmap
 
             # Send the result to the server!
             if len(encoded_request) >= (len(mmap)-1):
@@ -117,10 +117,10 @@ class SHMClient(ClientProviderBase, SHMBase):
                 #      f"least {len(encoded_request) + 1} bytes")
                 old_mmap = mmap
                 mmap = self.create_pid_mmap(
-                    len(encoded_request) + 1, self.port, getpid()
+                    len(encoded_request) + 1, self.port, getpid(), self.qid
                 )
                 mmap[0] = old_mmap[0]
-                _DLocks[self.port][0] = mmap
+                self.mmap = mmap
                 old_mmap[0] = INVALID
                 #print(f"Client: New mmap size is {len(mmap)} bytes "
                 #      f"for encoded_request length {len(encoded_request)}")
@@ -159,8 +159,8 @@ class SHMClient(ClientProviderBase, SHMBase):
                     elif mmap[0] == INVALID:
                         #print(f"Client: memory map has been marked as invalid")
                         prev_len = len(mmap)
-                        mmap = self.connect_to_pid_mmap(self.port, getpid())
-                        _DLocks[self.port][0] = mmap
+                        mmap = self.connect_to_pid_mmap(self.port, getpid(), self.qid)
+                        self.mmap = mmap
 
                         # Make sure it actually is larger than the previous one,
                         # so as to reduce the risk of an infinite loop
