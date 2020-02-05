@@ -10,7 +10,7 @@ This module for python 3.6+ on Linux allows separating larger, more complex
 applications into smaller components (microservices). For example, you could 
 build a text-to-speech service, a fulltext search service,
 an optical character recognition service, etc. Then, you could 
-have web or other frontends communicate with these services. Each service 
+have web frontends or other clients communicate with these services. Each service 
 is started separately in individual processes and has individual logs so as 
 to be able to track down events and errors without being overwhelmed with 
 too much information. 
@@ -27,6 +27,9 @@ which normally restricts applications from using more than a single CPU core,
 services can have multiple worker processes. They optionally can create more 
 or reduce worker processes as needed, depending on CPU usage. This helps
 to make sure server resources are more effectively utilised.
+
+See also `Implementation Considerations`_ for more information on why 
+speedysvc has been designed in the way it has.
 
 There is a service management web interface, showing logs/performance data for each
 service, and allowing stopping/starting services individually:
@@ -46,6 +49,8 @@ Install
 .. code-block:: bash
 
     pip3 install git+https://github.com/mcyph/speedysvc/speedysvc.git
+
+See also `Install/Dependencies`_.
 
 Quick Example
 -------------------
@@ -94,20 +99,19 @@ service.ini:
     max_proc_num=3
     min_proc_num=3
 
-Then type ``python3 -m speedysvc.service service.ini`` & from the same directory
+Then type ``python3 -m speedysvc.service service.ini &`` from the same directory
 to start the server. The web management interface will start on
 http://127.0.0.1:5155, where you can monitor the status and logs of the server.
 
 Then, type ``python3 echoclient.py`` to test a connection to the server.
 
+See `Example`_ for a a more complex example.
+
 See Also
 --------
 
-* `Install/Dependencies`_
-* `Example`_
 * `Client/Server API Reference`_
 * `Hybrid Spin Semaphore`_
-* `Implementation Considerations`_
 * `TODO`_
 
 License
