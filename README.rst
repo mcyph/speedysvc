@@ -7,15 +7,24 @@ About
     breaking changes to the API.
 
 This module for python 3.6+ on Linux allows separating bigger, more complex 
-applications into smaller components (microservices). Services can have multiple 
-worker processes, optionally scaling up or down depending on CPU usage. This works 
-around limitations of python's `Global Interpreter Lock`_, which normally restricts
-applications from using more than a single CPU core.
+applications into smaller components (microservices). 
+
+For example, you could have a text-to-speech service, a fulltext service,
+a machine learning-based part-of-speech tagger..just about any kind of software 
+service you could think of that makes sense in a client-server setup. 
+Each service is started separately in individual
+processes and has individual logs so as to be able to track down events and 
+errors without being overwhelmed with too much information. 
+
+In order to work around limitations of python's `Global Interpreter Lock`_, 
+which normally restricts applications from using more than a single CPU core,
+services can have multiple worker processes. They optionally can create more 
+or reduce worker processes as needed, depending on CPU usage. This helps
+to make sure server resources are more effectively utilised.
 
 Unlike other similar modules for client-server communication
 (which typically use sockets or HTTP REST), this module uses local shared
 memory, which typically performs around 5-20 times faster with much lower latency.
-
 Speedysvc servers can also be remotely communicated with using TCP sockets,
 using a fast and efficient protocol that optionally compresses traffic with
 snappy_/zlib.
