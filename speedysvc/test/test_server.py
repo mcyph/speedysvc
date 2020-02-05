@@ -1,4 +1,4 @@
-from speedysvc.rpc.base_classes.ServerMethodsBase import \
+from speedysvc.client_server.base_classes.ServerMethodsBase import \
     ServerMethodsBase
 from speedysvc.rpc_decorators import \
     json_method, raw_method, pickle_method, \
@@ -49,9 +49,9 @@ class TestServerMethods(ServerMethodsBase):
 if __name__ == '__main__':
     import multiprocessing
     from time import sleep
-    from speedysvc.rpc.network.NetworkServer import \
+    from speedysvc.client_server.network.NetworkServer import \
         NetworkServer
-    from speedysvc.rpc.shared_memory.SHMServer import SHMServer
+    from speedysvc.client_server.shared_memory.SHMServer import SHMServer
 
     network_server = NetworkServer(TestServerMethods)
 

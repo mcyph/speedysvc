@@ -4,8 +4,8 @@ import socket
 from struct import Struct
 from speedysvc.toolkit.documentation.copydoc import copydoc
 
-from speedysvc.rpc.base_classes.ClientProviderBase import ClientProviderBase
-from speedysvc.rpc.network.consts import len_packer, response_packer
+from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
+from speedysvc.client_server.network.consts import len_packer, response_packer
 from speedysvc.compression.compression_types import snappy_compression
 
 

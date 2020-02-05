@@ -12,7 +12,7 @@ from multiprocessing import cpu_count
 from speedysvc.kill_pid_and_children import kill_pid_and_children
 
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
-from speedysvc.rpc.network.NetworkServer import NetworkServer
+from speedysvc.client_server.network.NetworkServer import NetworkServer
 
 
 MONITOR_PROCESS_EVERY_SECS = 5
@@ -292,7 +292,7 @@ class MultiProcessServer:
             #'tcp_allow_insecure_serialisation': self.tcp_allow_insecure_serialisation
         }
         if True:
-            from speedysvc.service_managers.multi_process_manager._service_worker import _service_worker
+            from speedysvc.multi_process_manager._service_worker import _service_worker
             from os import fork
 
             DArgs['server_methods'] = getattr(
@@ -307,7 +307,7 @@ class MultiProcessServer:
         else:
             proc = subprocess.Popen([
                 'python3', '-m',
-                'speedysvc.service_managers.multi_process_manager._service_worker',
+                'speedysvc.multi_process_manager._service_worker',
                 json.dumps(DArgs)
             ], env=DEnv)
             pid = proc.pid

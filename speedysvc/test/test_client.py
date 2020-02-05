@@ -1,6 +1,6 @@
 import timeit
-from speedysvc.rpc.base_classes.ClientMethodsBase import ClientMethodsBase
-from speedysvc.rpc.test_server import TestServerMethods as srv
+from speedysvc.client_server.base_classes.ClientMethodsBase import ClientMethodsBase
+from speedysvc.client_server.test_server import TestServerMethods as srv
 
 
 class TestClientMethods(ClientMethodsBase):
@@ -27,9 +27,9 @@ import numpy
 
 if __name__ == '__main__':
     import multiprocessing
-    from speedysvc.rpc.network.NetworkClient import NetworkClient
-    from speedysvc.rpc.shared_memory.SHMClient import SHMClient
-    from speedysvc.rpc.connect import connect
+    from speedysvc.client_server.network.NetworkClient import NetworkClient
+    from speedysvc.client_server.shared_memory.SHMClient import SHMClient
+    from speedysvc.client_server.connect import connect
     MSG_SIZE = 5000 # HACK!
 
     def run_test():

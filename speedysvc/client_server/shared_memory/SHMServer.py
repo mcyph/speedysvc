@@ -1,11 +1,11 @@
 import time
 import traceback
 from _thread import start_new_thread
-from speedysvc.rpc.base_classes.ServerProviderBase import ServerProviderBase
+from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
 from speedysvc.ipc.JSONMMapList import JSONMMapList
-from speedysvc.rpc.shared_memory.SHMBase import SHMBase
-from speedysvc.rpc.shared_memory.shared_params import \
+from speedysvc.client_server.shared_memory.SHMBase import SHMBase
+from speedysvc.client_server.shared_memory.shared_params import \
     PENDING, INVALID, SERVER, CLIENT
 from hybrid_lock import CONNECT_TO_EXISTING, SemaphoreDestroyedException
 
@@ -123,8 +123,11 @@ class SHMServer(SHMBase, ServerProviderBase):
                 # and should propagate the error, rather than forever logging
                 raise
             except:
-                import traceback
-                traceback.print_exc()
+                #import traceback
+                #traceback.print_exc()
+                # There's error handling for calls themselves, so may be an
+                # AssertionError. If this is the case, perhaps the client
+                raise
 
     def handle_command(self, mmap, server_lock, pid, do_spin):
         try:

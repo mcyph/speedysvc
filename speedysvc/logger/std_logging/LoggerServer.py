@@ -2,7 +2,7 @@ import time
 import psutil
 from _thread import allocate_lock, start_new_thread
 
-from speedysvc.rpc.shared_memory.SHMServer import SHMServer
+from speedysvc.client_server.shared_memory.SHMServer import SHMServer
 from speedysvc.rpc_decorators import raw_method, json_method
 from speedysvc.logger.std_logging.log_entry_types import \
     dict_to_log_entry, STDERR, STDOUT

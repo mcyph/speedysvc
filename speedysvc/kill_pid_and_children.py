@@ -55,9 +55,9 @@ def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
             try:
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
-                sigint_timeout = 0.1
+                sigint_timeout = 0.01
                 continue
-            sigint_timeout = 0.1
+            sigint_timeout = 0.01
 
             try:
                 wait_for_pid(pid, timeout=sigterm_timeout)
@@ -67,6 +67,6 @@ def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
                 try:
                     os.kill(pid, signal.SIGKILL)
                 except ProcessLookupError:
-                    sigterm_timeout = 0.1
+                    sigterm_timeout = 0.01
                     continue
-                sigterm_timeout = 0.1
+                sigterm_timeout = 0.01

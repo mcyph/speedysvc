@@ -2,7 +2,7 @@ import json
 from abc import ABC
 from struct import Struct
 from hybrid_lock import HybridLock, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE
-from speedysvc.rpc.shared_memory.shared_params import get_mmap
+from speedysvc.client_server.shared_memory.shared_params import get_mmap
 
 
 class JSONMMapBase(ABC):

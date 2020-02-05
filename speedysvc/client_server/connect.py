@@ -2,8 +2,8 @@ import traceback
 
 from hybrid_lock import NoSuchSemaphoreException, SemaphoreDestroyedException
 from speedysvc.compression.compression_types import snappy_compression
-from speedysvc.rpc.shared_memory.SHMClient import SHMClient
-from speedysvc.rpc.network.NetworkClient import NetworkClient
+from speedysvc.client_server.shared_memory.SHMClient import SHMClient
+from speedysvc.client_server.network.NetworkClient import NetworkClient
 
 
 def connect(server_methods, address='shm://',

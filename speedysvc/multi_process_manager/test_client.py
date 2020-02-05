@@ -1,8 +1,8 @@
 import time
 import _thread
 import random
-from speedysvc.rpc.base_classes.ClientMethodsBase import ClientMethodsBase
-from speedysvc.service_managers.multi_process_manager.test_server import \
+from speedysvc.client_server.base_classes.ClientMethodsBase import ClientMethodsBase
+from speedysvc.multi_process_manager.test_server import \
     TestServerMethods as srv
 
 
@@ -14,8 +14,8 @@ class TestClientMethods(ClientMethodsBase):
 
 
 if __name__ == '__main__':
-    from speedysvc.rpc.network.NetworkClient import NetworkClient
-    from speedysvc.rpc.shared_memory.SHMClient import SHMClient
+    from speedysvc.client_server.network.NetworkClient import NetworkClient
+    from speedysvc.client_server.shared_memory.SHMClient import SHMClient
     from _thread import start_new_thread
 
     def fn():

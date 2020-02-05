@@ -6,8 +6,8 @@ import traceback
 from _thread import allocate_lock, start_new_thread
 
 from speedysvc.logger.std_logging.LoggerServer import LoggerServer
-from speedysvc.rpc.shared_memory.SHMClient import SHMClient
-from speedysvc.rpc.base_classes.ClientMethodsBase import ClientMethodsBase
+from speedysvc.client_server.shared_memory.SHMClient import SHMClient
+from speedysvc.client_server.base_classes.ClientMethodsBase import ClientMethodsBase
 from speedysvc.logger.std_logging.log_entry_types import \
     NOTSET, DEBUG, INFO, ERROR, WARNING, CRITICAL, STDOUT, STDERR
 

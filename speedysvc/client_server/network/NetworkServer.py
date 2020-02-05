@@ -2,9 +2,9 @@ import time
 import socket
 from _thread import start_new_thread
 
-from speedysvc.rpc.shared_memory.SHMClient import SHMClient
-from speedysvc.rpc.base_classes.ServerProviderBase import ServerProviderBase
-from speedysvc.rpc.network.consts import len_packer, response_packer
+from speedysvc.client_server.shared_memory.SHMClient import SHMClient
+from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
+from speedysvc.client_server.network.consts import len_packer, response_packer
 from speedysvc.compression.NullCompression import NullCompression
 from speedysvc.serialisation.MarshalSerialisation import MarshalSerialisation
 from speedysvc.serialisation.PickleSerialisation import PickleSerialisation

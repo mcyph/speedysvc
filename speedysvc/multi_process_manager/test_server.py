@@ -1,11 +1,11 @@
-from speedysvc.logger.LoggerServer import LoggerServer
-from speedysvc.rpc.base_classes.ServerMethodsBase import \
+from speedysvc.logger.std_logging.LoggerServer import LoggerServer
+from speedysvc.client_server.base_classes.ServerMethodsBase import \
     ServerMethodsBase
-from speedysvc.rpc.network.NetworkServer import NetworkServer
-from speedysvc.rpc.shared_memory.SHMServer import SHMServer
-from speedysvc.service_managers.multi_process_manager.MultiProcessManager import \
+from speedysvc.client_server.network.NetworkServer import NetworkServer
+from speedysvc.client_server.shared_memory.SHMServer import SHMServer
+from speedysvc.multi_process_manager.MultiProcessManager import \
     MultiProcessServer
-from speedysvc.logger.ServiceTimeSeriesData import ServiceTimeSeriesData
+from speedysvc.logger.time_series_data.ServiceTimeSeriesData import ServiceTimeSeriesData
 from speedysvc.rpc_decorators import pickle_method
 from speedysvc.toolkit.io.make_dirs import make_dirs
 

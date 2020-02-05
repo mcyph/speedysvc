@@ -37,7 +37,7 @@ cdef char UNLOCKED = 1
 cdef char DESTROYED = 127
 
 
-cdef long long get_current_time_ms() nogil:
+cdef long long get_current_time_ms():  # TODO: DOES nogil HERE CAUSE INSTABILITY?
     # NOTE: This function may not be portable!
     cdef timespec ts
     cdef long long current
@@ -320,6 +320,8 @@ cdef class HybridLock:
         cdef long long from_t = get_current_time_ms()
         cdef timespec ts
 
+        # Unfortunately, this code seems to cause random
+        # instability in some cases, for reasons I'm not sure!
         if spin:
             #with nogil:  # NOTE ME: Uncommenting this line might increase performance,
                           # at a cost of potentially having one process consuming many cores!
@@ -328,6 +330,7 @@ cdef class HybridLock:
                 # (minimum 0.5ms) so doesn't (necessarily?) make sense to
                 # consume more time busy waiting
                 if get_current_time_ms()-from_t > 6:
+                    #printf('TIME SLICE REACHED: %lld\n', get_current_time_ms())
                     break
                 elif self._spin_lock_char[0] == UNLOCKED:
                     break

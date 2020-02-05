@@ -1,13 +1,15 @@
 import time
 import _thread
 from os import getpid
+from ast import literal_eval
 from hybrid_lock import CREATE_NEW_OVERWRITE
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
-from speedysvc.rpc.shared_memory.SHMBase import SHMBase
-from speedysvc.rpc.shared_memory.shared_params import \
+from speedysvc.client_server.shared_memory.SHMBase import SHMBase
+from speedysvc.client_server.shared_memory.shared_params import \
     PENDING, INVALID, SERVER, CLIENT
 from speedysvc.ipc.JSONMMapList import JSONMMapList
-from speedysvc.rpc.base_classes.ClientProviderBase import ClientProviderBase
+from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
+from speedysvc.toolkit.exceptions.exception_map import DExceptions
 
 
 _monitor_started = [False]
@@ -20,14 +22,14 @@ def _monitor_for_dead_conns():
             for client in _LSHMClients:
                 if client.client_lock.get_destroyed() or client.server_lock.get_destroyed():
                     print(f"Locks destroyed - trying to recreate client connection: "
-                          f"{client.server_methods.name}:{client.server_methods.port}")
+                          f"{client.server_methods.__dict__.get('name')}:{client.server_methods.__dict__.get('port')}")
                     client.create_connections()
 
                 try:
                     client.send(b'heartbeat', b'echo_me', timeout=5)
                 except:
                     print(f"[SHMClient PID {getpid()}] Heartbeat failed - trying to recreate client connection: "
-                          f"{client.server_methods.name}:{client.server_methods.port}")
+                          f"{client.server_methods.__dict__.get('name')}:{client.server_methods.__dict__.get('port')}")
                     client.create_connections()
         except:
             import traceback
@@ -186,6 +188,17 @@ class SHMClient(ClientProviderBase, SHMBase):
         if response_status == b'+':
             return serialiser.loads(response_data)
         elif response_status == b'-':
-            raise Exception(response_data)
+            response_data = response_data[1:].decode('utf-8', errors='replace')
+            exc_type, remainder = response_data[:-1].split('(')
+            try:
+                # Try to convert to python types the arguments (safely)
+                # If we can't, it's not the end of the world
+                remainder = literal_eval(remainder)
+            except:
+                pass
+            if exc_type in DExceptions:
+                raise DExceptions[exc_type](remainder)
+            else:
+                raise Exception(response_data)
         else:
             raise Exception("Unknown status response %s" % response_status)

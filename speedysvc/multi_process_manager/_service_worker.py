@@ -7,8 +7,8 @@ from sys import argv
 from os import getpid
 
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
-from speedysvc.rpc.network.NetworkServer import NetworkServer
-from speedysvc.rpc.shared_memory.SHMServer import SHMServer
+from speedysvc.client_server.network.NetworkServer import NetworkServer
+from speedysvc.client_server.shared_memory.SHMServer import SHMServer
 
 
 def _service_worker(server_methods):
