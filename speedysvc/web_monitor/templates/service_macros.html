@@ -13,7 +13,7 @@
 {% macro service_status_table(LServiceDicts, add_links=False) %}
     <div class="status_table_cont_div">
         <table>
-            <tr>
+            <thead><tr>
                 <th>Service</th>
                 <th>Port</th>
                 <th>Implementations</th>
@@ -21,7 +21,7 @@
                 <th>Physical RAM (MB)</th>
                 <th>CPU</th>
                 <th>Workers</th>
-            </tr>
+            </tr></thead>
             {% for DService in LServiceDicts %}
                 {{ service_status_row(DService, add_links) }}
             {% endfor %}
@@ -54,13 +54,13 @@
 
 {% macro overall_method_stats_html(LMethodStats) %}
     <table>
-        <tr>
+        <thead><tr>
             <th>Service</th>
             <th>Method Name</th>
             <th>Total Calls</th>
             <th>Total Call Time</th>
             <th>Average Call Time</th>
-        </tr>
+        </tr></thead>
         {% for port, svc, method_name, num_calls, avg_call_time, total_time in LMethodStats %}
             <tr>
                 <td><a href="/service_info?port={{ port }}">{{ svc }}</a></td>
@@ -82,13 +82,13 @@
         {{ service_status_table([DService]) }}
 
         <h2>Time Series Data</h2>
-        <div class="cpu_chart" style="float: left"
+        <div class="cpu_chart" style="float: left; margin-bottom: 15px"
             ><canvas width="300" height="200"></canvas>
         </div>
-        <div class="ram_chart" style="float: left"
+        <div class="ram_chart" style="float: left; margin-bottom: 15px"
             ><canvas width="300" height="200"></canvas>
         </div>
-        <div class="io_chart" style="float: left"
+        <div class="io_chart" style="float: left; margin-bottom: 15px"
             ><canvas width="300" height="200"></canvas>
         </div>
 
@@ -105,12 +105,12 @@
 
 {% macro method_stats_html(LMethodStats) %}
     <table>
-        <tr>
+        <thead><tr>
             <th>Method Name</th>
             <th>Total Calls</th>
             <th>Total Call Time</th>
             <th>Average Call Time</th>
-        </tr>
+        </tr></thead>
         {% for method_name, num_calls, avg_call_time, total_time in LMethodStats %}
             <tr>
                 <td>{{ method_name }}</td>

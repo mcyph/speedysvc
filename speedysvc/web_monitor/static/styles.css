@@ -1,0 +1,18 @@
+table {
+  border: 0 solid #000000;
+  border-collapse: collapse;
+}
+table td, table th {
+  border: 1px solid #EEEEEE;
+  padding: 5px 8px;
+}
+table thead {
+  background: #EEEEEE;
+  background: linear-gradient(to bottom, #f2f2f2 0%, #efefef 66%, #EEEEEE 100%);
+  border-bottom: 1px solid #000000;
+}
+table thead th {
+  font-weight: bold;
+  color: #000000;
+  text-align: left;
+}
