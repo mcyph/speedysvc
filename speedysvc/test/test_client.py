@@ -1,6 +1,6 @@
 import timeit
 from speedysvc.client_server.base_classes.ClientMethodsBase import ClientMethodsBase
-from speedysvc.client_server.test_server import TestServerMethods as srv
+from speedysvc.test.test_server import TestServerMethods as srv
 
 
 class TestClientMethods(ClientMethodsBase):

@@ -44,28 +44,3 @@ class TestServerMethods(ServerMethodsBase):
     #@arrow_method
     #def test_arrow_method(self, data):
     #    return data
-
-
-if __name__ == '__main__':
-    import multiprocessing
-    from time import sleep
-    from speedysvc.client_server.network.NetworkServer import \
-        NetworkServer
-    from speedysvc.client_server.shared_memory.SHMServer import SHMServer
-
-    network_server = NetworkServer(TestServerMethods)
-
-    def run_me(init_resources):
-        methods = TestServerMethods()
-        provider1 = SHMServer()(methods, init_resources=init_resources)
-        provider2 = network_server(methods)
-        while 1: sleep(10)
-
-    for x in range(1):
-        p = multiprocessing.Process(target=run_me, args=(not x,))
-        p.start()
-        if not x:
-            sleep(2)
-
-    while 1:
-        sleep(10)
