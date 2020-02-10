@@ -25,7 +25,9 @@ In order to work around limitations of python's `Global Interpreter Lock`_
 which normally restricts applications from using more than a single CPU core,
 services can have multiple worker processes. They optionally can increase 
 or decrease worker processes as needed, depending on CPU usage. This helps
-to make sure server resources are more effectively utilised.
+to make sure server resources are more effectively used. While this is possible
+with the ``multiprocessing`` module, ``multiprocessing`` uses ``pipe2`` on Linux for 
+communication between processes which is much slower than using shared memory.
 
 There is a service management web interface that shows logs/performance data for each
 service and allows stopping/starting services individually.
