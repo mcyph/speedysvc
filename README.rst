@@ -26,7 +26,7 @@ which normally restricts applications from using more than a single CPU core,
 services can have multiple worker processes. They optionally can increase 
 or decrease worker processes as needed, depending on CPU usage. This helps
 to make sure server resources are more effectively used. While this is possible
-with the ``multiprocessing_`` module, ``multiprocessing`` on Linux uses ``pipe2`` for 
+with the `multiprocessing`_ module, multiprocessing on Linux uses ``pipe2`` for 
 communication between processes, which is much slower than using shared memory.
 
 There is a service management web interface that shows logs/performance data for each
