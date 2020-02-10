@@ -116,11 +116,19 @@ See Also
 
 * `Client/Server API Reference`_
 * `Hybrid Spin Semaphore`_
-* `TODO`_
 
 Similar projects:
 
 * Ray_ (for running distributed applications)
+
+TODO
+----
+
+* Allow running services as Docker containers
+* Add better log searching/filtering
+* REST requests
+
+`More info`_
 
 License
 -----------------------
@@ -158,3 +166,4 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 .. _shared memory: https://developer.ibm.com/articles/au-spunix_sharedmemory/
 .. _multiprocessing: https://docs.python.org/3/library/multiprocessing.html
 .. _Ray: https://ray.readthedocs.io/en/latest/
+.. _More info: https://github.com/mcyph/speedysvc/wiki/TODO
