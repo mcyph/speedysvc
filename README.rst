@@ -26,8 +26,8 @@ which normally restricts applications from using more than a single CPU core,
 services can have multiple worker processes. They optionally can increase 
 or decrease worker processes as needed, depending on CPU usage. This helps
 to make sure server resources are more effectively used. While this is possible
-with the ``multiprocessing`` module, ``multiprocessing`` on Linux uses ``pipe2`` for 
-communication between processes which is much slower than using shared memory.
+with the ``multiprocessing_`` module, ``multiprocessing`` on Linux uses ``pipe2`` for 
+communication between processes, which is much slower than using shared memory.
 
 There is a service management web interface that shows logs/performance data for each
 service and allows stopping/starting services individually.
@@ -118,6 +118,10 @@ See Also
 * `Hybrid Spin Semaphore`_
 * `TODO`_
 
+Similar projects:
+
+* Ray_ (for running distributed applications)
+
 License
 -----------------------
 
@@ -152,3 +156,5 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 .. _Global Interpreter Lock: https://wiki.python.org/moin/GlobalInterpreterLock
 .. _snappy: https://github.com/google/snappy
 .. _shared memory: https://developer.ibm.com/articles/au-spunix_sharedmemory/
+.. _multiprocessing: https://docs.python.org/3/library/multiprocessing.html
+.. _Ray: https://ray.readthedocs.io/en/latest/
