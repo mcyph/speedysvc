@@ -124,8 +124,9 @@ Similar projects:
 TODO
 ----
 
+* Ability to start services in parallel, specifying dependencies as needed
 * Allow running services as Docker containers
-* Add better log searching/filtering
+* Better log searching/filtering
 * REST requests
 
 `More info`_
