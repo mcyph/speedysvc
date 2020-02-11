@@ -126,6 +126,7 @@ TODO
 
 * Ability to start services in parallel, specifying dependencies as needed
 * Allow running services as Docker containers
+* Allow for ``while True: item = queue.get(); yield do_work(item)`` producer/consumer-style programming
 * Better log searching/filtering
 * REST requests
 
