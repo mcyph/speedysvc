@@ -19,13 +19,15 @@ Unlike other similar modules for client-server communication
 memory`_, which typically performs around 5-20 times faster with much lower latency.
 ``speedysvc`` servers can also be remotely communicated with over the network 
 using TCP sockets. The TCP protocol is fast and efficient, and optionally compresses 
-traffic using snappy_/zlib minimises bandwidth.
+traffic using snappy_/zlib to minimise bandwidth.
 
 In order to work around limitations of python's `Global Interpreter Lock`_ 
 which normally restricts applications from using more than a single CPU core,
 services can have multiple worker processes. They optionally can increase 
 or decrease worker processes as needed, depending on CPU usage. This helps
-to make sure server resources are more effectively utilised.
+to make sure server resources are more effectively used. While this is possible
+with the `multiprocessing`_ module, multiprocessing on Linux uses ``pipe2`` for 
+communication between processes, which is much slower than using shared memory.
 
 There is a service management web interface that shows logs/performance data for each
 service and allows stopping/starting services individually.
@@ -114,7 +116,21 @@ See Also
 
 * `Client/Server API Reference`_
 * `Hybrid Spin Semaphore`_
-* `TODO`_
+
+Similar projects:
+
+* Ray_ (for running distributed applications)
+
+TODO
+----
+
+* Ability to start services in parallel, specifying dependencies as needed
+* Allow running services as Docker containers
+* Allow for ``while True: item = queue.get(); yield do_work(item)`` producer/consumer-style programming
+* Better log searching/filtering
+* REST requests
+
+`More info`_
 
 License
 -----------------------
@@ -150,3 +166,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 .. _Global Interpreter Lock: https://wiki.python.org/moin/GlobalInterpreterLock
 .. _snappy: https://github.com/google/snappy
 .. _shared memory: https://developer.ibm.com/articles/au-spunix_sharedmemory/
+.. _multiprocessing: https://docs.python.org/3/library/multiprocessing.html
+.. _Ray: https://ray.readthedocs.io/en/latest/
+.. _More info: https://github.com/mcyph/speedysvc/wiki/TODO
