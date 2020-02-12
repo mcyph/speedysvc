@@ -85,9 +85,28 @@ class SHMClient(ClientProviderBase, SHMBase):
         return self.server_methods
 
     def send(self, cmd, args, timeout=-1):
+        t_from = time.time()
         if self.client_lock.get_destroyed() or self.server_lock.get_destroyed():
-            # If server no longer exists, try to recreate connection
-            self.create_connections()
+            # If locks were destroyed on other end, try to recreate connection
+            print(f"Lock destroyed for "
+                  f"{self.server_methods.__dict__.get('name')}:{self.port}. "
+                  f"Trying to reconnect...")
+
+            while True:
+                self.create_connections()
+                try:
+                    self.send(b'heartbeat', b'echo_me', timeout=3)
+                    break
+                except TimeoutError:
+                    if timeout != -1 and time.time()-t_from > timeout:
+                        raise TimeoutError(
+                            "Timeout waiting for reconnection to "
+                            f"{self.server_methods.__dict__.get('name')}:{self.port}"
+                        )
+                    self.unlink_pid_mmap(self.port, getpid(), self.qid)
+
+            print(f"Successfully reconnected to "
+                  f"{self.server_methods.__dict__.get('name')}:{self.port}!")
 
         if isinstance(cmd, bytes):
             # cmd -> a bytes object, most likely heartbeat or shutdown
@@ -183,20 +202,30 @@ class SHMClient(ClientProviderBase, SHMBase):
             finally:
                 pass
         finally:
-            self.client_lock.unlock()
+            try:
+                self.client_lock.unlock()
+            except:
+                # Currently, this method prints error information using perror
+                # but this should be replaced with a less blanket handler ===============================================
+                pass  # WARNING!
 
         if response_status == b'+':
             return serialiser.loads(response_data)
         elif response_status == b'-':
             response_data = response_data[1:].decode('utf-8', errors='replace')
-            exc_type, remainder = response_data[:-1].split('(')
-            try:
-                # Try to convert to python types the arguments (safely)
-                # If we can't, it's not the end of the world
-                remainder = literal_eval(remainder)
-            except:
-                pass
-            if exc_type in DExceptions:
+            if '(' in response_data:
+                exc_type, _, remainder = response_data[:-1].partition('(')
+                try:
+                    # Try to convert to python types the arguments (safely)
+                    # If we can't, it's not the end of the world
+                    remainder = literal_eval(remainder)
+                except:
+                    pass
+            else:
+                remainder = ''
+                exc_type = None
+
+            if exc_type is not None and exc_type in DExceptions:
                 raise DExceptions[exc_type](remainder)
             else:
                 raise Exception(response_data)

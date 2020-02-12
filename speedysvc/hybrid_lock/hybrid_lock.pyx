@@ -168,11 +168,7 @@ cdef class HybridLock:
     def __exception_occurred(self, kind):
         raise Exception('Error occurred calling '+kind+": "+strerror(errno).decode('utf-8', 'replace'))
 
-    def init_mmap(self,
-                       char* sem_loc,
-                       int permissions,
-                       int set_value=-1
-        ):
+    def init_mmap(self, char* sem_loc, int permissions, int set_value=-1):
 
         # Open existing shared memory object, or create one.
         # Two separate calls are needed here, to mark fact of creation
@@ -242,7 +238,7 @@ cdef class HybridLock:
     cpdef int destroy(self) except -1:
         # Mutex destruction completely cleans it from system memory.
         if self._cleaned_up:
-            raise SemaphoreDestroyedException("WARNING: Already cleaned up in HybridLock.destroy()!")
+            raise SemaphoreDestroyedException("HybridLock has already been destroyed")
         self._cleaned_up = 1
 
         #printf("Destroying semaphore %s\n", self._sem_loc)
@@ -322,7 +318,7 @@ cdef class HybridLock:
 
         # Unfortunately, this code seems to cause random
         # instability in some cases, for reasons I'm not sure!
-        spin = 0
+        #spin = 0
         if spin:
             #with nogil:  # NOTE ME: Uncommenting this line might increase performance,
                           # at a cost of potentially having one process consuming many cores!
@@ -330,10 +326,11 @@ cdef class HybridLock:
                 # The Linux kernel time slice is normally around 6ms max
                 # (minimum 0.5ms) so doesn't (necessarily?) make sense to
                 # consume more time busy waiting
+
                 if get_current_time_ms()-from_t > 6:
                     #printf('TIME SLICE REACHED: %lld\n', get_current_time_ms())
                     break
-                elif self._spin_lock_char[0] == UNLOCKED:
+                elif self.get_value():
                     break
 
         if timeout == -1:
@@ -375,4 +372,8 @@ cdef class HybridLock:
         self._spin_lock_char[0] = UNLOCKED
         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
             retval = sem_post(self._semaphore)
+            if retval != 0:
+                perror("sem_post")
+                raise Exception("sem_post")
+
         return retval

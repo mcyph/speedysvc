@@ -1,8 +1,8 @@
-{% from "service_macros.html" import service_status_table, console_log, overall_method_stats_html %}
+{% from "service_macros.html" import service_status_table, console_log, overall_method_stats_html, accuracy_warning_message %}
 <!DOCTYPE html>
 <html>
 <head>
-    <title>SHMRPC Service Web Monitor</title>
+    <title>SpeedySVC Service Web Monitor</title>
 
     <script src="/static/chart.min.js"></script>
     <script src="/static/AjaxRequest.js"></script>
@@ -25,6 +25,7 @@
     <div id="overall_service_methods_cont">
         {{ overall_method_stats_html(LOverallServiceMethods) }}
     </div>
+    {{  accuracy_warning_message() }}
 
     <h2>Console Log</h2>
     {{ console_log(console_offset, console_text) }}

@@ -118,6 +118,8 @@ class SHMServer(SHMBase, ServerProviderBase):
                       f"returning ({len(self.SPIDThreads)} remaining)")
 
                 # Try to clean up
+                # TODO: ONLY CLEAN UP ENTIRELY IF SHUTTING DOWN ALL WORKER PROCESSES!!!! ===============================
+                # This perhaps should be in MultiProcessManager
                 try:
                     client_lock.destroy()
                 except:
@@ -140,12 +142,15 @@ class SHMServer(SHMBase, ServerProviderBase):
             except SemaphoreDestroyedException:
                 # In this case, the lock was likely destroyed by the client
                 # and should propagate the error, rather than forever logging
-                raise
+                print(f"Lock for service {self.name} "
+                      f"in worker thread for pid {pid} subid {qid} was destroyed: "
+                      f"returning ({len(self.SPIDThreads)} remaining)")
+                return
             except:
                 #import traceback
                 #traceback.print_exc()
                 # There's error handling for calls themselves, so may be an
-                # AssertionError. If this is the case, perhaps the client
+                # AssertionError.
                 raise
 
     def handle_command(self, mmap, server_lock, pid, qid, do_spin):

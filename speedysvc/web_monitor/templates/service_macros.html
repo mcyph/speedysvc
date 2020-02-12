@@ -41,9 +41,9 @@
         <td>
             {{ DService['status']|e }}
             {% if DService['status'] == 'started' %}
-                [<a href="/stop_service?port={{ DService['port'] }}">stop</a>]
+                [<a href="/stop_service?port={{ DService['port'] }}" onclick="this.style.visibility = 'hidden'">stop</a>]
             {% elif DService['status'] == 'stopped' %}
-                [<a href="/start_service?port={{ DService['port'] }}">start</a>]
+                [<a href="/start_service?port={{ DService['port'] }}" onclick="this.style.visibility = 'hidden'">start</a>]
             {% endif %}
         </td>
         <td>{{ DService['physical_mem']|e }}</td>
@@ -96,6 +96,7 @@
         <div id="method_stats_html_cont_div">
             {{ DService['method_stats_html']|safe }}
         </div>
+        {{ accuracy_warning_message() }}
 
         <h2>Console Log</h2>
         {{ console_log(DService['console_offset'],
@@ -122,5 +123,9 @@
     </table>
 {% endmacro %}
 
-
-
+{% macro accuracy_warning_message() %}
+    <div style="color: brown; font-size: 0.9em">
+        * Note: the times do not include the lock overhead, which often is 0.00005s+ per call.
+        <br>Remote network (tcp) mode can also have an 0.001s+ overhead.
+    </div>
+{% endmacro %}

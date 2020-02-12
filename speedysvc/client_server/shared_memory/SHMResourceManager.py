@@ -11,6 +11,10 @@ from speedysvc.client_server.shared_memory.shared_params import get_mmap
 
 
 def lock_fn(old_fn):
+    """
+    Decorator for a function which needs a lock
+    for shared encode/decode operations
+    """
     def new_fn(self, *args, **kw):
         with self.lock:
             self.lock_acquired = True
@@ -56,9 +60,12 @@ class SHMResourceManager(JSONMMapBase):
 
     def __monitor_pids_loop(self):
         while True:
-            with FIXME:
+            try:
                 self.check_for_missing_pids()
-                time.sleep(5)
+            except:
+                import traceback
+                traceback.print_exc()
+            time.sleep(5)
 
     @lock_fn
     def check_for_missing_pids(self):
@@ -94,12 +101,16 @@ class SHMResourceManager(JSONMMapBase):
     def create_client_resources(self, pid, qid):
         """
         Create new client resources for a given pid/qid
+        and adds the PID/QID to the service info,
+        so as to inform servers to respond to requests
         :return: (the shared mmap, client HybridLock, server HybridLock)
         """
         mmap = self.connect_to_pid_mmap(pid, qid)
         client_lock, server_lock = self.__get_client_server_locks(
             pid, qid, CREATE_NEW_OVERWRITE
         )
+        # Inform servers
+        self.add_client_pid_qid(pid, qid)
         return mmap, client_lock, server_lock
 
     def open_existing_client_resources(self, pid, qid):
@@ -176,7 +187,20 @@ class SHMResourceManager(JSONMMapBase):
     #===============================================================#
 
     def create_pid_mmap(self, min_size, pid, qid):
-        # Make it so that the size is always within a power of 2
+        """
+        Create/overwrite a memory map for a given client connection.
+        Often is called more than once with a larger min_size, if the
+        memory map isn't large enough to send the required data.
+
+        :param min_size: minimum size of the mmap in bytes. If less than
+                         the OS's page size, then it will be made a
+                         multiple of it.
+        :param pid: the process ID
+        :param qid: the in-process ID
+        :return: a mmap object
+        """
+
+        # get_mmap makes it so that the size is always within a power of 2
         # so as to prevent needing to keep reallocating
         # (hopefully an ok balance between too little and too much)
         #
@@ -193,10 +217,12 @@ class SHMResourceManager(JSONMMapBase):
         )
 
     def connect_to_pid_mmap(self, pid, qid):
-        # Connect to an existing shared mmap
-        # Same as above, but don't use in "create" mode as we're
-        # connecting to a semaphore/shared memory that
-        # (should've been) already created.
+        """
+        Connect to an existing shared mmap
+        Same as above, but don't use in "create" mode as we're
+        connecting to a semaphore/shared memory that
+        (should've been) already created.
+        """
         socket_name = self.MMAP_TEMPLATE % dict(
             port=self.port, pid=pid, qid=qid
         )
@@ -243,11 +269,17 @@ class SHMResourceManager(JSONMMapBase):
         LServerPIDs, LClientPIDs = self._decode()
 
         if kill:
+            num_to_kill = [len(LServerPIDs)]
+
             def _kill(pid):
+                num_to_kill[0] -= 1
                 kill_pid_and_children(pid)
 
             for pid in LServerPIDs:
                 _thread.start_new_thread(_kill, (pid,))
+
+            while num_to_kill[0] != 0:
+                time.sleep(0.01)
 
         self._encode([[], LClientPIDs])
 
