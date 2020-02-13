@@ -35,6 +35,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         self.resource_manager = SHMResourceManager(
             server_methods.port, server_methods.name
         )
+        self.resource_manager.check_for_missing_pids()
         self.resource_manager.add_server_pid(getpid())
         start_new_thread(self.monitor_pids, ())
 
