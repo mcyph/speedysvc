@@ -35,8 +35,9 @@ def get_mmap(location, create, new_size=None):
         return mapfile
     else:
         # Connect to the existing memory map
+        #print("CONNECT TO SHARED MEMORY:", location)
         memory = posix_ipc.SharedMemory(location.decode('ascii'))
-        #print("CONNECT TO MEMORY SIZE:", location, memory.size)
+
         mapfile = mmap.mmap(memory.fd, memory.size)
         memory.close_fd()
         return mapfile

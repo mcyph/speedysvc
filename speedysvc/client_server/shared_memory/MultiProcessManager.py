@@ -124,7 +124,9 @@ class MultiProcessServer:
         # TODO: Also add capability to clean up previous MultiProcessManager's!
         # TODO: It would also be nice to remove self.LPIDs, and only rely on
         #   SHMResourceManager for storing server worker PIDs
+        # OPEN ISSUE: Should check_for_missing_pids be called periodically?
         self.resource_manager = SHMResourceManager(self.port, self.name)
+        self.resource_manager.check_for_missing_pids()
         self.resource_manager.reset_all_server_pids(kill=True)
 
         # Collect data periodically
@@ -254,10 +256,6 @@ class MultiProcessServer:
             "Can't start a service that isn't stopped!"
         self.logger_client.set_service_status('starting')
 
-        # Reset the state of the client PIDs
-        from speedysvc.ipc.JSONMMapList import JSONMMapList
-        self.__LPIDs = JSONMMapList(port=self.port, create=True)
-
         for x in range(self.min_proc_num):
             # Make sure the initial processes have booted up
             # from the main thread, so it can block as necessary
@@ -322,7 +320,7 @@ class MultiProcessServer:
         else:
             proc = subprocess.Popen([
                 'python3', '-m',
-                'speedysvc.multi_process_manager._service_worker',
+                'speedysvc.client_server.shared_memory._service_worker',
                 json.dumps(DArgs)
             ], env=DEnv)
             pid = proc.pid

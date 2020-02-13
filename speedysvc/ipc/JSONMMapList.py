@@ -13,7 +13,7 @@ class JSONMMapList(JSONMMapBase):
 
     def __enter__(self):
         # Allow for `with JSONMapArray(..)` syntax
-        self.lock.lock()
+        self.lock.lock(spin=0)
         self.lock_acquired = True
 
     def __exit__(self, type, value, traceback):

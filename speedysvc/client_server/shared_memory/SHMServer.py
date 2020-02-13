@@ -40,15 +40,19 @@ class SHMServer(SHMBase, ServerProviderBase):
 
     def shutdown(self):
         self.shut_me_down = True
-        self.resource_manager.del_server_pid(getpid())
 
         while True:
             try:
                 while not self.shutdown_ok:
                     time.sleep(0.05)
                     continue
+                break
             except KeyboardInterrupt:
                 pass  # HACK!
+
+        # Signify to future MultiProcessManager's
+        # they don't need to clean me up
+        self.resource_manager.del_server_pid(getpid())
 
     def monitor_pids(self):
         """
@@ -68,6 +72,10 @@ class SHMServer(SHMBase, ServerProviderBase):
                     self.resource_manager.get_created_exited_client_pids(
                         self.SPIDThreads
                     )
+                #if SCreated or SExited:
+                #    print(f"{self.name}:{self.port}[{self.SPIDThreads}] SCREATED: {SCreated} SEXITED: {SExited}")
+                #else:
+                #    print(self.SPIDThreads, self.resource_manager.get_client_pids())
 
                 for pid, qid in SCreated:
                     # Add newly created client connections
@@ -76,8 +84,10 @@ class SHMServer(SHMBase, ServerProviderBase):
 
                 for pid, qid in SExited:
                     # Remove connections to clients that no longer exist
-                    if (pid, qid) in self.SPIDThreads:
+                    try:
                         self.SPIDThreads.remove((pid, qid))
+                    except KeyError:
+                        pass
                 
             except:
                 import traceback
@@ -94,6 +104,8 @@ class SHMServer(SHMBase, ServerProviderBase):
             self.resource_manager.open_existing_client_resources(
                 pid, qid
             )
+        print(f"SHMServer {self.name} started new worker "
+              f"thread for pid {pid} subid {qid}")
         do_spin = True
 
         while True:
@@ -134,7 +146,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         try:
             server_lock.lock(
                 timeout=1,
-                spin=do_spin and self.use_spinlock
+                spin=int(do_spin and self.use_spinlock)
             )
             do_spin = True
         except TimeoutError:

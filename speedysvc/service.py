@@ -270,7 +270,7 @@ class Services:
         }
         proc = subprocess.Popen([
             'python3', '-m',
-            'speedysvc.multi_process_manager.MultiProcessManager',
+            'speedysvc.client_server.shared_memory.MultiProcessManager',
             json.dumps(DArgs)
         ], env=DEnv)
         self.DProcByName[server_methods.name] = proc

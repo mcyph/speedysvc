@@ -36,7 +36,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         ClientProviderBase.__init__(self, server_methods, port)
         self.qid = new_qid(self.port)
         self.resource_manager = SHMResourceManager(
-            self.port, server_methods.name
+            self.port, server_methods.__dict__.get('name')
         )
         # (Note the pid/qid of this connection is registered here)
         self.mmap, self.client_lock, self.server_lock = \
@@ -70,7 +70,10 @@ class SHMClient(ClientProviderBase, SHMBase):
             len(cmd), len(args)
         ) + cmd + args
 
-        self.client_lock.lock(timeout=timeout, spin=self.use_spinlock)
+        self.client_lock.lock(
+            timeout=timeout,
+            spin=int(self.use_spinlock)
+        )
         try:
             # Next line must be in critical area!
             mmap = self.mmap
@@ -114,7 +117,7 @@ class SHMClient(ClientProviderBase, SHMBase):
 
             self.server_lock.lock(
                 timeout=-1,
-                spin=self.use_spinlock
+                spin=int(self.use_spinlock)
             )  # CHECK ME!!!!
 
             try:

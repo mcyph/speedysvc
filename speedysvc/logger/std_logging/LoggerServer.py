@@ -30,7 +30,6 @@ class LoggerServer:
         #          used by the original server.
         self.port = port = f'{server_methods.port}_log'
         self.name = f'{server_methods.name}_log'
-        self.shm_server = SHMServer()
 
         # Store the single value stats
         # (e.g. how long each individual call takes,
@@ -62,13 +61,11 @@ class LoggerServer:
         )
 
         # Start the server
-        # Reset the state of the client PIDs
-        from speedysvc.ipc.JSONMMapList import JSONMMapList
         assert port == self.port, (port, self.port)
-        self.__LPIDs = JSONMMapList(port=port, create=True)
-        self.shm_server(
+        self.shm_server = SHMServer(
             server_methods=self,
-            use_spinlock=False # NOTE ME: This is normally called in the background, and performance shouldn't be a priority here
+            use_spinlock=False
+            # NOTE ME: This is normally called in the background, and performance shouldn't be a priority here
         )
 
         self.flush_needed = False

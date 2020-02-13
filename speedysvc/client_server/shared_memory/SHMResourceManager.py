@@ -1,4 +1,6 @@
+import json
 import time
+import psutil
 import _thread
 import posix_ipc
 from psutil import pid_exists
@@ -16,12 +18,15 @@ def lock_fn(old_fn):
     for shared encode/decode operations
     """
     def new_fn(self, *args, **kw):
-        with self.lock:
-            self.lock_acquired = True
-            try:
-                old_fn(*args, **kw)
-            finally:
-                self.lock_acquired = False
+        self.lock.lock(spin=0)
+        self.lock_acquired = True
+        try:
+            r = old_fn(self, *args, **kw)
+        finally:
+            self.lock.unlock()
+            self.lock_acquired = False
+        return r
+
     return new_fn
 
 
@@ -48,11 +53,23 @@ class SHMResourceManager(JSONMMapBase):
         # TODO: Specify the actual mmap location of the JSON Map!!
         try:
             JSONMMapBase.__init__(self, port, create=False)
+            #print(f"SHMResourceManager for {name}:{port}: connected")
         except NoSuchSemaphoreException:
             JSONMMapBase.__init__(self, port, create=True)
+            #print(f"SHMResourceManager for {name}:{port}: created")
+
+        self.__init_value()
 
         if monitor_pids:
             _thread.start_new_thread(self.__monitor_pids_loop, ())
+
+    @lock_fn
+    def __init_value(self):
+        try:
+            if not self._decode():
+                self._encode([[], []])
+        except json.decoder.JSONDecodeError:
+            self._encode([[], []])
 
     #===============================================================#
     #                         Monitor PIDs                          #
@@ -105,7 +122,7 @@ class SHMResourceManager(JSONMMapBase):
         so as to inform servers to respond to requests
         :return: (the shared mmap, client HybridLock, server HybridLock)
         """
-        mmap = self.connect_to_pid_mmap(pid, qid)
+        mmap = self.create_pid_mmap(min_size=1024, pid=pid, qid=qid)
         client_lock, server_lock = self.__get_client_server_locks(
             pid, qid, CREATE_NEW_OVERWRITE
         )
@@ -284,7 +301,12 @@ class SHMResourceManager(JSONMMapBase):
 
             def _kill(pid):
                 num_to_kill[0] -= 1
-                kill_pid_and_children(pid)
+                try:
+                    kill_pid_and_children(pid)
+                except psutil.NoSuchProcess:
+                    # doesn't exist any more -
+                    # no need to do anything!
+                    pass
 
             for pid in LServerPIDs:
                 _thread.start_new_thread(_kill, (pid,))
@@ -307,6 +329,11 @@ class SHMResourceManager(JSONMMapBase):
         LServerPIDs, LClientPIDs = self._decode()
         SClientPIDs = set(tuple(i) for i in LClientPIDs)
         return SClientPIDs-SPIDs, SPIDs-SClientPIDs
+
+    @lock_fn
+    def get_client_pids(self):
+        LServerPIDs, LClientPIDs = self._decode()
+        return LClientPIDs
 
     @lock_fn
     def add_client_pid_qid(self, pid, qid):

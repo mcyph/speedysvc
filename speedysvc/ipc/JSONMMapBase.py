@@ -8,7 +8,7 @@ from speedysvc.client_server.shared_memory.shared_params import get_mmap
 class JSONMMapBase(ABC):
     def __init__(self, port, create):
         self.lock = HybridLock(
-            f'sem_{port}_pids'.encode('ascii'),
+            f'resman_{port}_lock'.encode('ascii'),
             CREATE_NEW_OVERWRITE
             if create
             else CONNECT_TO_EXISTING,
@@ -19,7 +19,7 @@ class JSONMMapBase(ABC):
         # exceed this size, and also in the scheme of things
         # isn't that much memory IMO.
         self.mmap = get_mmap(
-            f'mmap_{port}_pids'.encode('ascii'),
+            f'resman_{port}_data'.encode('ascii'),
             create, new_size=32767
         )
 
