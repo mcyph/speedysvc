@@ -23,7 +23,7 @@ def _service_worker(server_methods):
           f"Server methods created, starting implementations")
 
     L = []
-    L.append(SHMServer()(server_methods=smi))
+    L.append(SHMServer(server_methods=smi))
 
     # Tell the logger server that a child has properly loaded:
     # this helps to make sure if processes are loaded properly,

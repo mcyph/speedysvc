@@ -1,47 +1,47 @@
 import time
 import traceback
+from os import getpid
 from _thread import start_new_thread
 from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
-from speedysvc.ipc.JSONMMapList import JSONMMapList
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
 from speedysvc.client_server.shared_memory.shared_params import \
     PENDING, INVALID, SERVER, CLIENT
-from hybrid_lock import CONNECT_TO_EXISTING, SemaphoreDestroyedException
+from speedysvc.client_server.shared_memory.SHMResourceManager import \
+    SHMResourceManager
+from hybrid_lock import SemaphoreDestroyedException
 
 
 class SHMServer(SHMBase, ServerProviderBase):
-    def __init__(self):
-        pass
-
-    def __call__(self, server_methods, use_spinlock=True):
-        # TODO!
-        print(f"{server_methods.name}:{server_methods.port}: SHMServer __call__")
+    def __init__(self, server_methods, use_spinlock=True):
         # NOTE: init_resources should only be called if creating from scratch -
         # if connecting to an existing socket, init_resources should be False!
         ServerProviderBase.__call__(self, server_methods)
 
-        print('Starting new SHMServer on port:', server_methods.port)
+        print(f'{server_methods.name}:{server_methods.port}:'
+              f'Starting new SHMServer on port:',
+              server_methods.port)
+
         self.port = server_methods.port
         self.shut_me_down = False
         self.shutdown_ok = False
         self.use_spinlock = use_spinlock
 
-        # Add a default method: heartbeat to make sure the service
-        # is responding to requests
-        self.server_methods.heartbeat = lambda data: data
-        self.server_methods.heartbeat.serialiser = RawSerialisation
-
         """
         TODO: Create or connect to a shared shm/semaphore which stores the
          current processes which are associated with this service.
         """
-        self.init_pids_map_array()
+        self.SPIDThreads = set()
+        self.resource_manager = SHMResourceManager(
+            server_methods.port, server_methods.name
+        )
+        self.resource_manager.add_server_pid(getpid())
         start_new_thread(self.monitor_pids, ())
-        return self
 
     def shutdown(self):
         self.shut_me_down = True
+        self.resource_manager.del_server_pid(getpid())
+
         while True:
             try:
                 while not self.shutdown_ok:
@@ -49,15 +49,6 @@ class SHMServer(SHMBase, ServerProviderBase):
                     continue
             except KeyboardInterrupt:
                 pass  # HACK!
-
-    def init_pids_map_array(self):
-        self.LPIDs = JSONMMapList(
-            # Note, the resource is created in MultiProcessManager,
-            # so that we can be sure it's properly intialised before any
-            # of the child workers start (and not have race conditions)
-            port=self.port, create=False
-        )
-        self.SPIDThreads = set()
 
     def monitor_pids(self):
         """
@@ -71,39 +62,38 @@ class SHMServer(SHMBase, ServerProviderBase):
         while True:
             if self.shut_me_down:
                 return
-            try:
-                with self.LPIDs:
-                    SPIDs = set()
-                    for pid, qid in self.LPIDs:
-                        SPIDs.add((pid, qid))
-                        if self.shut_me_down:
-                            # Don't start any more threads if
-                            # a shutdown has been requested!
-                            return
-                        elif not (pid, qid) in self.SPIDThreads:
-                            self.SPIDThreads.add((pid, qid))
-                            start_new_thread(self.main, (pid, qid))
 
-                    for pid, qid in list(self.SPIDThreads):
-                        if not (pid, qid) in SPIDs:
-                            self.SPIDThreads.remove((pid, qid))
+            try:
+                SCreated, SExited = \
+                    self.resource_manager.get_created_exited_client_pids(
+                        self.SPIDThreads
+                    )
+
+                for pid, qid in SCreated:
+                    # Add newly created client connections
+                    self.SPIDThreads.add((pid, qid))
+                    start_new_thread(self.worker_thread_fn, (pid, qid))
+
+                for pid, qid in SExited:
+                    # Remove connections to clients that no longer exist
+                    if (pid, qid) in self.SPIDThreads:
+                        self.SPIDThreads.remove((pid, qid))
+                
             except:
                 import traceback
                 traceback.print_exc()
 
             time.sleep(0.5)
 
-    def main(self, pid, qid):
+    def worker_thread_fn(self, pid, qid):
         """
         Connect to the shared mmap space/client+server semaphores.
         Continuously poll for commands, responding as needed.
         """
-        client_lock, server_lock = self.get_pid_semaphores(
-            self.port, pid, qid, mode=CONNECT_TO_EXISTING
-        )
-        mmap = self.connect_to_pid_mmap(
-            self.server_methods.port, pid, qid
-        )
+        mmap, client_lock, server_lock = \
+            self.resource_manager.open_existing_client_resources(
+                pid, qid
+            )
         do_spin = True
 
         while True:
@@ -111,34 +101,21 @@ class SHMServer(SHMBase, ServerProviderBase):
                 # PID no longer exists, so don't continue to loop
                 return
             elif self.shut_me_down:
-                self.SPIDThreads.remove((pid, qid))
+                try:
+                    self.SPIDThreads.remove((pid, qid))
+                except KeyError:
+                    pass
+
                 self.shutdown_ok = not len(self.SPIDThreads)
                 print(f"Signal to shutdown SHMServer {self.name} "
                       f"in worker thread for pid {pid} subid {qid} caught: "
                       f"returning ({len(self.SPIDThreads)} remaining)")
-
-                # Try to clean up
-                # TODO: ONLY CLEAN UP ENTIRELY IF SHUTTING DOWN ALL WORKER PROCESSES!!!! ===============================
-                # This perhaps should be in MultiProcessManager
-                try:
-                    client_lock.destroy()
-                except:
-                    import traceback
-                    traceback.print_exc()
-
-                try:
-                    server_lock.destroy()
-                except:
-                    import traceback
-                    traceback.print_exc()
-
-                self.unlink_pid_mmap(
-                    self.server_methods.port, pid, qid
-                )
                 return
 
             try:
-                do_spin, mmap = self.handle_command(mmap, server_lock, pid, qid, do_spin)
+                do_spin, mmap = self.handle_command(
+                    mmap, server_lock, pid, qid, do_spin
+                )
             except SemaphoreDestroyedException:
                 # In this case, the lock was likely destroyed by the client
                 # and should propagate the error, rather than forever logging
@@ -155,7 +132,10 @@ class SHMServer(SHMBase, ServerProviderBase):
 
     def handle_command(self, mmap, server_lock, pid, qid, do_spin):
         try:
-            server_lock.lock(timeout=1, spin=do_spin and self.use_spinlock)
+            server_lock.lock(
+                timeout=1,
+                spin=do_spin and self.use_spinlock
+            )
             do_spin = True
         except TimeoutError:
             # Disable spinning for subsequent tries!
@@ -171,7 +151,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                     # Size change - re-open the mmap!
                     #print(f"Server: memory map has been marked as invalid")
                     prev_len = len(mmap)
-                    mmap = self.connect_to_pid_mmap(self.port, pid, qid)
+                    mmap = self.resource_manager.connect_to_pid_mmap(pid, qid)
 
                     # Make sure it actually is larger than the previous one,
                     # so as to reduce the risk of an infinite loop
@@ -236,8 +216,10 @@ class SHMServer(SHMBase, ServerProviderBase):
                 #print(f"Server: Recreating memory map to be at "
                 #      f"least {len(encoded) + 1} bytes")
                 old_mmap = mmap
-                mmap = self.create_pid_mmap(
-                    min_size=len(encoded)+1, port=self.port, pid=pid, qid=qid
+                mmap = self.resource_manager.create_pid_mmap(
+                    min_size=len(encoded)+1,
+                    pid=pid,
+                    qid=qid
                 )
                 mmap[0] = old_mmap[0]
                 old_mmap[0] = INVALID

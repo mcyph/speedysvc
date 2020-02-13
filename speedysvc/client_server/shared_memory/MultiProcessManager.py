@@ -13,6 +13,8 @@ from speedysvc.kill_pid_and_children import kill_pid_and_children
 
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.client_server.network.NetworkServer import NetworkServer
+from speedysvc.client_server.shared_memory.SHMResourceManager import \
+    SHMResourceManager
 
 
 MONITOR_PROCESS_EVERY_SECS = 5
@@ -117,6 +119,14 @@ class MultiProcessServer:
             "The overall percentage CPU usage before starting a new " \
             "process should be between 0.0 and 1.0 non-inclusive"
 
+        # Get the SHMResourceManager to clean up
+        # any previously created server processes
+        # TODO: Also add capability to clean up previous MultiProcessManager's!
+        # TODO: It would also be nice to remove self.LPIDs, and only rely on
+        #   SHMResourceManager for storing server worker PIDs
+        self.resource_manager = SHMResourceManager(self.port, self.name)
+        self.resource_manager.reset_all_server_pids(kill=True)
+
         # Collect data periodically
         self.LPIDs = []
         self.last_proc_op_time = 0
@@ -140,7 +150,12 @@ class MultiProcessServer:
         """
         print(f"{self.server_methods.name}: Process monitor started")
 
-        while not self.shutting_down and self.logger_client.get_service_status() not in ('stopping', 'stopped'):
+        while (
+            (not self.shutting_down) and
+            (self.logger_client.get_service_status() not in (
+                'stopping', 'stopped'
+            ))
+        ):
             for pid in self.LPIDs[:]:
                 try:
                     if not psutil.pid_exists(pid):
@@ -292,7 +307,7 @@ class MultiProcessServer:
             #'tcp_allow_insecure_serialisation': self.tcp_allow_insecure_serialisation
         }
         if True:
-            from speedysvc.multi_process_manager._service_worker import _service_worker
+            from speedysvc.client_server.shared_memory._service_worker import _service_worker
             from os import fork
 
             DArgs['server_methods'] = getattr(

@@ -48,7 +48,7 @@ class SHMResourceManager(JSONMMapBase):
         # TODO: Specify the actual mmap location of the JSON Map!!
         try:
             JSONMMapBase.__init__(self, port, create=False)
-        except SemaphoreExistsException:
+        except NoSuchSemaphoreException:
             JSONMMapBase.__init__(self, port, create=True)
 
         if monitor_pids:
@@ -258,7 +258,18 @@ class SHMResourceManager(JSONMMapBase):
         self._encode([LServerPIDs, LClientPIDs])
 
     @lock_fn
-    def reset_all_server_pids(self, kill=False):
+    def server_pid_active(self, pid):
+        """
+        A means for servers to check whether they should
+        shut down as a result of a new MultiProcessManager taking
+        over. This might happen as a result of MultiProcessManager
+        not shutting down cleanly.
+        """
+        LServerPIDs, LClientPIDs = self._decode()
+        return pid in LServerPIDs
+
+    @lock_fn
+    def reset_all_server_pids(self, kill=True):
         """
         Remove all of the PIDs of the servers
 
