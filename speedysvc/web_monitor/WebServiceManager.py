@@ -106,7 +106,7 @@ class WebServiceManager:
         offset, LHTML = self.logger_parent.get_html_log(
             offset=offset
         )
-        return offset, '\n'.join(LHTML)
+        return offset, '<br>'.join(LHTML) + ('<br>' if LHTML else '')
 
     def get_overall_table_html(self, add_links=True):
         """
@@ -227,8 +227,7 @@ class WebServiceManager:
         return {
             "port": port,
             "name": service.original_server_methods.name,
-            "implementations": [
-            ], # TODO: UPDATE ME to include whether tcp_bind is set!!! ===============================================
+            "bound_to_tcp": service.tcp_bind,
             "status": service.get_service_status(),
             'workers': len(service.LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
             'physical_mem': recent_values[-1]['physical_mem'] // 1024 // 1024,

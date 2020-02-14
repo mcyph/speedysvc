@@ -65,7 +65,6 @@ class Services:
         self.DArgKeys = {
             'log_dir': lambda x: x,
             'tcp_bind': lambda x: x,
-            'tcp_compression': lambda x: x,
             'tcp_allow_insecure_serialisation': self.__convert_bool,
             'max_proc_num': self.__greater_than_0_int,
             'min_proc_num': self.__greater_than_0_int,
@@ -219,7 +218,6 @@ class Services:
                                 server_methods, import_from, section,
                                 log_dir='/tmp',
                                 tcp_bind=None,
-                                tcp_compression=None,
                                 tcp_allow_insecure_serialisation=False,
 
                                 max_proc_num=cpu_count(),
@@ -255,7 +253,6 @@ class Services:
             'import_from': import_from,
             'section': section,
             'tcp_bind': tcp_bind,
-            'tcp_compression': tcp_compression,
             'tcp_allow_insecure_serialisation': tcp_allow_insecure_serialisation,
 
             'min_proc_num': min_proc_num,
@@ -277,6 +274,7 @@ class Services:
         self.DProcByPort[server_methods.port] = proc
 
         logger_server.proc = proc  # HACK!
+        logger_server.tcp_bind = tcp_bind  # HACK!
         web_service_manager.add_service(logger_server)
 
         if wait_until_completed:

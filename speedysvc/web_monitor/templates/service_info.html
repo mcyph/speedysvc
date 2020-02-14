@@ -1,4 +1,4 @@
-{% from "service_macros.html" import service %}
+{% from "service_macros.html" import service, rand_animal %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -14,7 +14,10 @@
 <body style="font-family: monospace; font-size: 15px">
 
 <div style="width: 920px; padding: 10px; margin: 0 auto">
-    <h1><a href="/">speedysvc monitor</a> / {{ service_name|e }}:{{ port }}</h1>
+    <h1>
+        <div style="float: right">{{ rand_animal() }}</div>
+        <a href="/">speedysvc monitor</a> / {{ service_name|e }}:{{ port }}
+    </h1>
 
     {{ service(DService) }}
 </div>

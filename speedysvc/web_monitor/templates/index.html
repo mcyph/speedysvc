@@ -1,4 +1,4 @@
-{% from "service_macros.html" import service_status_table, console_log, overall_method_stats_html, accuracy_warning_message %}
+{% from "service_macros.html" import service_status_table, console_log, overall_method_stats_html, accuracy_warning_message, rand_animal %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -14,7 +14,10 @@
 <body style="font-family: monospace; font-size: 15px">
 
 <div style="width: 920px; padding: 10px; margin: 0 auto">
-    <h1>speedysvc monitor</h1>
+    <h1>
+        <div style="float: right">{{ rand_animal() }}</div>
+        speedysvc monitor
+    </h1>
 
     <h2>Services</h2>
     <div id="service_status_table_cont">

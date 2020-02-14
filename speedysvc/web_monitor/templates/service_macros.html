@@ -1,6 +1,6 @@
 {% macro console_log(console_offset, console_text) %}
     <div class="console_log"
-         style="font-family: monospace; white-space: pre; width: 900px; overflow-x: auto"
+         style="font-family: monospace; font-size: 0.9em; white-space: pre-wrap; width: 900px; overflow-x: auto"
          offset="{{ console_offset }}"
         >{{ console_text|safe }}</div>
 {% endmacro %}
@@ -16,7 +16,7 @@
             <thead><tr>
                 <th>Service</th>
                 <th>Port</th>
-                <th>Implementations</th>
+                <th>Bound to TCP</th>
                 <th>Status</th>
                 <th>Physical RAM (MB)</th>
                 <th>CPU</th>
@@ -37,7 +37,7 @@
             <td>{{ DService['name']|e }}</td>
         {% endif %}
         <td>{{ DService['port']|e }}</td>
-        <td>{{ DService['implementations']|join(", ")|e }}</td>
+        <td>{{ DService['bound_to_tcp'] or 'n/a'|e }}</td>
         <td>
             {{ DService['status']|e }}
             {% if DService['status'] == 'started' %}
@@ -128,4 +128,10 @@
         * Note: the times do not include the lock overhead, which often is 0.00005s+ per call.
         <br>Remote network (tcp) mode can also have an 0.001s+ overhead.
     </div>
+{% endmacro %}
+
+{% macro rand_animal() %}
+    {# Of course this makes it go faster.. #}
+    {{ ['🐎', '🐇', '🏃']
+|random }}
 {% endmacro %}

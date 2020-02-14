@@ -36,7 +36,6 @@ class MultiProcessServer:
     def __init__(self,
                  import_from, section, server_methods,
                  tcp_bind=None,
-                 tcp_compression=None,
                  tcp_allow_insecure_serialisation=False,
 
                  min_proc_num=1,
@@ -67,7 +66,6 @@ class MultiProcessServer:
                                it can be created by child worker processes.
 
         :param tcp_bind:
-        :param tcp_compression:
         :param tcp_allow_insecure_serialisation:
 
         :param min_proc_num: the minimum number of worker processes.
@@ -102,7 +100,6 @@ class MultiProcessServer:
         self.server_methods = server_methods
 
         self.tcp_bind = tcp_bind
-        self.tcp_compression = tcp_compression
         self.tcp_allow_insecure_serialisation = tcp_allow_insecure_serialisation
 
         self.min_proc_num = min_proc_num
@@ -300,9 +297,6 @@ class MultiProcessServer:
         DArgs = {
             'import_from': self.import_from,
             'section': self.section,
-            #'tcp_bind': self.tcp_bind,
-            #'tcp_compression':  self.tcp_compression,
-            #'tcp_allow_insecure_serialisation': self.tcp_allow_insecure_serialisation
         }
         if True:
             from speedysvc.client_server.shared_memory._service_worker import _service_worker

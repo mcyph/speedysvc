@@ -119,6 +119,5 @@ class Service {
 
     writeConsoleHTML(html) {
         this.$(".console_log").innerHTML += html;
-
     }
 }
