@@ -12,6 +12,31 @@ from speedysvc.client_server.shared_memory.SHMResourceManager import \
 from hybrid_lock import SemaphoreDestroyedException
 
 
+_monitor_pids_started = [False]
+_LSHMServers = []
+def _monitor_pids():
+    """
+    Monitor PIDs for all SHMServers in a
+    single thread to minimize resources
+    """
+    while True:
+        if not _LSHMServers:
+            _monitor_pids_started[0] = False
+            return
+
+        for shm_server in _LSHMServers[:]:
+            try:
+                if shm_server.shut_me_down:
+                    _LSHMServers.remove(shm_server)
+                else:
+                    shm_server.monitor_pids()
+            except:
+                import traceback
+                traceback.print_exc()
+
+        time.sleep(0.5)
+
+
 class SHMServer(SHMBase, ServerProviderBase):
     def __init__(self, server_methods, use_spinlock=True):
         # NOTE: init_resources should only be called if creating from scratch -
@@ -37,7 +62,11 @@ class SHMServer(SHMBase, ServerProviderBase):
         )
         self.resource_manager.check_for_missing_pids()
         self.resource_manager.add_server_pid(getpid())
-        start_new_thread(self.monitor_pids, ())
+
+        _LSHMServers.append(self)
+        if not _monitor_pids_started[0]:
+            _monitor_pids_started[0] = True
+            start_new_thread(_monitor_pids, ())
 
     def shutdown(self):
         self.shut_me_down = True
@@ -64,37 +93,26 @@ class SHMServer(SHMBase, ServerProviderBase):
         If the client PID no longer exists, also clean up its resources,
         as needed.
         """
-        while True:
-            if self.shut_me_down:
-                return
+        SCreated, SExited = \
+            self.resource_manager.get_created_exited_client_pids(
+                self.SPIDThreads
+            )
+        #if SCreated or SExited:
+        #    print(f"{self.name}:{self.port}[{self.SPIDThreads}] SCREATED: {SCreated} SEXITED: {SExited}")
+        #else:
+        #    print(self.SPIDThreads, self.resource_manager.get_client_pids())
 
+        for pid, qid in SCreated:
+            # Add newly created client connections
+            self.SPIDThreads.add((pid, qid))
+            start_new_thread(self.worker_thread_fn, (pid, qid))
+
+        for pid, qid in SExited:
+            # Remove connections to clients that no longer exist
             try:
-                SCreated, SExited = \
-                    self.resource_manager.get_created_exited_client_pids(
-                        self.SPIDThreads
-                    )
-                #if SCreated or SExited:
-                #    print(f"{self.name}:{self.port}[{self.SPIDThreads}] SCREATED: {SCreated} SEXITED: {SExited}")
-                #else:
-                #    print(self.SPIDThreads, self.resource_manager.get_client_pids())
-
-                for pid, qid in SCreated:
-                    # Add newly created client connections
-                    self.SPIDThreads.add((pid, qid))
-                    start_new_thread(self.worker_thread_fn, (pid, qid))
-
-                for pid, qid in SExited:
-                    # Remove connections to clients that no longer exist
-                    try:
-                        self.SPIDThreads.remove((pid, qid))
-                    except KeyError:
-                        pass
-                
-            except:
-                import traceback
-                traceback.print_exc()
-
-            time.sleep(0.5)
+                self.SPIDThreads.remove((pid, qid))
+            except KeyError:
+                pass
 
     def worker_thread_fn(self, pid, qid):
         """
@@ -146,7 +164,7 @@ class SHMServer(SHMBase, ServerProviderBase):
     def handle_command(self, mmap, server_lock, pid, qid, do_spin):
         try:
             server_lock.lock(
-                timeout=1,
+                timeout=4,
                 spin=int(do_spin and self.use_spinlock)
             )
             do_spin = True

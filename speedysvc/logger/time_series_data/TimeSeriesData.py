@@ -11,6 +11,26 @@ from _thread import allocate_lock, start_new_thread
 # I'm not sure how useful that data is actually likely to be
 
 
+SAMPLE_INTERVAL_SECS = 5
+
+
+_sample_loop_started = [False]
+_LTimeSeriesData = []
+def _time_series_loop():
+    """
+    Monitor time series data in a
+    single thread to minimize resources
+    """
+    while True:
+        for tsd in _LTimeSeriesData[:]:
+            try:
+                tsd.sample_data_loop()
+            except:
+                import traceback
+                traceback.print_exc()
+        sleep(SAMPLE_INTERVAL_SECS)
+
+
 class TimeSeriesData(ABC):
     def __init__(self, path, LFormat,
                  fifo_cache_len=300,
@@ -79,6 +99,7 @@ class TimeSeriesData(ABC):
                 for _, property in [(None, 'timestamp')]+list(LFormat)
             })
 
+        _LTimeSeriesData.append(self)
         self.collecting_data = False
         if start_collecting_immediately:
             self.start_collecting()
@@ -93,8 +114,12 @@ class TimeSeriesData(ABC):
             # as could indicate start_collecting_immediately
             # was mistakenly set, etc
             raise Exception("Collection of data already started")
+
+        if not _sample_loop_started[0]:
+            _sample_loop_started[0] = True
+            start_new_thread(_time_series_loop, ())
+
         self.collecting_data = True
-        start_new_thread(self.__sample_data_loop, ())
 
     def stop_collecting(self):
         """
@@ -108,8 +133,8 @@ class TimeSeriesData(ABC):
     #                            Recording of Data                            #
     #=========================================================================#
 
-    def __sample_data_loop(self):
-        while self.collecting_data:
+    def sample_data_loop(self):
+        if self.collecting_data:
             try:
                 DSample = self.sample_data()
                 if DSample: # WARNING!!! ======================================
@@ -118,8 +143,6 @@ class TimeSeriesData(ABC):
                 pass
                 #import traceback
                 #traceback.print_exc()
-
-            sleep(self.sample_interval_secs)
 
     @abstractmethod
     def sample_data(self):

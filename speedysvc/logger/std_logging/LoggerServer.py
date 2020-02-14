@@ -13,6 +13,31 @@ from speedysvc.logger.time_series_data.ServiceTimeSeriesData import ServiceTimeS
 FLUSH_EVERY_SECONDS = 3.0
 
 
+_flush_loop_started = [False]
+_LLoggerServers = []
+def _check_flush_needed_loop():
+    """
+    Monitor whether a flush to disk of the logs is
+    needed in a single thread to minimize resources
+    """
+    while True:
+        if not _LLoggerServers:
+            _flush_loop_started[0] = False
+            return
+
+        for logger_server in _LLoggerServers[:]:
+            try:
+                if logger_server.shm_server.shut_me_down:
+                    _LLoggerServers.remove(logger_server)
+                else:
+                    logger_server.flush()
+            except:
+                import traceback
+                traceback.print_exc()
+
+        time.sleep(FLUSH_EVERY_SECONDS)
+
+
 class LoggerServer:
     def __init__(self, log_dir, server_methods,
                  fifo_json_log_parent=None):
@@ -69,24 +94,25 @@ class LoggerServer:
         )
 
         self.flush_needed = False
-        start_new_thread(self.__flush_loop, ())
+        _LLoggerServers.append(self)
+        if not _flush_loop_started[0]:
+            _flush_loop_started[0] = True
+            start_new_thread(_check_flush_needed_loop, ())
 
-    def __flush_loop(self):
+    def flush(self):
         """
         Only flush the files periodically, so as to
         reduce the amount IO affects performance
         """
-        while True:
-            if self.flush_needed:
+        if self.flush_needed:
+            with self.stderr_lock:
+                self.f_stderr.flush()
+            with self.stdout_lock:
+                self.f_stdout.flush()
+            with self.stdout_lock:
                 with self.stderr_lock:
-                    self.f_stderr.flush()
-                with self.stdout_lock:
-                    self.f_stdout.flush()
-                with self.stdout_lock:
-                    with self.stderr_lock:
-                        self.fifo_json_log.flush()
-                self.flush_needed = False
-            time.sleep(FLUSH_EVERY_SECONDS)
+                    self.fifo_json_log.flush()
+            self.flush_needed = False
 
     #=========================================================#
     #                Update Method Statistics                 #
