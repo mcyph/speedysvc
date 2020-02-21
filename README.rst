@@ -51,7 +51,10 @@ Install
 -------------------
 
 .. code-block:: bash
-
+    
+    apt install libsnappy-dev
+    pip3 install --upgrade pip
+    pip3 install Cython
     pip3 install git+https://github.com/mcyph/speedysvc
 
 See also `Install/Dependencies`_.
