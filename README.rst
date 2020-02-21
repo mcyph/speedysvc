@@ -52,7 +52,7 @@ Install
 
 .. code-block:: bash
 
-    pip3 install git+https://github.com/mcyph/speedysvc/speedysvc.git
+    pip3 install git+https://github.com/mcyph/speedysvc
 
 See also `Install/Dependencies`_.
 
