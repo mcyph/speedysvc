@@ -61,5 +61,9 @@ setup(
         'flask',
         'psutil',
     ],
+    package_data = {
+        '': ['*.json', '*.ini'],
+    },
+    include_package_data=True,
     zip_safe=False
 )
