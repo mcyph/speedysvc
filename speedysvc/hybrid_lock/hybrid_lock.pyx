@@ -37,7 +37,7 @@ cdef char UNLOCKED = 1
 cdef char DESTROYED = 127
 
 
-cdef long long get_current_time_ms():  # TODO: DOES nogil HERE CAUSE INSTABILITY?
+cdef long long get_current_time_ms() nogil:
     # NOTE: This function may not be portable!
     cdef timespec ts
     cdef long long current
@@ -315,23 +315,32 @@ cdef class HybridLock:
         cdef int retval = -1
         cdef long long from_t = get_current_time_ms()
         cdef timespec ts
+        cdef int spin_times = 0
 
         # Unfortunately, this code seems to cause random
         # instability in some cases, for reasons I'm not sure!
         #spin = 0
-        if spin:
-            #with nogil:  # NOTE ME: Uncommenting this line might increase performance,
-                          # at a cost of potentially having one process consuming many cores!
-            while 1:
-                # The Linux kernel time slice is normally around 6ms max
-                # (minimum 0.5ms) so doesn't (necessarily?) make sense to
-                # consume more time busy waiting
 
-                if get_current_time_ms()-from_t > 6:
-                    #printf('TIME SLICE REACHED: %lld\n', get_current_time_ms())
-                    break
-                elif self.get_value():
-                    break
+        if spin:
+            with nogil:  # NOTE ME: Uncommenting this line might increase performance,
+                          # at a cost of potentially having one process consuming many cores!
+                while 1:
+                    # The Linux kernel time slice is normally around 6ms max
+                    # (minimum 0.5ms) so doesn't (necessarily?) make sense to
+                    # consume more time busy waiting
+
+                    if get_current_time_ms()-from_t > 6:
+                        #printf('TIME SLICE REACHED: %lld\n', get_current_time_ms())
+                        break
+                    elif self._spin_lock_char[0] == DESTROYED:
+                        raise SemaphoreDestroyedException("lock called on destroyed HybridLock!")
+                    elif self._spin_lock_char[0] == UNLOCKED:
+                        break
+                    #elif self.get_value():
+                    #    break
+                    elif spin_times > 8192:
+                        break
+                    spin_times += 1
 
         if timeout == -1:
             # NOTE THIS: It seems that semaphore functions need to

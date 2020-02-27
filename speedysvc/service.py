@@ -220,9 +220,9 @@ class Services:
                                 tcp_bind=None,
                                 tcp_allow_insecure_serialisation=False,
 
-                                max_proc_num=cpu_count(),
+                                max_proc_num=1,
                                 min_proc_num=1,
-                                wait_until_completed=True,
+                                wait_until_completed=False,
 
                                 fifo_json_log_parent=None):
 
