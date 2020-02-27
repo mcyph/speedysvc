@@ -2,10 +2,10 @@
 About
 ===========================
 
-    NOTE: ``speedysvc``'s status is still alpha - I'm using it in my project 
-    https://langlynx.com, but is still under active development. There are 
-    likely bugs and there will be breaking changes to the API.
-
+    NOTE: ``speedysvc``'s status is beta - it should be functional and 
+    don't intend to make major changes, but the web management and configuration 
+    interface API might be changed later. 
+    
 This module for python 3.6+ on Linux allows separating larger, more complex 
 applications into smaller components (microservices). For example, you could 
 build a text-to-speech service, a fulltext search service,
@@ -51,8 +51,11 @@ Install
 -------------------
 
 .. code-block:: bash
-
-    pip3 install git+https://github.com/mcyph/speedysvc/speedysvc.git
+    
+    apt install git libsnappy-dev
+    pip3 install --upgrade pip
+    pip3 install Cython
+    pip3 install git+https://github.com/mcyph/speedysvc
 
 See also `Install/Dependencies`_.
 
