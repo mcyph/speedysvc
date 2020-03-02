@@ -149,6 +149,9 @@ class LoggerClient(ClientMethodsBase):
     #                Service Time Series Data                 #
     #=========================================================#
 
+    def get_last_record(self):
+        return self.send(LoggerServer.get_last_record, [])
+
     def get_average_over(self, from_time, to_time):
         return self.send(LoggerServer.get_average_over, [from_time, to_time])
 

@@ -146,19 +146,28 @@ class SHMResourceManager(JSONMMapBase):
         Get the locks for a client connection to the servers
         :return: (client HybridLock, server HybridLock)
         """
+        return (
+            self.get_client_lock(pid, qid, mode),
+            self.get_server_lock(pid, qid, mode)
+        )
+
+    def get_client_lock(self, pid, qid, mode):
         client_loc = self.CLIENT_LOCK_TEMPLATE % dict(
             port=self.port, pid=pid, qid=qid
         )
         client_lock = HybridLock(
             client_loc.encode('ascii'), mode=mode, initial_value=1
         )
+        return client_lock
+
+    def get_server_lock(self, pid, qid, mode):
         server_loc = self.SERVER_LOCK_TEMPLATE % dict(
             port=self.port, pid=pid, qid=qid
         )
         server_lock = HybridLock(
             server_loc.encode('ascii'), mode=mode, initial_value=0
         )
-        return client_lock, server_lock
+        return server_lock
 
     def unlink_client_resources(self, pid, qid):
         """
@@ -227,11 +236,12 @@ class SHMResourceManager(JSONMMapBase):
         socket_name = self.MMAP_TEMPLATE % dict(
             port=self.port, pid=pid, qid=qid
         )
-        return get_mmap(
+        mmap = get_mmap(
             socket_name.encode('utf-8'),
             create=True,
-            new_size=int(min_size*1.5)
+            new_size=min_size
         )
+        return mmap
 
     def connect_to_pid_mmap(self, pid, qid):
         """

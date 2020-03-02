@@ -323,6 +323,13 @@ class TimeSeriesData(ABC):
     #                  Short-term In-Memory Data Processing                   #
     #=========================================================================#
 
+    def get_last_record(self):
+        """
+
+        :return:
+        """
+        return self.deque[0]
+
     def get_recent_values(self, reversed=True):
         """
         Get a list of the most recent values.

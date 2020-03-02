@@ -27,6 +27,7 @@ def new_qid(port):
 
 class SHMClient(ClientProviderBase, SHMBase):
     def __init__(self, server_methods, port=None, use_spinlock=True):
+        self.pid = getpid()
         self.use_spinlock = use_spinlock
         # Create the shared mmap space/client+server semaphores.
 
@@ -34,6 +35,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         # current processes which are associated with this service,
         # and add this process' PID.
         ClientProviderBase.__init__(self, server_methods, port)
+        assert not hasattr(self, 'qid')
         self.qid = new_qid(self.port)
         self.resource_manager = SHMResourceManager(
             self.port, server_methods.__dict__.get('name')
@@ -79,18 +81,8 @@ class SHMClient(ClientProviderBase, SHMBase):
             mmap = self.mmap
 
             # Send the result to the server!
-            if len(encoded_request) >= (len(mmap)-1):
-                #print(f"Client: Recreating memory map to be at "
-                #      f"least {len(encoded_request) + 1} bytes")
-                old_mmap = mmap
-                mmap = self.resource_manager.create_pid_mmap(
-                    len(encoded_request) + 1, getpid(), self.qid
-                )
-                mmap[0] = old_mmap[0]
-                self.mmap = mmap
-                old_mmap[0] = INVALID
-                #print(f"Client: New mmap size is {len(mmap)} bytes "
-                #      f"for encoded_request length {len(encoded_request)}")
+            if len(encoded_request) >= len(mmap)-1:
+                mmap = self.mmap = self.__resize_mmap(mmap, encoded_request)
 
             assert len(mmap) > len(encoded_request), \
                 (len(mmap), len(encoded_request))
@@ -123,22 +115,16 @@ class SHMClient(ClientProviderBase, SHMBase):
             try:
                 # Make sure response state ok,
                 # reconnecting to mmap if resized
+                num_times = 0
+
                 while True: # WARNING
                     if mmap[0] == CLIENT:
                         break  # OK
 
                     elif mmap[0] == INVALID:
-                        #print(f"Client: memory map has been marked as invalid")
-                        prev_len = len(mmap)
-                        mmap = self.resource_manager.connect_to_pid_mmap(
-                            getpid(), self.qid
-                        )
-                        self.mmap = mmap
-
-                        # Make sure it actually is larger than the previous one,
-                        # so as to reduce the risk of an infinite loop
-                        assert len(mmap) > prev_len, \
-                            "New memory map should be larger than the previous one!"
+                        mmap = self.mmap = self.__reconnect_to_mmap(mmap)
+                        assert num_times < 1000, "Shouldn't get here!"
+                        num_times += 1
 
                     elif mmap[0] == SERVER:
                         raise Exception("Should never get here!")
@@ -166,22 +152,87 @@ class SHMClient(ClientProviderBase, SHMBase):
         if response_status == b'+':
             return serialiser.loads(response_data)
         elif response_status == b'-':
-            response_data = response_data[1:].decode('utf-8', errors='replace')
-            if '(' in response_data:
-                exc_type, _, remainder = response_data[:-1].partition('(')
-                try:
-                    # Try to convert to python types the arguments (safely)
-                    # If we can't, it's not the end of the world
-                    remainder = literal_eval(remainder)
-                except:
-                    pass
-            else:
-                remainder = ''
-                exc_type = None
-
-            if exc_type is not None and exc_type in DExceptions:
-                raise DExceptions[exc_type](remainder)
-            else:
-                raise Exception(response_data)
+            self.__handle_exception(response_data)
         else:
             raise Exception("Unknown status response %s" % response_status)
+
+    def __handle_exception(self, response_data):
+        """
+
+        :param response_data:
+        :return:
+        """
+        response_data = response_data[1:].decode('utf-8', errors='replace')
+        if '(' in response_data:
+            exc_type, _, remainder = response_data[:-1].partition('(')
+            try:
+                # Try to convert to python types the arguments (safely)
+                # If we can't, it's not the end of the world
+                remainder = literal_eval(remainder)
+            except:
+                pass
+        else:
+            remainder = ''
+            exc_type = None
+
+        if exc_type is not None and exc_type in DExceptions:
+            raise DExceptions[exc_type](remainder)
+        else:
+            raise Exception(response_data)
+
+    def __resize_mmap(self, mmap, encoded_request):
+        """
+
+        :param mmap:
+        :param encoded_request:
+        :return:
+        """
+        #print(f"[pid {getpid()}:qid {self.qid}] "
+        #      f"Client: Recreating memory map to be at "
+        #      f"least {len(encoded_request)} bytes")
+
+        old_mmap = mmap
+        assert self.pid == getpid()
+        mmap = self.resource_manager.create_pid_mmap(
+            min_size=len(encoded_request) * 2,
+            pid=getpid(),
+            qid=self.qid
+        )
+
+        # Assign the new mmap
+        assert len(mmap) > len(old_mmap), (len(old_mmap), len(mmap))
+        mmap[0] = old_mmap[0]
+        assert mmap[0] != INVALID
+
+        # Make the old one invalid
+        old_mmap[0] = INVALID
+        old_mmap.close()
+        #print(f"Client: New mmap size is {len(mmap)} bytes "
+        #      f"for encoded_request length {len(encoded_request)}")
+        return mmap
+
+    def __reconnect_to_mmap(self, mmap):
+        """
+
+        :param mmap:
+        :return:
+        """
+        #print(f"Client: memory map has been marked as invalid")
+        prev_len = len(mmap)
+        mmap.close()
+
+        # Make sure that fork() hasn't caused PIDs to
+        # get out of sync (if fork() is being used)!
+        assert self.pid == getpid()
+        mmap = self.resource_manager.connect_to_pid_mmap(
+            pid=getpid(),
+            qid=self.qid
+        )
+
+        # Make sure it actually is larger than the previous one,
+        # so as to reduce the risk of an infinite loop
+        assert len(mmap) > prev_len, \
+            f"[pid {getpid()}:qid {self.qid}] " \
+            f"New memory map should be larger than the previous one: " \
+            f"{len(mmap)} !> {prev_len}"
+        return mmap

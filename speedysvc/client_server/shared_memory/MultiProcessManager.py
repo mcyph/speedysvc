@@ -2,19 +2,21 @@ import sys, os
 import time
 import json
 import signal
-from os import getpid
+import random
 import psutil
 import _thread
 import importlib
 import subprocess
 from sys import argv
+from os import getpid
 from multiprocessing import cpu_count
 from speedysvc.kill_pid_and_children import kill_pid_and_children
 
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.client_server.network.NetworkServer import NetworkServer
 from speedysvc.client_server.shared_memory.SHMResourceManager import \
-    SHMResourceManager
+    SHMResourceManager, CONNECT_TO_EXISTING
+from hybrid_lock import SemaphoreDestroyedException
 
 
 MONITOR_PROCESS_EVERY_SECS = 5
@@ -187,6 +189,7 @@ class MultiProcessServer:
             DRemoveProcAvg = self.logger_client.get_average_over(
                 time.time() - self.kill_proc_avg_over_secs, time.time()
             )
+            DLastRecord = self.logger_client.get_last_record()
             time_since_last_op = time.time()-self.last_proc_op_time
             #print(f"{self.server_methods.name} DNEWPROCAVG:", DNewProcAvg)
 
@@ -196,7 +199,7 @@ class MultiProcessServer:
 
             if (
                 self.max_proc_mem_bytes is not None and
-                DRemoveProcAvg['physical_mem'] > self.max_proc_mem_bytes # What about virtual memory?? ==============
+                DLastRecord['physical_mem'] > self.max_proc_mem_bytes  # What about virtual memory?? ==============
             ):
                 # Reap processes until we don't exceed
                 # the maximum amount of memory
@@ -298,16 +301,20 @@ class MultiProcessServer:
             'import_from': self.import_from,
             'section': self.section,
         }
-        if True:
+        if False:
             from speedysvc.client_server.shared_memory._service_worker import _service_worker
             from os import fork
 
+            pid = fork()
+
+            # Note that the server_methods needs to be after to fork()
+            # in order to make sure any module-level SHMClients report
+            # correct values with getpid(), and so we won't waste
+            # memory in this management process!
             DArgs['server_methods'] = getattr(
                 importlib.import_module(DArgs.pop('import_from')),
                 DArgs.pop('section')
             )
-
-            pid = fork()
             if pid == 0:
                 # in child
                 _service_worker(**DArgs)
@@ -334,10 +341,12 @@ class MultiProcessServer:
                 self.logger_client.start_collecting()
 
         if self.wait_until_completed:
-            print(f"{self.server_methods.name} parent: Waiting for child to initialise...")
+            print(f"{self.server_methods.name} parent: "
+                  f"Waiting for child to initialise...")
             while not self.logger_client.get_service_status() == 'started':
                 time.sleep(0.1)
-            print(f"{self.server_methods.name} parent: child signaled it has initialised OK")
+            print(f"{self.server_methods.name} parent: "
+                  f"child signaled it has initialised OK")
 
             start_collecting_data()
         else:
@@ -348,18 +357,85 @@ class MultiProcessServer:
         Remove process with `pid` if specified;
         otherwise remove the most recently-created process
         """
-        if pid is None:
-            pid = self.LPIDs[-1]
 
-        self.last_proc_op_time = time.time()
-        self.LPIDs.remove(pid)
+        # Lock the service, to make sure we don't
+        # terminate it halfway through a call!
+        LLocks = self.__get_L_client_locks()
+        self.__lock_client_locks(LLocks)
+
         try:
-            self.logger_client.remove_pid(pid)
-        except:
-            pass
+            if pid is None:
+                pid = random.choice(self.LPIDs)
 
-        if psutil.pid_exists(pid):
-            kill_pid_and_children(pid)
+            self.last_proc_op_time = time.time()
+            self.LPIDs.remove(pid)
+            try:
+                self.logger_client.remove_pid(pid)
+            except:
+                pass
+
+            if psutil.pid_exists(pid):
+                kill_pid_and_children(pid)
+        finally:
+            self.__unlock_client_locks(LLocks)
+
+    #========================================================#
+    #              Acquire/Release Server Locks              #
+    #========================================================#
+
+    def __get_L_client_locks(self):
+        """
+
+        :return:
+        """
+        L = []
+        for pid, qid in self.resource_manager.get_client_pids():
+            client_lock = self.resource_manager.get_client_lock(
+                pid, qid, CONNECT_TO_EXISTING
+            )
+            L.append(client_lock)
+        return L
+
+    def __lock_client_locks(self, LLocks):
+        """
+
+        :param LLocks:
+        :return:
+        """
+        for lock in LLocks:
+            try:
+                lock.lock()
+            except SemaphoreDestroyedException:
+                pass
+            except:
+                import traceback
+                traceback.print_exc()
+
+    def __unlock_client_locks(self, LLocks):
+        """
+
+        :param LLocks:
+        :return:
+        """
+        for lock in LLocks:
+            try:
+                lock.unlock()
+            except SemaphoreDestroyedException:
+                pass
+            except:
+                import traceback
+                traceback.print_exc()
+
+    def __unlock_client_locks_for_dead_pids(self, LLocks):
+        """
+        TODO: If a server lock's reported PID no longer exists
+          (possibly due to it crashing due to a segfault etc),
+          release it!!
+
+        :param LLocks:
+        :return:
+        """
+        FIXME
 
 
 if __name__ == '__main__':
@@ -374,9 +450,11 @@ if __name__ == '__main__':
     def signal_handler(sig, frame):
         if _handling_sigint[0]: return
         _handling_sigint[0] = True
-        print(f"MultiProcessManager [{getpid()}]: exiting PIDs {mps.LPIDs}")
+        print(f"MultiProcessManager [{getpid()}]: "
+              f"exiting PIDs {mps.LPIDs}")
         mps.stop_service()
-        print("MultiProcesssManager: exiting", getpid())
+        print("MultiProcesssManager: "
+              "exiting", getpid())
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)

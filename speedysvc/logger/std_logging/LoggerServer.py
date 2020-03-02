@@ -249,6 +249,14 @@ class LoggerServer:
     #=========================================================#
 
     @json_method
+    def get_last_record(self):
+        """
+
+        :return:
+        """
+        return self.service_time_series_data.get_last_record()
+
+    @json_method
     def get_average_over(self, from_time, to_time):
         """
 

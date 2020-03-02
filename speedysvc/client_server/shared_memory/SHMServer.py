@@ -123,8 +123,8 @@ class SHMServer(SHMBase, ServerProviderBase):
             self.resource_manager.open_existing_client_resources(
                 pid, qid
             )
-        print(f"SHMServer {self.name} started new worker "
-              f"thread for pid {pid} subid {qid}")
+        #print(f"SHMServer {self.name} started new worker "
+        #      f"thread for pid {pid} subid {qid}")
         do_spin = True
 
         while True:
@@ -138,9 +138,9 @@ class SHMServer(SHMBase, ServerProviderBase):
                     pass
 
                 self.shutdown_ok = not len(self.SPIDThreads)
-                print(f"Signal to shutdown SHMServer {self.name} "
-                      f"in worker thread for pid {pid} subid {qid} caught: "
-                      f"returning ({len(self.SPIDThreads)} remaining)")
+                #print(f"Signal to shutdown SHMServer {self.name} "
+                #      f"in worker thread for pid {pid} subid {qid} caught: "
+                #      f"returning ({len(self.SPIDThreads)} remaining)")
                 return
 
             try:
@@ -150,9 +150,9 @@ class SHMServer(SHMBase, ServerProviderBase):
             except SemaphoreDestroyedException:
                 # In this case, the lock was likely destroyed by the client
                 # and should propagate the error, rather than forever logging
-                print(f"Lock for service {self.name} "
-                      f"in worker thread for pid {pid} subid {qid} was destroyed: "
-                      f"returning ({len(self.SPIDThreads)} remaining)")
+                #print(f"Lock for service {self.name} "
+                #      f"in worker thread for pid {pid} subid {qid} was destroyed: "
+                #      f"returning ({len(self.SPIDThreads)} remaining)")
                 return
             except:
                 #import traceback
@@ -174,21 +174,17 @@ class SHMServer(SHMBase, ServerProviderBase):
             return do_spin, mmap
 
         try:
+            num_times = 0
             while True: # WARNING
                 # Prepare for handling command
                 if mmap[0] == PENDING:
                     break # OK
                 elif mmap[0] == INVALID:
                     # Size change - re-open the mmap!
-                    #print(f"Server: memory map has been marked as invalid")
-                    prev_len = len(mmap)
-                    mmap = self.resource_manager.connect_to_pid_mmap(pid, qid)
+                    mmap = self.__reconnect_to_mmap(pid, qid, mmap)
+                    assert num_times < 1000, "Shouldn't get here!"
+                    num_times += 1
 
-                    # Make sure it actually is larger than the previous one,
-                    # so as to reduce the risk of an infinite loop
-                    assert len(mmap) > prev_len, \
-                        "New memory map should be larger than the previous one!"
-                    continue
                 elif mmap[0] == CLIENT:
                     # We'll just return here, as we
                     # shouldn't have obtained the lock
@@ -233,6 +229,8 @@ class SHMServer(SHMBase, ServerProviderBase):
 
             except Exception as exc:
                 # Output to stderr log for the service
+                import sys
+                sys.stderr.write(f"Service {self.name} error handling method: {fn}\n")
                 traceback.print_exc()
 
                 # Just send a basic Exception instance for now, but would be nice
@@ -244,16 +242,7 @@ class SHMServer(SHMBase, ServerProviderBase):
 
             # Resize the mmap as needed
             if len(encoded) >= len(mmap)-1:
-                #print(f"Server: Recreating memory map to be at "
-                #      f"least {len(encoded) + 1} bytes")
-                old_mmap = mmap
-                mmap = self.resource_manager.create_pid_mmap(
-                    min_size=len(encoded)+1,
-                    pid=pid,
-                    qid=qid
-                )
-                mmap[0] = old_mmap[0]
-                old_mmap[0] = INVALID
+                mmap = self.__resize_mmap(pid, qid, mmap, encoded)
 
             # Set the result, and end the call
             mmap[1:1+len(encoded)] = encoded
@@ -267,3 +256,40 @@ class SHMServer(SHMBase, ServerProviderBase):
         finally:
             server_lock.unlock()
         return do_spin, mmap
+
+    def __resize_mmap(self, pid, qid, mmap, encoded):
+        #print(
+        #    f"[pid {pid}:qid {qid}] "
+        #    f"Server: Recreating memory map to be at "
+        #    f"least {len(encoded) + 1} bytes"
+        #)
+        old_mmap = mmap
+        mmap = self.resource_manager.create_pid_mmap(
+            min_size=len(encoded) * 2,
+            pid=pid,
+            qid=qid
+        )
+
+        # Assign the new mmap
+        assert len(mmap) > len(old_mmap), (len(old_mmap), len(mmap))
+        mmap[0] = old_mmap[0]
+        assert mmap[0] != INVALID
+
+        # Make the old one invalid
+        old_mmap[0] = INVALID
+        old_mmap.close()
+        return mmap
+
+    def __reconnect_to_mmap(self, pid, qid, mmap):
+        #print(f"Server: memory map has been marked as invalid")
+        prev_len = len(mmap)
+        mmap.close()
+        mmap = self.resource_manager.connect_to_pid_mmap(pid, qid)
+
+        # Make sure it actually is larger than the previous one,
+        # so as to reduce the risk of an infinite loop
+        assert len(mmap) > prev_len, \
+            f"[pid {pid}:qid {qid}] " \
+            f"New memory map should be larger than the previous one: " \
+            f"{len(mmap)} !> {prev_len}"
+        return mmap

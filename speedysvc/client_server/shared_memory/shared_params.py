@@ -12,26 +12,25 @@ def get_mmap(location, create, new_size=None):
         chk_size = posix_ipc.PAGE_SIZE
         while chk_size < new_size:
             chk_size *= 2
+        assert chk_size >= new_size
 
         # Clean up since last time
         try:
-            #print("UNLINKING:", location)
             posix_ipc.unlink_shared_memory(location.decode('ascii'))
-        except:
+        except posix_ipc.ExistentialError:
             pass
-            #import traceback
-            #traceback.print_exc()
 
         # Allocate the memory map
         memory = posix_ipc.SharedMemory(
             location.decode('ascii'), posix_ipc.O_CREX, size=chk_size # O_CREX?
         )
+        assert memory.size == chk_size, (memory.size, chk_size)
         mapfile = mmap.mmap(memory.fd, memory.size)
-        #print(f"{location} ALLOCATING:", chk_size, "ACTUALLY:", memory.size)
 
         # We (apparently) don't need the file
         # descriptor after it's been memory mapped
         memory.close_fd()
+
         return mapfile
     else:
         # Connect to the existing memory map
