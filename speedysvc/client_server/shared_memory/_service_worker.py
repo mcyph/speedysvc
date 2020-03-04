@@ -15,12 +15,12 @@ def _service_worker(server_methods):
     """
     In child processes of MultiProcessManager
     """
-    print(f"{server_methods.name} child: Creating logger client")
+    #print(f"{server_methods.name} child: Creating logger client")
     logger_client = LoggerClient(server_methods)
-    print(f"{server_methods.name} child: Creating server methods")
+    #print(f"{server_methods.name} child: Creating server methods")
     smi = server_methods(logger_client)
-    print(f"{server_methods.name} child: "
-          f"Server methods created, starting implementations")
+    #print(f"{server_methods.name} child: "
+    #      f"Server methods created, starting implementations")
 
     L = []
     L.append(SHMServer(server_methods=smi))
@@ -29,6 +29,9 @@ def _service_worker(server_methods):
     # this helps to make sure if processes are loaded properly,
     # if one depends on another.
     logger_client.set_service_status('started')
+
+    print(f"{server_methods.name} worker PID [{getpid()}]: "
+          f"Server methods created - listening for commands")
 
     _handling_sigint = [False]
     def signal_handler(sig, frame):
@@ -44,7 +47,7 @@ def _service_worker(server_methods):
                 print(f"Shutdown OK for {smi.name} [PID {getpid()}]")
 
         time.sleep(2)
-        print("_service_worker: exiting PID", getpid())
+        print(f"{smi.name} worker PID [{getpid()}]: exiting")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)

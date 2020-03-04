@@ -43,9 +43,9 @@ class SHMServer(SHMBase, ServerProviderBase):
         # if connecting to an existing socket, init_resources should be False!
         ServerProviderBase.__call__(self, server_methods)
 
-        print(f'{server_methods.name}:{server_methods.port}:'
-              f'Starting new SHMServer on port:',
-              server_methods.port)
+        #print(f'{server_methods.name}:{server_methods.port}:'
+        #      f'Starting new SHMServer on port:',
+        #      server_methods.port)
 
         self.port = server_methods.port
         self.shut_me_down = False

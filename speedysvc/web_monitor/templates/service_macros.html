@@ -67,7 +67,7 @@
                 <td>{{ method_name }}</td>
                 <td>{{ num_calls }}</td>
                 <td>{{ '%0.5f'| format(total_time|float) }}</td>
-                <td>{{ '%0.5f'| format(avg_call_time|float) }}</td>
+                <td>{{ '%0.6f'| format(avg_call_time|float) }}</td>
             </tr>
         {% endfor %}
     </table>

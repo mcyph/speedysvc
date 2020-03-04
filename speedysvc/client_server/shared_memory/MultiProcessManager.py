@@ -149,7 +149,7 @@ class MultiProcessServer:
                  resources" is set in child SHMServers)
         * Respawn in case of crashes
         """
-        print(f"{self.server_methods.name}: Process monitor started")
+        #print(f"{self.server_methods.name}: Process monitor started")
 
         while (
             (not self.shutting_down) and
@@ -450,11 +450,11 @@ if __name__ == '__main__':
     def signal_handler(sig, frame):
         if _handling_sigint[0]: return
         _handling_sigint[0] = True
-        print(f"MultiProcessManager [{getpid()}]: "
-              f"exiting PIDs {mps.LPIDs}")
+        #print(f"MultiProcessManager [{getpid()}]: "
+        #      f"exiting PIDs {mps.LPIDs}")
         mps.stop_service()
-        print("MultiProcesssManager: "
-              "exiting", getpid())
+        #print("MultiProcesssManager: "
+        #      "exiting", getpid())
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)

@@ -40,7 +40,7 @@ def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
         [pid]
     )
     for pid in LKillPIDs:
-        print(f"Sending SIGINT to pid: [{pid}]")
+        #print(f"Sending SIGINT to pid: [{pid}]")
         try:
             os.kill(pid, signal.SIGINT)
         except ProcessLookupError:
@@ -51,7 +51,7 @@ def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
             wait_for_pid(pid, timeout=sigint_timeout)
         except TimeoutError:
             # If that fails, send SIGTERM
-            print(f"Sending SIGTERM to pid: [{pid}]")
+            #print(f"Sending SIGTERM to pid: [{pid}]")
             try:
                 os.kill(pid, signal.SIGTERM)
             except ProcessLookupError:
@@ -63,7 +63,7 @@ def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
                 wait_for_pid(pid, timeout=sigterm_timeout)
             except TimeoutError:
                 # Send SIGKILLs if all else fails
-                print(f"Sending SIGKILL to pid: [{pid}]")
+                #print(f"Sending SIGKILL to pid: [{pid}]")
                 try:
                     os.kill(pid, signal.SIGKILL)
                 except ProcessLookupError:

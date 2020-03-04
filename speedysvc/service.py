@@ -68,6 +68,7 @@ class Services:
             'tcp_allow_insecure_serialisation': self.__convert_bool,
             'max_proc_num': self.__greater_than_0_int,
             'min_proc_num': self.__greater_than_0_int,
+            'max_proc_mem_bytes': self.__greater_than_0_int_or_none,
             'wait_until_completed': self.__convert_bool
         }
 
@@ -110,6 +111,14 @@ class Services:
         }[i.lower()]
 
     def __greater_than_0_int(self, i):
+        i = int(i)
+        assert i > 0, "Value should be greater than 0"
+        return i
+
+
+    def __greater_than_0_int_or_none(self, i):
+        if i is None:
+            return i
         i = int(i)
         assert i > 0, "Value should be greater than 0"
         return i
@@ -222,6 +231,7 @@ class Services:
 
                                 max_proc_num=1,
                                 min_proc_num=1,
+                                max_proc_mem_bytes=None,
                                 wait_until_completed=False,
 
                                 fifo_json_log_parent=None):
@@ -257,7 +267,7 @@ class Services:
 
             'min_proc_num': min_proc_num,
             'max_proc_num': max_proc_num,
-            'max_proc_mem_bytes': None,
+            'max_proc_mem_bytes': max_proc_mem_bytes,
 
             'new_proc_cpu_pc': 0.3,
             'new_proc_avg_over_secs': 20,
