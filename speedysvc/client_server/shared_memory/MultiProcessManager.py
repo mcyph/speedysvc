@@ -16,7 +16,7 @@ from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.client_server.network.NetworkServer import NetworkServer
 from speedysvc.client_server.shared_memory.SHMResourceManager import \
     SHMResourceManager, CONNECT_TO_EXISTING
-from hybrid_lock import SemaphoreDestroyedException
+from hybrid_lock import SemaphoreDestroyedException, NoSuchSemaphoreException
 
 
 MONITOR_PROCESS_EVERY_SECS = 5
@@ -390,10 +390,14 @@ class MultiProcessServer:
         """
         L = []
         for pid, qid in self.resource_manager.get_client_pids():
-            client_lock = self.resource_manager.get_client_lock(
-                pid, qid, CONNECT_TO_EXISTING
-            )
-            L.append(client_lock)
+            try:
+                client_lock = self.resource_manager.get_client_lock(
+                    pid, qid, CONNECT_TO_EXISTING
+                )
+                L.append(client_lock)
+            except (NoSuchSemaphoreException,
+                    SemaphoreDestroyedException):
+                pass
         return L
 
     def __lock_client_locks(self, LLocks):
@@ -408,8 +412,9 @@ class MultiProcessServer:
             except SemaphoreDestroyedException:
                 pass
             except:
-                import traceback
-                traceback.print_exc()
+                pass
+                #import traceback
+                #traceback.print_exc()
 
     def __unlock_client_locks(self, LLocks):
         """
@@ -423,8 +428,9 @@ class MultiProcessServer:
             except SemaphoreDestroyedException:
                 pass
             except:
-                import traceback
-                traceback.print_exc()
+                pass
+                #import traceback
+                #traceback.print_exc()
 
     def __unlock_client_locks_for_dead_pids(self, LLocks):
         """

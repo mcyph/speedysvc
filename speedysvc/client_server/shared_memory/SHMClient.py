@@ -107,6 +107,10 @@ class SHMClient(ClientProviderBase, SHMBase):
                     if time.time()-t_from > timeout:
                         raise TimeoutError()
 
+                # Prevent spinning for no reason
+                if time.time()-t_from > 0.1:
+                    time.sleep(0.01)
+
             self.server_lock.lock(
                 timeout=-1,
                 spin=int(self.use_spinlock)
