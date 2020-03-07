@@ -87,7 +87,6 @@ class NetworkServer(ServerProviderBase):
             args = recv(data_len)
             if actually_compressed:
                 args = compression_inst.decompress(args)
-            #print(data_len, cmd_len, cmd, args)
 
             try:
                 send_data = shm_client.send(cmd, args)

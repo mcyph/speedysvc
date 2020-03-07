@@ -11,8 +11,8 @@ class MsgPackSerialisation:
 
     @staticmethod
     def dumps(o):
-        return msgpack.packb(o, encoding='utf-8')
+        return msgpack.packb(o)
 
     @staticmethod
     def loads(o):
-        return msgpack.unpackb(o, encoding='utf-8')
+        return msgpack.unpackb(o)

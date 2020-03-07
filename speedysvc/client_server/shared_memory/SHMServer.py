@@ -1,4 +1,5 @@
 import time
+import posix_ipc
 import traceback
 from os import getpid
 from _thread import start_new_thread
@@ -119,10 +120,16 @@ class SHMServer(SHMBase, ServerProviderBase):
         Connect to the shared mmap space/client+server semaphores.
         Continuously poll for commands, responding as needed.
         """
-        mmap, client_lock, server_lock = \
-            self.resource_manager.open_existing_client_resources(
-                pid, qid
-            )
+        try:
+            mmap, client_lock, server_lock = \
+                self.resource_manager.open_existing_client_resources(
+                    pid, qid
+                )
+        except posix_ipc.ExistentialError:
+            # Resources might've been destroyed
+            # in the meantime by the client?
+            return
+
         #print(f"SHMServer {self.name} started new worker "
         #      f"thread for pid {pid} subid {qid}")
         do_spin = True
