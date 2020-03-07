@@ -1,5 +1,6 @@
 import time
 import _thread
+import warnings
 from os import getpid
 from ast import literal_eval
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
@@ -95,6 +96,7 @@ class SHMClient(ClientProviderBase, SHMBase):
             #      self.client_lock.get_value())
             self.server_lock.unlock()
 
+            checked_server_exists = False
             t_from = time.time()
             while mmap[0] == PENDING:
                 # TODO: Give up and try to reconnect if this goes on
@@ -109,6 +111,17 @@ class SHMClient(ClientProviderBase, SHMBase):
 
                 # Prevent spinning for no reason
                 if time.time()-t_from > 0.1:
+                    if not checked_server_exists:
+                        checked_server_exists = True
+                        
+                        self.resource_manager.check_for_missing_pids()
+                        if not self.resource_manager.get_server_pids():
+                            warnings.warn(
+                                f"Client [pid {getpid()}:qid {self.qid}]: "
+                                f"Could not find worker processes for service "
+                                f"{self.server_methods.name} - "
+                                f"it probably needs to be restarted!"
+                            )
                     time.sleep(0.01)
 
             self.server_lock.lock(
