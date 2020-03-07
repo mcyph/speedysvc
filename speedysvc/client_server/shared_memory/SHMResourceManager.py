@@ -263,6 +263,11 @@ class SHMResourceManager(JSONMMapBase):
     #===============================================================#
 
     @lock_fn
+    def get_server_pids(self):
+        LServerPIDs, LClientPIDs = self._decode()
+        return LServerPIDs
+
+    @lock_fn
     def add_server_pid(self, pid):
         """
         Add to a list of PIDs which are associated with this service

@@ -113,7 +113,7 @@ class SHMClient(ClientProviderBase, SHMBase):
                 if time.time()-t_from > 0.1:
                     if not checked_server_exists:
                         checked_server_exists = True
-                        
+
                         self.resource_manager.check_for_missing_pids()
                         if not self.resource_manager.get_server_pids():
                             warnings.warn(
