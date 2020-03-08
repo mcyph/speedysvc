@@ -25,8 +25,8 @@ class NetworkServer(ServerProviderBase):
             self.__check_security()
 
         sock = self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.bind((tcp_bind_address, server_methods.port))
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((tcp_bind_address, server_methods.port))
         sock.listen(0)
 
     def __check_security(self):
