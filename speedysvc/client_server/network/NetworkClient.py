@@ -1,6 +1,7 @@
 import time
 import warnings
 import socket
+from _thread import allocate_lock
 from os import getpid
 from speedysvc.toolkit.documentation.copydoc import copydoc
 
@@ -21,6 +22,7 @@ class NetworkClient(ClientProviderBase):
         """
         self.host = host
         self.port = port
+        self.lock = allocate_lock()
         ClientProviderBase.__init__(self, server_methods)
         self.compression_inst = compression_inst
         self.__connect()
@@ -47,6 +49,10 @@ class NetworkClient(ClientProviderBase):
 
     @copydoc(ClientProviderBase.send)
     def send(self, fn, data):
+        with self.lock:
+            return self._send(fn, data)
+
+    def _send(self, fn, data):
         actually_compressed, data = \
             self.compression_inst.compress(fn.serialiser.dumps(data))
         cmd = fn.__name__.encode('ascii')
