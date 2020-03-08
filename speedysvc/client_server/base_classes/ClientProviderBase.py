@@ -1,4 +1,6 @@
+from ast import literal_eval
 from abc import ABC, abstractmethod
+from speedysvc.toolkit.exceptions.exception_map import DExceptions
 from speedysvc.toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB, LOCK_EX
 
 
@@ -67,3 +69,27 @@ class ClientProviderBase(ABC):
                  be almost anything that's encodable
         """
         pass
+
+    def _handle_exception(self, response_data):
+        """
+
+        :param response_data:
+        :return:
+        """
+        response_data = response_data[1:].decode('utf-8', errors='replace')
+        if '(' in response_data:
+            exc_type, _, remainder = response_data[:-1].partition('(')
+            try:
+                # Try to convert to python types the arguments (safely)
+                # If we can't, it's not the end of the world
+                remainder = literal_eval(remainder)
+            except:
+                pass
+        else:
+            remainder = ''
+            exc_type = None
+
+        if exc_type is not None and exc_type in DExceptions:
+            raise DExceptions[exc_type](remainder)
+        else:
+            raise Exception(response_data)

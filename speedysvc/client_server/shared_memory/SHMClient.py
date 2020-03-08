@@ -2,14 +2,12 @@ import time
 import _thread
 import warnings
 from os import getpid
-from ast import literal_eval
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
 from speedysvc.client_server.shared_memory.shared_params import \
     PENDING, INVALID, SERVER, CLIENT
 from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager
 from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
-from speedysvc.toolkit.exceptions.exception_map import DExceptions
 
 
 _qid_lock = _thread.allocate_lock()
@@ -169,33 +167,9 @@ class SHMClient(ClientProviderBase, SHMBase):
         if response_status == b'+':
             return serialiser.loads(response_data)
         elif response_status == b'-':
-            self.__handle_exception(response_data)
+            self._handle_exception(response_data)
         else:
             raise Exception("Unknown status response %s" % response_status)
-
-    def __handle_exception(self, response_data):
-        """
-
-        :param response_data:
-        :return:
-        """
-        response_data = response_data[1:].decode('utf-8', errors='replace')
-        if '(' in response_data:
-            exc_type, _, remainder = response_data[:-1].partition('(')
-            try:
-                # Try to convert to python types the arguments (safely)
-                # If we can't, it's not the end of the world
-                remainder = literal_eval(remainder)
-            except:
-                pass
-        else:
-            remainder = ''
-            exc_type = None
-
-        if exc_type is not None and exc_type in DExceptions:
-            raise DExceptions[exc_type](remainder)
-        else:
-            raise Exception(response_data)
 
     def __resize_mmap(self, mmap, encoded_request):
         """

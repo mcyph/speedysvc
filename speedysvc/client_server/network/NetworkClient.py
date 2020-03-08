@@ -91,6 +91,7 @@ class NetworkClient(ClientProviderBase):
         if status == b'+':
             return fn.serialiser.loads(data)
         else:
+            self._handle_exception(data)
             raise Exception(data.decode('utf-8'))
 
 
