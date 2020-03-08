@@ -58,8 +58,25 @@ class NetworkClient(ClientProviderBase):
             # connection no longer functioning
             try:
                 self.conn_to_server.send(prefix + cmd + data)
+
+                def recv(amount):
+                    # Note string concatenation is slower in earlier versions
+                    # of python, but should be faster than list concat in later
+                    # versions after 3.
+                    r = b''
+                    while len(r) != amount:
+                        add_me = self.conn_to_server.recv(amount)
+                        if not add_me:
+                            raise ConnectionResetError()
+                        r += add_me
+                    return r
+
+                actually_compressed, data_len, status = \
+                    response_packer.unpack(recv(response_packer.size))
+                data = recv(data_len)
                 break
-            except socket.error:
+
+            except (socket.error, ConnectionResetError):
                 if not displayed_reconnect_msg:
                     displayed_reconnect_msg = True
                     warnings.warn(
@@ -69,22 +86,15 @@ class NetworkClient(ClientProviderBase):
                         f"the service may need to be checked/restarted!"
                     )
 
-                import time
-                time.sleep(1)
-                self.__connect()
+                while True:
+                    try:
+                        import time
+                        time.sleep(1)
+                        self.__connect()
+                    except (ConnectionRefusedError, ConnectionError):
+                        continue
+                    break
 
-        def recv(amount):
-            # Note string concatenation is slower in earlier versions
-            # of python, but should be faster than list concat in later
-            # versions after 3.
-            r = b''
-            while len(r) != amount:
-                r += self.conn_to_server.recv(amount)
-            return r
-
-        actually_compressed, data_len, status = \
-            response_packer.unpack(recv(response_packer.size))
-        data = recv(data_len)
         if actually_compressed:
             data = self.compression_inst.decompress(data)
 
