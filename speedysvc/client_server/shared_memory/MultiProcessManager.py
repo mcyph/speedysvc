@@ -272,7 +272,7 @@ class MultiProcessServer:
                     tcp_bind_address=self.tcp_bind,
                     server_methods=self.server_methods,
                     force_insecure_serialisation=self.tcp_allow_insecure_serialisation
-                )(self.server_methods)
+                )
 
             _thread.start_new_thread(start_network_server, ())
         _thread.start_new_thread(self.__monitor_process_loop, ())

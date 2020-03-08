@@ -5,7 +5,7 @@ from speedysvc.serialisation.RawSerialisation import \
 class ServerProviderBase:
     ___init = False
 
-    def __call__(self, server_methods):
+    def __init__(self, server_methods):
         """
         TODO!!!! ===========================================================
 

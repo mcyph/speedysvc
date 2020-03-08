@@ -29,6 +29,9 @@ class NetworkServer(ServerProviderBase):
         sock.bind((tcp_bind_address, server_methods.port))
         sock.listen(0)
 
+        ServerProviderBase.__init__(self, server_methods)
+        start_new_thread(self.__listen_for_conns_loop, ())
+
     def __check_security(self):
         for name in dir(self):
             attr = getattr(self, name)
@@ -42,11 +45,6 @@ class NetworkServer(ServerProviderBase):
                         "if you know what you're doing. It may be preferable to use JSON/raw "
                         "depending on your use case."
                     )
-
-    def __call__(self, server_methods):
-        ServerProviderBase.__call__(self, server_methods)
-        start_new_thread(self.__listen_for_conns_loop, ())
-        return self
 
     def __listen_for_conns_loop(self):
         server = self.sock

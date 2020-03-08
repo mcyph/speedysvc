@@ -42,7 +42,7 @@ class SHMServer(SHMBase, ServerProviderBase):
     def __init__(self, server_methods, use_spinlock=True):
         # NOTE: init_resources should only be called if creating from scratch -
         # if connecting to an existing socket, init_resources should be False!
-        ServerProviderBase.__call__(self, server_methods)
+        ServerProviderBase.__init__(self, server_methods)
 
         #print(f'{server_methods.name}:{server_methods.port}:'
         #      f'Starting new SHMServer on port:',
