@@ -30,6 +30,24 @@ def lock_fn(old_fn):
     return new_fn
 
 
+def lock_fn_timeout(old_fn):
+    """
+    Decorator for a function which needs a lock
+    for shared encode/decode operations
+    """
+    def new_fn(self, *args, **kw):
+        self.lock.lock(spin=0, timeout=5)
+        self.lock_acquired = True
+        try:
+            r = old_fn(self, *args, **kw)
+        finally:
+            self.lock.unlock()
+            self.lock_acquired = False
+        return r
+
+    return new_fn
+
+
 class SHMResourceManager(JSONMMapBase):
     MMAP_TEMPLATE = 'service_%(port)s_%(pid)s_%(qid)s'
     SERVER_LOCK_TEMPLATE = 'server_%(port)s_pid_%(pid)s_%(qid)s'
@@ -58,12 +76,16 @@ class SHMResourceManager(JSONMMapBase):
             JSONMMapBase.__init__(self, port, create=True)
             #print(f"SHMResourceManager for {name}:{port}: created")
 
-        self.__init_value()
+        try:
+            self.__init_value()
+        except TimeoutError:
+            self.lock.unlock()
+            self.__init_value()
 
         if monitor_pids:
             _thread.start_new_thread(self.__monitor_pids_loop, ())
 
-    @lock_fn
+    @lock_fn_timeout
     def __init_value(self):
         try:
             if not self._decode():
