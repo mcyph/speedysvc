@@ -1,6 +1,6 @@
 import time
 import _thread
-import warnings
+from warnings import warn
 from os import getpid
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
@@ -22,6 +22,10 @@ def new_qid(port):
             _DQIds[port] = 0
         _DQIds[port] += 1
         return _DQIds[port]
+
+
+class ResendError(Exception):
+    pass
 
 
 class SHMClient(ClientProviderBase, SHMBase):
@@ -54,6 +58,20 @@ class SHMClient(ClientProviderBase, SHMBase):
         return self.server_methods
 
     def send(self, cmd, args, timeout=-1):
+        num_times = 0
+        while True:
+            try:
+                return self._send(cmd, args, timeout)
+            except ResendError:
+                if num_times > 20:
+                    raise ResendError(
+                        f"Client [pid {getpid()}:qid {self.qid}]: "
+                        "Resent too many times!"
+                    )
+                num_times += 1
+                continue
+
+    def _send(self, cmd, args, timeout=-1):
         if isinstance(cmd, bytes):
             # cmd -> a bytes object, most likely heartbeat or shutdown
             serialiser = RawSerialisation
@@ -75,6 +93,7 @@ class SHMClient(ClientProviderBase, SHMBase):
             timeout=timeout,
             spin=int(self.use_spinlock)
         )
+
         try:
             # Next line must be in critical area!
             mmap = self.mmap
@@ -89,10 +108,11 @@ class SHMClient(ClientProviderBase, SHMBase):
 
             # Wait for the server to begin processing
             mmap[0] = PENDING
-            #print("BEFORE SERVER UNLOCK:",
-            #      self.server_lock.get_value(),
-            #      self.client_lock.get_value())
-            self.server_lock.unlock()
+            try:
+                self.server_lock.unlock()
+            except SystemError:
+                # Server has probably crashed
+                pass
 
             checked_server_exists = False
             t_from = time.time()
@@ -114,7 +134,7 @@ class SHMClient(ClientProviderBase, SHMBase):
 
                         self.resource_manager.check_for_missing_pids()
                         if not self.resource_manager.get_server_pids():
-                            warnings.warn(
+                            warn(
                                 f"Client [pid {getpid()}:qid {self.qid}]: "
                                 f"Could not find worker processes for service "
                                 f"{self.server_methods.name} - "
@@ -142,7 +162,16 @@ class SHMClient(ClientProviderBase, SHMBase):
                         num_times += 1
 
                     elif mmap[0] == SERVER:
-                        raise Exception("Should never get here!")
+                        warn(f"Client [pid {getpid()}:qid {self.qid}]: "
+                             f"Lock was released, but still belonged "
+                             f"to a server worker - the worker likely has crashed. "
+                             f"Resending request to hopefully allow another server "
+                             f"pid to handle!")
+                        try:
+                            self.server_lock.unlock()
+                        except:
+                            pass
+                        raise ResendError()
                     else:
                         raise Exception("Unknown state: %s" % mmap[0])
 

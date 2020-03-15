@@ -7,7 +7,7 @@ from libc.stdlib cimport malloc, free
 from libc.string cimport strcpy, strlen, strerror
 
 from posix.stat cimport fchmod
-from posix.unistd cimport ftruncate, close
+from posix.unistd cimport ftruncate, close, getpid
 from posix.fcntl cimport O_CREAT, O_EXCL, O_RDWR
 from posix.time cimport clock_gettime, timespec, CLOCK_REALTIME
 from posix.mman cimport PROT_READ, PROT_WRITE, MAP_SHARED, MAP_FAILED
@@ -52,6 +52,7 @@ cdef class HybridLock:
     cdef sem_t* _semaphore
     cdef int _cleaned_up
     cdef char* _spin_lock_char
+    cdef int* _spin_lock_pid
     cdef int _shm_fd
     cdef char* _sem_loc
 
@@ -196,7 +197,7 @@ cdef class HybridLock:
         # Map pthread mutex into the shared memory.
         cdef void *addr = mmap(
             NULL,
-            sizeof(char*),
+            sizeof(char*) + sizeof(int*),
             PROT_READ|PROT_WRITE,
             MAP_SHARED,
             self._shm_fd,
@@ -209,10 +210,12 @@ cdef class HybridLock:
         self._spin_lock_char = <char *>addr # VOLATILE??? ===========================================
         if set_value != -1:
             self._spin_lock_char[0] = set_value
-
         if self._spin_lock_char[0] == DESTROYED:
             raise SemaphoreDestroyedException("Semaphore at %s already destroyed: shouldn't get here!", sem_loc)
 
+        # Create an int which tracks which
+        # PID is currently holding the lock
+        self._spin_lock_pid = <int *>(addr + sizeof(char*))
         return 0
 
     #===========================================================#
@@ -369,6 +372,10 @@ cdef class HybridLock:
                     raise TimeoutError()
                 else:
                     raise Exception("sem_timedwait: %d" % timeout)
+
+        if retval == 0:
+            # register the current process as having the lock
+            self._spin_lock_pid[0] = getpid()
         return retval
 
     cpdef int unlock(self) except -1:
@@ -386,3 +393,16 @@ cdef class HybridLock:
                 raise Exception("sem_post")
 
         return retval
+
+    cpdef int get_pid_holding_lock(self) except -1:
+        cpdef int value = self.get_value()
+
+        if value == -1:
+            # An error
+            return -1
+        elif value == 0:
+            # Currently being held - return the PID of the process
+            return self._spin_lock_pid[0]
+        else:
+            # Not being held - return 0
+            return 0

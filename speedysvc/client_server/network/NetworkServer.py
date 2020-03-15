@@ -48,9 +48,10 @@ class NetworkServer(ServerProviderBase):
 
     def __listen_for_conns_loop(self):
         server = self.sock
+        print("Multithreaded server: waiting for connections...")
+
         while True:
             server.listen(4)
-            print("Multithreaded server: waiting for connections...")
             conn, (ip, port) = server.accept()
             shm_client = SHMClient(self.server_methods)
             start_new_thread(self.run, (conn, shm_client,))

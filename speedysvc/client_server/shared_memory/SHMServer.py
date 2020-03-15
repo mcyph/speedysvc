@@ -261,7 +261,10 @@ class SHMServer(SHMBase, ServerProviderBase):
                 fn.metadata['total_time'] += time.time() - t_from
 
         finally:
-            server_lock.unlock()
+            try:
+                server_lock.unlock()
+            except SystemError:
+                pass
         return do_spin, mmap
 
     def __resize_mmap(self, pid, qid, mmap, encoded):

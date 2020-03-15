@@ -9,6 +9,7 @@ import importlib
 import subprocess
 from sys import argv
 from os import getpid
+from warnings import warn
 from multiprocessing import cpu_count
 from speedysvc.kill_pid_and_children import kill_pid_and_children
 
@@ -138,6 +139,22 @@ class MultiProcessServer:
         self.start_service()
 
     def __monitor_process_loop(self):
+        while (
+            (not self.shutting_down) and
+            (self.logger_client.get_service_status() not in (
+                    'stopping', 'stopped'
+            ))
+        ):
+            try:
+                self.__monitor_process()
+            except:
+                import traceback
+                traceback.print_exc()
+                time.sleep(5)
+
+            time.sleep(MONITOR_PROCESS_EVERY_SECS)
+
+    def __monitor_process(self):
         """
         * Spawn new worker processes which exceed
           process time over a given time period
@@ -151,91 +168,86 @@ class MultiProcessServer:
         """
         #print(f"{self.server_methods.name}: Process monitor started")
 
-        while (
-            (not self.shutting_down) and
-            (self.logger_client.get_service_status() not in (
-                'stopping', 'stopped'
-            ))
-        ):
-            for pid in self.LPIDs[:]:
-                try:
-                    if not psutil.pid_exists(pid):
-                        # Stop monitoring child processes that no longer exist.
+        for pid in self.LPIDs[:]:
+            try:
+                if not psutil.pid_exists(pid):
+                    # Stop monitoring child processes that no longer exist.
+                    warn(f"MultiProcessManager PID {pid} for service {self.name} "
+                         f"doesn't exist any more - it may have crashed!")
+                    self.remove_child_process(pid)
+                else:
+                    proc = psutil.Process(pid)
+                    if proc.status() == psutil.STATUS_ZOMBIE:
+                        # Process no longer exists except on process table.
+                        warn(f"MultiProcessManager PID {pid} for service "
+                             f"{self.name} is a zombie - it may have crashed!")
+                        os.waitpid(pid, 0)
                         self.remove_child_process(pid)
-                    else:
-                        proc = psutil.Process(pid)
-                        if proc.status() == psutil.STATUS_ZOMBIE:
-                            # Process no longer exists except on process table.
-                            os.waitpid(pid, 0)
-                            self.remove_child_process(pid)
-                except:
-                    import traceback
-                    traceback.print_exc()
+            except:
+                import traceback
+                traceback.print_exc()
 
-            if (
-                len(self.LPIDs) < self.min_proc_num
-            ):
-                # Start a new worker process if there aren't enough
-                print(f"{self.server_methods.name}: "
-                      f"Adding worker process due to "
-                      f"minimum processes not satisfied")
-                self.new_child_process()
-                time.sleep(MONITOR_PROCESS_EVERY_SECS)
-                continue
-
-            DNewProcAvg = self.logger_client.get_average_over(
-                time.time() - self.new_proc_avg_over_secs, time.time()
-            )
-            DRemoveProcAvg = self.logger_client.get_average_over(
-                time.time() - self.kill_proc_avg_over_secs, time.time()
-            )
-            DLastRecord = self.logger_client.get_last_record()
-            time_since_last_op = time.time()-self.last_proc_op_time
-            #print(f"{self.server_methods.name} DNEWPROCAVG:", DNewProcAvg)
-
-            if not DNewProcAvg or not DRemoveProcAvg:
-                time.sleep(MONITOR_PROCESS_EVERY_SECS)
-                continue
-
-            if (
-                self.max_proc_mem_bytes is not None and
-                DLastRecord['physical_mem'] > self.max_proc_mem_bytes  # What about virtual memory?? ==============
-            ):
-                # Reap processes until we don't exceed
-                # the maximum amount of memory
-                print(f"{self.server_methods.name}: "
-                      f"Removing process due to memory exceeded")
-                self.remove_child_process()
-
-            elif (
-                time_since_last_op > self.new_proc_avg_over_secs and
-                (DNewProcAvg['cpu_usage_pc'] / DNewProcAvg['num_processes']) >
-                    (self.new_proc_cpu_pc * 100.0) and
-                len(self.LPIDs) < self.max_proc_num
-            ):
-                # Start a new worker process if the CPU usage is higher
-                # than a certain amount over the provided period
-                # new_proc_avg_over_secs
-                print(f"{self.server_methods.name}: "
-                      f"Adding worker process due to CPU higher than "
-                      f"{int(self.new_proc_cpu_pc*100)}% over "
-                      f"{self.new_proc_avg_over_secs} seconds")
-                self.new_child_process()
-
-            elif (
-                time_since_last_op > self.kill_proc_avg_over_secs and
-                DRemoveProcAvg['cpu_usage_pc'] < (self.new_proc_cpu_pc * 100.0) and
-                len(self.LPIDs) > self.min_proc_num
-            ):
-                # Reduce the number of workers if they aren't being
-                # used over an extended period
-                print(f"{self.server_methods.name}: "
-                      f"Removing process due to CPU lower than "
-                      f"{int(self.new_proc_cpu_pc*100)}% over "
-                      f"{self.kill_proc_avg_over_secs} seconds")
-                self.remove_child_process()
-
+        if len(self.LPIDs) < self.min_proc_num:
+            # Start a new worker process if there aren't enough
+            print(f"{self.server_methods.name}: "
+                  f"Adding worker process due to "
+                  f"minimum processes not satisfied")
+            self.new_child_process()
             time.sleep(MONITOR_PROCESS_EVERY_SECS)
+            return
+
+        DNewProcAvg = self.logger_client.get_average_over(
+            time.time() - self.new_proc_avg_over_secs, time.time()
+        )
+        DRemoveProcAvg = self.logger_client.get_average_over(
+            time.time() - self.kill_proc_avg_over_secs, time.time()
+        )
+        DLastRecord = self.logger_client.get_last_record()
+        time_since_last_op = time.time()-self.last_proc_op_time
+        #print(f"{self.server_methods.name} DNEWPROCAVG:", DNewProcAvg)
+
+        if not DNewProcAvg or not DRemoveProcAvg:
+            #print("NOT DNewProcAvg/DRemoveProcAvg!!!!")
+            time.sleep(MONITOR_PROCESS_EVERY_SECS)
+            return
+
+        if (
+            self.max_proc_mem_bytes is not None and
+            DLastRecord['physical_mem'] > self.max_proc_mem_bytes  # What about virtual memory?? ==============
+        ):
+            # Reap processes until we don't exceed
+            # the maximum amount of memory
+            print(f"{self.server_methods.name}: "
+                  f"Removing process due to memory exceeded")
+            self.remove_child_process()
+
+        elif (
+            time_since_last_op > self.new_proc_avg_over_secs and
+            (DNewProcAvg['cpu_usage_pc'] / DNewProcAvg['num_processes']) >
+                (self.new_proc_cpu_pc * 100.0) and
+            len(self.LPIDs) < self.max_proc_num
+        ):
+            # Start a new worker process if the CPU usage is higher
+            # than a certain amount over the provided period
+            # new_proc_avg_over_secs
+            print(f"{self.server_methods.name}: "
+                  f"Adding worker process due to CPU higher than "
+                  f"{int(self.new_proc_cpu_pc*100)}% over "
+                  f"{self.new_proc_avg_over_secs} seconds")
+            self.new_child_process()
+
+        elif (
+            time_since_last_op > self.kill_proc_avg_over_secs and
+            DRemoveProcAvg['cpu_usage_pc'] < (self.new_proc_cpu_pc * 100.0) and
+            len(self.LPIDs) > self.min_proc_num
+        ):
+            # Reduce the number of workers if they aren't being
+            # used over an extended period
+            print(f"{self.server_methods.name}: "
+                  f"Removing process due to CPU lower than "
+                  f"{int(self.new_proc_cpu_pc*100)}% over "
+                  f"{self.kill_proc_avg_over_secs} seconds")
+            self.remove_child_process()
 
     #========================================================#
     #                  Start/Stop Processes                  #
@@ -360,8 +372,8 @@ class MultiProcessServer:
 
         # Lock the service, to make sure we don't
         # terminate it halfway through a call!
-        LLocks = self.__get_L_client_locks()
-        self.__lock_client_locks(LLocks)
+        LLocks = self.__get_L_locks()
+        self.__lock_locks(LLocks)
 
         try:
             if pid is None:
@@ -377,13 +389,13 @@ class MultiProcessServer:
             if psutil.pid_exists(pid):
                 kill_pid_and_children(pid)
         finally:
-            self.__unlock_client_locks(LLocks)
+            self.__unlock_locks(LLocks)
 
     #========================================================#
     #              Acquire/Release Server Locks              #
     #========================================================#
 
-    def __get_L_client_locks(self):
+    def __get_L_locks(self):
         """
 
         :return:
@@ -398,9 +410,18 @@ class MultiProcessServer:
             except (NoSuchSemaphoreException,
                     SemaphoreDestroyedException):
                 pass
+
+            try:
+                server_lock = self.resource_manager.get_server_lock(
+                    pid, qid, CONNECT_TO_EXISTING
+                )
+                L.append(server_lock)
+            except (NoSuchSemaphoreException,
+                    SemaphoreDestroyedException):
+                pass
         return L
 
-    def __lock_client_locks(self, LLocks):
+    def __lock_locks(self, LLocks):
         """
 
         :param LLocks:
@@ -408,6 +429,23 @@ class MultiProcessServer:
         """
         for lock in LLocks:
             try:
+                # Unlock locks which are held by dead PIDs!
+                should_clean_up = False
+                pid = lock.get_pid_holding_lock()
+                if not psutil.pid_exists(pid):
+                    should_clean_up = True
+                else:
+                    try:
+                        proc = psutil.Process(pid)
+                        if proc.status() == psutil.STATUS_ZOMBIE:
+                            should_clean_up = True
+                    except:
+                        pass
+
+                if should_clean_up:
+                    try: lock.unlock()
+                    except: pass
+
                 lock.lock()
             except SemaphoreDestroyedException:
                 pass
@@ -416,7 +454,7 @@ class MultiProcessServer:
                 #import traceback
                 #traceback.print_exc()
 
-    def __unlock_client_locks(self, LLocks):
+    def __unlock_locks(self, LLocks):
         """
 
         :param LLocks:
@@ -432,7 +470,7 @@ class MultiProcessServer:
                 #import traceback
                 #traceback.print_exc()
 
-    def __unlock_client_locks_for_dead_pids(self, LLocks):
+    def __unlock_locks_for_dead_pids(self, LLocks):
         """
         TODO: If a server lock's reported PID no longer exists
           (possibly due to it crashing due to a segfault etc),
