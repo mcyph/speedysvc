@@ -192,6 +192,7 @@ class Services:
         :param port:
         :return:
         """
+        self.DLoggerServersByPort[port].set_service_status('stopping')
         proc = self.DProcByPort[port]
         self.DLoggerServersByPort[port].stop_collecting()
         self.__kill_proc(proc)
@@ -203,6 +204,7 @@ class Services:
         :param name:
         :return:
         """
+        self.DLoggerServersByName[name].set_service_status('stopping')
         proc = self.DProcByName[name]
         self.DLoggerServersByName[name].stop_collecting()
         self.__kill_proc(proc)
@@ -253,7 +255,9 @@ class Services:
             )
             self.DLoggerServersByName[server_methods.name] = logger_server
             self.DLoggerServersByPort[server_methods.port] = logger_server
+
         logger_server = self.DLoggerServersByPort[server_methods.port]
+        logger_server.set_service_status('forking')
 
         # Assemble relevant parameters
         # TODO: This is redundant - should all be supplied using self.DValues!

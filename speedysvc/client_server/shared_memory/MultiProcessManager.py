@@ -22,16 +22,18 @@ from hybrid_lock import SemaphoreDestroyedException, NoSuchSemaphoreException
 
 MONITOR_PROCESS_EVERY_SECS = 5
 
-STARTED = 0
+STARTED = 0  # server methods started
 STOPPED = 1
 STOPPING = 2
-STARTING = 3
+STARTING = 3  # Process forked/created, server methods starting
+FORKING = 4  # Process being forked/created
 
 _DStatusStrings = {
     STARTED: 'started',
     STOPPED: 'stopped',
     STOPPING: 'stopping',
     STARTING: 'starting',
+    FORKING: 'forking'
 }
 
 
@@ -264,8 +266,9 @@ class MultiProcessServer:
         """
         Start a stopped service.
         """
-        assert self.logger_client.get_service_status() == 'stopped', \
-            "Can't start a service that isn't stopped!"
+        assert self.logger_client.get_service_status() in ('stopped', 'forking'), \
+            f"Can't start a service that isn't stopped " \
+            f"(current status: {self.logger_client.get_service_status()})!"
         self.logger_client.set_service_status('starting')
 
         for x in range(self.min_proc_num):
@@ -313,7 +316,7 @@ class MultiProcessServer:
             'import_from': self.import_from,
             'section': self.section,
         }
-        if False:
+        if True:
             from speedysvc.client_server.shared_memory._service_worker import _service_worker
             from os import fork
 
@@ -496,7 +499,11 @@ if __name__ == '__main__':
         _handling_sigint[0] = True
         #print(f"MultiProcessManager [{getpid()}]: "
         #      f"exiting PIDs {mps.LPIDs}")
-        mps.stop_service()
+        try:
+            mps.stop_service()
+        except AssertionError:
+            # Not started anyway
+            pass
         #print("MultiProcesssManager: "
         #      "exiting", getpid())
         sys.exit(0)
