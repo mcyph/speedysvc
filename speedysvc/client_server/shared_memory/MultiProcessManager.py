@@ -322,16 +322,18 @@ class MultiProcessServer:
 
             pid = fork()
 
-            # Note that the server_methods needs to be after to fork()
-            # in order to make sure any module-level SHMClients report
-            # correct values with getpid(), and so we won't waste
-            # memory in this management process!
-            DArgs['server_methods'] = getattr(
-                importlib.import_module(DArgs.pop('import_from')),
-                DArgs.pop('section')
-            )
             if pid == 0:
                 # in child
+
+                # Note that the server_methods needs to be after to fork()
+                # in order to make sure any module-level SHMClients report
+                # correct values with getpid(), and so we won't waste
+
+                # memory in this management process!
+                DArgs['server_methods'] = getattr(
+                    importlib.import_module(DArgs.pop('import_from')),
+                    DArgs.pop('section')
+                )
                 _service_worker(**DArgs)
         else:
             proc = subprocess.Popen([
