@@ -197,9 +197,15 @@ class SHMServer(SHMBase, ServerProviderBase):
                     # shouldn't have obtained the lock
                     return False, mmap # Should this not spin??? ========================================
                 elif mmap[0] == SERVER:
-                    raise Exception("Should never get here!")
+                    raise Exception(
+                        f"Service {self.name} pid/qid {pid}:{qid} "
+                        f"should never get here!"
+                    )
                 else:
-                    raise Exception("Unknown state: %s" % mmap[0])
+                    raise Exception(
+                        f"Service {self.name} pid/qid {pid}:{qid} "
+                        f"unknown state: %s" % mmap[0]
+                    )
 
             # Measure for complete time it takes from
             # getting/putting back to the shm block
