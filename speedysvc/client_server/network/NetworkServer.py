@@ -53,7 +53,10 @@ class NetworkServer(ServerProviderBase):
         while True:
             server.listen(4)
             conn, (ip, port) = server.accept()
-            shm_client = SHMClient(self.server_methods)
+            # If we're using tcp sockets, spinlocks can
+            # actually be counterproductive and harm performance
+            # as we'd be waiting too long too often
+            shm_client = SHMClient(self.server_methods, use_spinlock=False)
             start_new_thread(self.run, (conn, shm_client,))
 
     def run(self, conn, shm_client):
