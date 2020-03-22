@@ -112,11 +112,26 @@ class SHMResourceManager(JSONMMapBase):
         Check for PIDs of clients and servers which don't
         exist any more, and clean up their resources!
         """
+        def is_pid_still_alive(pid):
+            if not pid_exists(pid):
+                return False
+
+            try:
+                proc = psutil.Process(pid=pid)
+                if proc.status() == psutil.STATUS_ZOMBIE:
+                    return False
+            except:
+                import traceback
+                traceback.print_exc()
+                return False
+
+            return True
+
         LServerPIDs, LClientPIDs = self._decode()
 
         n_LServerPIDs = []
         for pid in LServerPIDs:
-            if pid_exists(pid):
+            if is_pid_still_alive(pid):
                 n_LServerPIDs.append(pid)
             else:
                 # Won't do anything if doesn't exist - we'll leave the
@@ -126,7 +141,7 @@ class SHMResourceManager(JSONMMapBase):
 
         n_LClientPIDs = []
         for pid, qid in LClientPIDs:
-            if pid_exists(pid):
+            if is_pid_still_alive(pid):
                 n_LClientPIDs.append((pid, qid))
             else:
                 self.unlink_client_resources(pid, qid)
