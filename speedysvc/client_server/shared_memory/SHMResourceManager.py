@@ -5,6 +5,7 @@ import _thread
 import posix_ipc
 from psutil import pid_exists
 from speedysvc.kill_pid_and_children import kill_pid_and_children
+from speedysvc.is_pid_still_alive import is_pid_still_alive
 from hybrid_lock import HybridLock, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE, \
     NoSuchSemaphoreException, SemaphoreExistsException
 from speedysvc.ipc.JSONMMapBase import JSONMMapBase
@@ -82,11 +83,16 @@ class SHMResourceManager(JSONMMapBase):
             JSONMMapBase.__init__(self, port, create=True)
             #print(f"SHMResourceManager for {name}:{port}: created")
 
-        try:
-            self.__init_value()
-        except TimeoutError:
-            self.lock.unlock()
-            self.__init_value()
+        pid_holding_lock = self.lock.get_pid_holding_lock()
+        if pid_holding_lock and not is_pid_still_alive(pid_holding_lock):
+            # If the process which is holding the
+            # lock no longer exists, force unlock
+            try:
+                self.lock.unlock()
+            except:
+                pass
+
+        self.__init_value()
 
         if monitor_pids:
             _thread.start_new_thread(self.__monitor_pids_loop, ())
@@ -118,21 +124,6 @@ class SHMResourceManager(JSONMMapBase):
         Check for PIDs of clients and servers which don't
         exist any more, and clean up their resources!
         """
-        def is_pid_still_alive(pid):
-            if not pid_exists(pid):
-                return False
-
-            try:
-                proc = psutil.Process(pid=pid)
-                if proc.status() == psutil.STATUS_ZOMBIE:
-                    return False
-            except:
-                import traceback
-                traceback.print_exc()
-                return False
-
-            return True
-
         LServerPIDs, LClientPIDs = self._decode()
 
         n_LServerPIDs = []
