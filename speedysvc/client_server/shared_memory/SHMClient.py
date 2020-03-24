@@ -117,9 +117,10 @@ class SHMClient(ClientProviderBase, SHMBase):
             checked_server_exists = False
             t_from = time.time()
             while mmap[0] == PENDING:
-                # TODO: Give up and try to reconnect if this goes on
-                #  for too long - in that case, chances are something's
-                #  gone wrong on the server end
+                # Give up and try to reconnect if this goes on
+                # for too long - in that case, chances are something's
+                # gone wrong on the server end
+                #
                 # Preferably, this should be done in cython, if I find time to do it.
 
                 # Spin! - should check to make sure this isn't being called too often
@@ -161,7 +162,7 @@ class SHMClient(ClientProviderBase, SHMBase):
                         assert num_times < 1000, "Shouldn't get here!"
                         num_times += 1
 
-                    elif mmap[0] == SERVER:
+                    elif mmap[0] == SERVER or mmap[0] == PENDING:
                         warn(f"Client [pid {getpid()}:qid {self.qid}]: "
                              f"Lock was released, but still belonged "
                              f"to a server worker - the worker likely has crashed. "
