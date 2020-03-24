@@ -55,7 +55,16 @@ def lock_fn_timeout(old_fn):
     return new_fn
 
 
-class SHMResourceManager(JSONMMapBase):
+_DResourceManagers = {}
+
+
+def SHMResourceManager(port, name, monitor_pids=False):
+    if not (port, name) in _DResourceManagers:
+        _DResourceManagers[port, name] = _SHMResourceManager(port, name, monitor_pids)
+    return _DResourceManagers[port, name]
+
+
+class _SHMResourceManager(JSONMMapBase):
     MMAP_TEMPLATE = 'service_%(port)s_%(pid)s_%(qid)s'
     SERVER_LOCK_TEMPLATE = 'server_%(port)s_pid_%(pid)s_%(qid)s'
     CLIENT_LOCK_TEMPLATE = 'client_%(port)s_pid_%(pid)s_%(qid)s'
@@ -96,6 +105,8 @@ class SHMResourceManager(JSONMMapBase):
 
         if monitor_pids:
             _thread.start_new_thread(self.__monitor_pids_loop, ())
+
+        _DResourceManagers[port, name] = self
 
     @lock_fn_timeout
     def __init_value(self):
