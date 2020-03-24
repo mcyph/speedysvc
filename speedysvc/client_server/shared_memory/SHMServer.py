@@ -201,6 +201,10 @@ class SHMServer(SHMBase, ServerProviderBase):
                         f"Service {self.name} pid/qid {pid}:{qid} "
                         f"should never get here!"
                     )
+                elif mmap[0] == 0:
+                    # mmap likely has been freed by client/resource manager(?)
+                    time.sleep(0.1)
+                    return
                 else:
                     raise Exception(
                         f"Service {self.name} pid/qid {pid}:{qid} "

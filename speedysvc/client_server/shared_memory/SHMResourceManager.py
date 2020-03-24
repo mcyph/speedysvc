@@ -23,7 +23,10 @@ def lock_fn(old_fn):
         try:
             r = old_fn(self, *args, **kw)
         finally:
-            self.lock.unlock()
+            try:
+                self.lock.unlock()
+            except:
+                pass
             self.lock_acquired = False
         return r
 
@@ -41,7 +44,10 @@ def lock_fn_timeout(old_fn):
         try:
             r = old_fn(self, *args, **kw)
         finally:
-            self.lock.unlock()
+            try:
+                self.lock.unlock()
+            except:
+                pass
             self.lock_acquired = False
         return r
 
