@@ -1,4 +1,5 @@
 import time
+import atexit
 import _thread
 from warnings import warn
 from os import getpid
@@ -46,6 +47,14 @@ class SHMClient(ClientProviderBase, SHMBase):
         # (Note the pid/qid of this connection is registered here)
         self.mmap, self.client_lock, self.server_lock = \
             self.resource_manager.create_client_resources(getpid(), self.qid)
+
+        self.cleaned_up = False
+
+        # Add a handler for when the program is
+        # exiting to reduce the probability of
+        # resources being left over when __del__
+        # isn't called in time
+        atexit.register(self.__del__)
 
     def __del__(self):
         """

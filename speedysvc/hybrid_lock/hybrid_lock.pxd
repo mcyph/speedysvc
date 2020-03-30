@@ -18,3 +18,6 @@ cdef extern from "<semaphore.h>" nogil:
     int sem_destroy(sem_t *mutex)
     int sem_unlink(const char *name)
     int sem_getvalue(sem_t *sem, int *value)
+
+cdef extern from "unistd.h":
+    int getpagesize()

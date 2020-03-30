@@ -177,6 +177,8 @@ cdef class HybridLock:
         self._shm_fd = shm_open(sem_loc, O_RDWR, permissions)
 
         if errno == ENOENT:
+            #print("SHM creating:", sem_loc, getpid())
+
             # Need to create a new shared memory item
             self._shm_fd = shm_open(
                 sem_loc, O_RDWR|O_CREAT, permissions
@@ -186,6 +188,8 @@ cdef class HybridLock:
             # body can access it. Avoiding the umask of shm_open
             if fchmod(self._shm_fd, permissions) == -1:
                 self.__exception_occurred("fchmod")
+        #else:
+        #    print("SHM open existing:", sem_loc, getpid())
 
         if self._shm_fd == -1:
             raise SystemError("shm_open")
@@ -197,7 +201,7 @@ cdef class HybridLock:
         # Map pthread mutex into the shared memory.
         cdef void *addr = mmap(
             NULL,
-            sizeof(char*) + sizeof(int*),
+            getpagesize(),
             PROT_READ|PROT_WRITE,
             MAP_SHARED,
             self._shm_fd,
@@ -215,7 +219,10 @@ cdef class HybridLock:
 
         # Create an int which tracks which
         # PID is currently holding the lock
-        self._spin_lock_pid = <int *>(addr + sizeof(char*))
+        self._spin_lock_pid = <int *>(addr + sizeof(char))
+        #print("spin lock PID:", self._spin_lock_pid[0],
+        #      "from pid:", getpid(),
+        #      "spin lock char:", self._spin_lock_char[0], (<int *>addr)[0])
         return 0
 
     #===========================================================#
@@ -389,7 +396,6 @@ cdef class HybridLock:
         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
             retval = sem_post(self._semaphore)
             if retval != 0:
-                perror("sem_post")
                 raise Exception("sem_post")
 
         return retval

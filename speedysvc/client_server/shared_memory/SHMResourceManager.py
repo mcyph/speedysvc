@@ -93,10 +93,12 @@ class _SHMResourceManager(JSONMMapBase):
             #print(f"SHMResourceManager for {name}:{port}: created")
 
         pid_holding_lock = self.lock.get_pid_holding_lock()
-        if pid_holding_lock and not is_pid_still_alive(pid_holding_lock):
+        if (pid_holding_lock and not is_pid_still_alive(pid_holding_lock)) or not pid_holding_lock:
             # If the process which is holding the
             # lock no longer exists, force unlock
             try:
+                print(f"SHMResourceManager for {name}: "
+                      f"PID {pid_holding_lock} no longer exists - unlocking!")
                 self.lock.unlock()
             except:
                 pass

@@ -38,9 +38,29 @@ def test2():
            existing_2.get_value() == \
            exclusive.get_value() == 1, (existing.get_value(), exclusive.get_value())
     exclusive.lock()
+    #exclusive.unlock()
+    #print("CHECK HOLDING LOCK OK:", exclusive.get_pid_holding_lock())
     assert existing.get_value() == \
            existing_2.get_value() == \
            exclusive.get_value() == 0, (existing.get_value(), exclusive.get_value())
+    # The pid of the process holding the lock
+    # should be the same for all the locks
+    assert exclusive.get_pid_holding_lock()  # Should not be 0!
+    assert exclusive.get_pid_holding_lock() == \
+           existing.get_pid_holding_lock() == \
+           existing_2.get_pid_holding_lock()
+
+    from os import fork, getpid
+    parent_pid = getpid()
+    pid = fork()
+    if pid == 0:
+        #print("CHILD")
+        _check_pid_holding_lock_from_other_pid(parent_pid)
+        return
+    else:
+        import time
+        time.sleep(1)
+
     exclusive.unlock()
 
     # Try destroying one, and make sure every one is invalidated
@@ -55,6 +75,18 @@ def test2():
         raise Exception("Shouldn't get here!")
     except NoSuchSemaphoreException:
         pass
+
+
+def _check_pid_holding_lock_from_other_pid(from_pid):
+    # Make sure get_pid_holding_lock returns
+    # the same thing from a different process
+    existing = HybridLock(b'test', CONNECT_TO_EXISTING)
+    pid_holding = existing.get_pid_holding_lock()
+    from os import getpid, getppid
+    assert pid_holding == from_pid, \
+        f"pid {from_pid} != {pid_holding} " \
+        f"(parent pid {getppid()} child pid {getpid()})"
+
 
 def test3():
     # Try killing one process, then reconnecting to the server
