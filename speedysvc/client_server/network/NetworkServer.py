@@ -75,18 +75,29 @@ class NetworkServer(ServerProviderBase):
             # versions after 3.
             r = b''
             while len(r) != amount:
-                r += conn.recv(amount)
+                i = conn.recv(amount)
+                if i:
+                    r += i
+                else:
+                    raise ConnectionResetError()
             return r
 
         # Client tells the server whether to use
         # compression, as currently implemented
-        compression_inst = compression_types.get_by_type_code(recv(1))
+        try:
+            compression_inst = compression_types.get_by_type_code(recv(1))
+        except ConnectionResetError:
+            return
 
         while True:
-            actually_compressed, data_len, cmd_len = \
-                len_packer.unpack(recv(len_packer.size))
-            cmd = recv(cmd_len)
-            args = recv(data_len)
+            try:
+                actually_compressed, data_len, cmd_len = \
+                    len_packer.unpack(recv(len_packer.size))
+                cmd = recv(cmd_len)
+                args = recv(data_len)
+            except ConnectionResetError:
+                return
+
             if actually_compressed:
                 args = compression_inst.decompress(args)
 
@@ -116,7 +127,6 @@ class NetworkServer(ServerProviderBase):
                     ) + send_data
                 )
 
-            #print("SEND:", send_data)
             conn.send(send_data)
 
 

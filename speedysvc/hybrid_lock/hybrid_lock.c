@@ -3348,18 +3348,9 @@ static int __pyx_f_11hybrid_lock_10HybridLock_destroy(struct __pyx_obj_11hybrid_
  *             raise SemaphoreDestroyedException("HybridLock has already been destroyed")
  *         self._cleaned_up = 1             # <<<<<<<<<<<<<<
  * 
- *         printf("Destroying semaphore %s\n", self._sem_loc)
+ *         #printf("Destroying semaphore %s\n", self._sem_loc)
  */
   __pyx_v_self->_cleaned_up = 1;
-
-  /* "hybrid_lock.pyx":254
- *         self._cleaned_up = 1
- * 
- *         printf("Destroying semaphore %s\n", self._sem_loc)             # <<<<<<<<<<<<<<
- * 
- *         # After calling shm_unlink, I believe the behaviour is
- */
-  (void)(printf(((char const *)"Destroying semaphore %s\n"), __pyx_v_self->_sem_loc));
 
   /* "hybrid_lock.pyx":260
  *         # accessible by name, but will still remain accessible
@@ -4804,7 +4795,7 @@ static int __pyx_f_11hybrid_lock_10HybridLock_unlock(struct __pyx_obj_11hybrid_l
  *         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
  *             retval = sem_post(self._semaphore)             # <<<<<<<<<<<<<<
  *             if retval != 0:
- *                 #perror("sem_post")
+ *                 raise Exception("sem_post")
  */
     __pyx_v_retval = sem_post(__pyx_v_self->_semaphore);
 
@@ -4812,31 +4803,31 @@ static int __pyx_f_11hybrid_lock_10HybridLock_unlock(struct __pyx_obj_11hybrid_l
  *         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
  *             retval = sem_post(self._semaphore)
  *             if retval != 0:             # <<<<<<<<<<<<<<
- *                 #perror("sem_post")
  *                 raise Exception("sem_post")
+ * 
  */
     __pyx_t_1 = ((__pyx_v_retval != 0) != 0);
     if (unlikely(__pyx_t_1)) {
 
-      /* "hybrid_lock.pyx":400
+      /* "hybrid_lock.pyx":399
+ *             retval = sem_post(self._semaphore)
  *             if retval != 0:
- *                 #perror("sem_post")
  *                 raise Exception("sem_post")             # <<<<<<<<<<<<<<
  * 
  *         return retval
  */
-      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__15, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 400, __pyx_L1_error)
+      __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&((PyTypeObject*)PyExc_Exception)[0])), __pyx_tuple__15, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 399, __pyx_L1_error)
       __Pyx_GOTREF(__pyx_t_2);
       __Pyx_Raise(__pyx_t_2, 0, 0, 0);
       __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-      __PYX_ERR(0, 400, __pyx_L1_error)
+      __PYX_ERR(0, 399, __pyx_L1_error)
 
       /* "hybrid_lock.pyx":398
  *         if self.get_value() == 0: # NOTE ME: Can't unlock if already at 0, as we're only using it as a binary semaphore
  *             retval = sem_post(self._semaphore)
  *             if retval != 0:             # <<<<<<<<<<<<<<
- *                 #perror("sem_post")
  *                 raise Exception("sem_post")
+ * 
  */
     }
 
@@ -4849,7 +4840,7 @@ static int __pyx_f_11hybrid_lock_10HybridLock_unlock(struct __pyx_obj_11hybrid_l
  */
   }
 
-  /* "hybrid_lock.pyx":402
+  /* "hybrid_lock.pyx":401
  *                 raise Exception("sem_post")
  * 
  *         return retval             # <<<<<<<<<<<<<<
@@ -4917,12 +4908,12 @@ static PyObject *__pyx_pf_11hybrid_lock_10HybridLock_16unlock(struct __pyx_obj_1
   return __pyx_r;
 }
 
-/* "hybrid_lock.pyx":404
+/* "hybrid_lock.pyx":403
  *         return retval
  * 
  *     cpdef int get_pid_holding_lock(self) except -1:             # <<<<<<<<<<<<<<
  *         cpdef int value = self.get_value()
- *         #print("pid holding lock value:", value)
+ * 
  */
 
 static PyObject *__pyx_pw_11hybrid_lock_10HybridLock_19get_pid_holding_lock(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
@@ -4933,18 +4924,18 @@ static int __pyx_f_11hybrid_lock_10HybridLock_get_pid_holding_lock(struct __pyx_
   int __pyx_t_1;
   __Pyx_RefNannySetupContext("get_pid_holding_lock", 0);
 
-  /* "hybrid_lock.pyx":405
+  /* "hybrid_lock.pyx":404
  * 
  *     cpdef int get_pid_holding_lock(self) except -1:
  *         cpdef int value = self.get_value()             # <<<<<<<<<<<<<<
- *         #print("pid holding lock value:", value)
  * 
+ *         if value == -1:
  */
-  __pyx_t_1 = __pyx_f_11hybrid_lock_10HybridLock_get_value(__pyx_v_self, 0); if (unlikely(__pyx_t_1 == ((int)-10))) __PYX_ERR(0, 405, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_11hybrid_lock_10HybridLock_get_value(__pyx_v_self, 0); if (unlikely(__pyx_t_1 == ((int)-10))) __PYX_ERR(0, 404, __pyx_L1_error)
   __pyx_v_value = __pyx_t_1;
 
-  /* "hybrid_lock.pyx":408
- *         #print("pid holding lock value:", value)
+  /* "hybrid_lock.pyx":406
+ *         cpdef int value = self.get_value()
  * 
  *         if value == -1:             # <<<<<<<<<<<<<<
  *             # An error
@@ -4953,7 +4944,7 @@ static int __pyx_f_11hybrid_lock_10HybridLock_get_pid_holding_lock(struct __pyx_
   switch (__pyx_v_value) {
     case -1L:
 
-    /* "hybrid_lock.pyx":410
+    /* "hybrid_lock.pyx":408
  *         if value == -1:
  *             # An error
  *             return -1             # <<<<<<<<<<<<<<
@@ -4963,8 +4954,8 @@ static int __pyx_f_11hybrid_lock_10HybridLock_get_pid_holding_lock(struct __pyx_
     __pyx_r = -1;
     goto __pyx_L0;
 
-    /* "hybrid_lock.pyx":408
- *         #print("pid holding lock value:", value)
+    /* "hybrid_lock.pyx":406
+ *         cpdef int value = self.get_value()
  * 
  *         if value == -1:             # <<<<<<<<<<<<<<
  *             # An error
@@ -4973,7 +4964,7 @@ static int __pyx_f_11hybrid_lock_10HybridLock_get_pid_holding_lock(struct __pyx_
     break;
     case 0:
 
-    /* "hybrid_lock.pyx":413
+    /* "hybrid_lock.pyx":411
  *         elif value == 0:
  *             # Currently being held - return the PID of the process
  *             return self._spin_lock_pid[0]             # <<<<<<<<<<<<<<
@@ -4983,7 +4974,7 @@ static int __pyx_f_11hybrid_lock_10HybridLock_get_pid_holding_lock(struct __pyx_
     __pyx_r = (__pyx_v_self->_spin_lock_pid[0]);
     goto __pyx_L0;
 
-    /* "hybrid_lock.pyx":411
+    /* "hybrid_lock.pyx":409
  *             # An error
  *             return -1
  *         elif value == 0:             # <<<<<<<<<<<<<<
@@ -4993,7 +4984,7 @@ static int __pyx_f_11hybrid_lock_10HybridLock_get_pid_holding_lock(struct __pyx_
     break;
     default:
 
-    /* "hybrid_lock.pyx":416
+    /* "hybrid_lock.pyx":414
  *         else:
  *             # Not being held - return 0
  *             return 0             # <<<<<<<<<<<<<<
@@ -5003,12 +4994,12 @@ static int __pyx_f_11hybrid_lock_10HybridLock_get_pid_holding_lock(struct __pyx_
     break;
   }
 
-  /* "hybrid_lock.pyx":404
+  /* "hybrid_lock.pyx":403
  *         return retval
  * 
  *     cpdef int get_pid_holding_lock(self) except -1:             # <<<<<<<<<<<<<<
  *         cpdef int value = self.get_value()
- *         #print("pid holding lock value:", value)
+ * 
  */
 
   /* function exit code */
@@ -5040,8 +5031,8 @@ static PyObject *__pyx_pf_11hybrid_lock_10HybridLock_18get_pid_holding_lock(stru
   PyObject *__pyx_t_2 = NULL;
   __Pyx_RefNannySetupContext("get_pid_holding_lock", 0);
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_f_11hybrid_lock_10HybridLock_get_pid_holding_lock(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 404, __pyx_L1_error)
-  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 404, __pyx_L1_error)
+  __pyx_t_1 = __pyx_f_11hybrid_lock_10HybridLock_get_pid_holding_lock(__pyx_v_self, 1); if (unlikely(__pyx_t_1 == ((int)-1))) __PYX_ERR(0, 403, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyInt_From_int(__pyx_t_1); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 403, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_r = __pyx_t_2;
   __pyx_t_2 = 0;
@@ -5519,14 +5510,14 @@ static CYTHON_SMALL_CODE int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__14);
   __Pyx_GIVEREF(__pyx_tuple__14);
 
-  /* "hybrid_lock.pyx":400
+  /* "hybrid_lock.pyx":399
+ *             retval = sem_post(self._semaphore)
  *             if retval != 0:
- *                 #perror("sem_post")
  *                 raise Exception("sem_post")             # <<<<<<<<<<<<<<
  * 
  *         return retval
  */
-  __pyx_tuple__15 = PyTuple_Pack(1, __pyx_n_u_sem_post); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(0, 400, __pyx_L1_error)
+  __pyx_tuple__15 = PyTuple_Pack(1, __pyx_n_u_sem_post); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(0, 399, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__15);
   __Pyx_GIVEREF(__pyx_tuple__15);
 
