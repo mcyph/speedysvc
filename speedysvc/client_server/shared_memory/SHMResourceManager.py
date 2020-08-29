@@ -11,6 +11,12 @@ from hybrid_lock import HybridLock, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE, \
 from speedysvc.ipc.JSONMMapBase import JSONMMapBase
 # TODO: Move get_mmap somewhere more appropriate!
 from speedysvc.client_server.shared_memory.shared_params import get_mmap
+from speedysvc.client_server.shared_memory.shared_params import INVALID, SERVER, CLIENT
+
+
+def debug(*s):
+    if False:
+        print(*s)
 
 
 def lock_fn(old_fn):
@@ -66,8 +72,7 @@ def SHMResourceManager(port, name, monitor_pids=False):
 
 class _SHMResourceManager(JSONMMapBase):
     MMAP_TEMPLATE = 'service_%(port)s_%(pid)s_%(qid)s'
-    SERVER_LOCK_TEMPLATE = 'server_%(port)s_pid_%(pid)s_%(qid)s'
-    CLIENT_LOCK_TEMPLATE = 'client_%(port)s_pid_%(pid)s_%(qid)s'
+    LOCK_TEMPLATE = 'lock_%(port)s_pid_%(pid)s_%(qid)s'
 
     def __init__(self, port, name, monitor_pids=False):
         """
@@ -87,18 +92,18 @@ class _SHMResourceManager(JSONMMapBase):
         # TODO: Specify the actual mmap location of the JSON Map!!
         try:
             JSONMMapBase.__init__(self, port, create=False)
-            #print(f"SHMResourceManager for {name}:{port}: connected")
+            #debug(f"SHMResourceManager for {name}:{port}: connected")
         except NoSuchSemaphoreException:
             JSONMMapBase.__init__(self, port, create=True)
-            #print(f"SHMResourceManager for {name}:{port}: created")
+            #debug(f"SHMResourceManager for {name}:{port}: created")
 
         pid_holding_lock = self.lock.get_pid_holding_lock()
         if (pid_holding_lock and not is_pid_still_alive(pid_holding_lock)) or not pid_holding_lock:
             # If the process which is holding the
             # lock no longer exists, force unlock
             try:
-                print(f"SHMResourceManager for {name}: "
-                      f"PID {pid_holding_lock} no longer exists - unlocking!")
+                #debug(f"SHMResourceManager for {name}: "
+                #      f"PID {pid_holding_lock} no longer exists - unlocking!")
                 self.lock.unlock()
             except:
                 pass
@@ -154,7 +159,7 @@ class _SHMResourceManager(JSONMMapBase):
             if is_pid_still_alive(pid):
                 n_LClientPIDs.append((pid, qid))
             else:
-                self.unlink_client_resources(pid, qid)
+                self.unlink_resources(pid, qid)
 
         self._encode([n_LServerPIDs, n_LClientPIDs])
 
@@ -162,7 +167,7 @@ class _SHMResourceManager(JSONMMapBase):
     #           Create/Open/Destroy Client Locks+MMaps              #
     #===============================================================#
 
-    def create_client_resources(self, pid, qid):
+    def create_resources(self, pid, qid):
         """
         Create new client resources for a given pid/qid
         and adds the PID/QID to the service info,
@@ -170,87 +175,45 @@ class _SHMResourceManager(JSONMMapBase):
         :return: (the shared mmap, client HybridLock, server HybridLock)
         """
         mmap = self.create_pid_mmap(min_size=1024, pid=pid, qid=qid)
-        client_lock, server_lock = self.__get_client_server_locks(
-            pid, qid, CREATE_NEW_OVERWRITE
-        )
+        lock = self.get_lock(pid, qid, CREATE_NEW_OVERWRITE)
         # Inform servers
         self.add_client_pid_qid(pid, qid)
-        return mmap, client_lock, server_lock
+        return mmap, lock
 
-    def open_existing_client_resources(self, pid, qid):
+    def open_existing_resources(self, pid, qid):
         """
         Create existing client resources for a given pid/qid
         :return: (the shared mmap, client HybridLock, server HybridLock)
         """
         mmap = self.connect_to_pid_mmap(pid, qid)
-        client_lock, server_lock = self.__get_client_server_locks(
-            pid, qid, CONNECT_TO_EXISTING
-        )
-        return mmap, client_lock, server_lock
+        lock = self.get_lock(pid, qid, CONNECT_TO_EXISTING)
+        return mmap, lock
 
-    def __get_client_server_locks(self, pid, qid, mode):
+    def get_lock(self, pid, qid, mode):
         """
         Get the locks for a client connection to the servers
-        :return: (client HybridLock, server HybridLock)
+        :return: HybridLock
         """
-        return (
-            self.get_client_lock(pid, qid, mode),
-            self.get_server_lock(pid, qid, mode)
-        )
-
-    def get_client_lock(self, pid, qid, mode):
-        client_loc = self.CLIENT_LOCK_TEMPLATE % dict(
-            port=self.port, pid=pid, qid=qid
-        )
-        client_lock = HybridLock(
-            client_loc.encode('ascii'), mode=mode, initial_value=1
-        )
+        client_loc = self.LOCK_TEMPLATE % dict(port=self.port, pid=pid, qid=qid)
+        client_lock = HybridLock(client_loc.encode('ascii'), mode=mode, initial_value=1)
         return client_lock
 
-    def get_server_lock(self, pid, qid, mode):
-        server_loc = self.SERVER_LOCK_TEMPLATE % dict(
-            port=self.port, pid=pid, qid=qid
-        )
-        server_lock = HybridLock(
-            server_loc.encode('ascii'), mode=mode, initial_value=0
-        )
-        return server_lock
-
-    def unlink_client_resources(self, pid, qid):
+    def unlink_resources(self, pid, qid):
         """
-        Remove the locks and memory map associated with
-        the process ID/in-process ID
+        Remove the locks and memory map associated with the process ID/in-process ID
 
-        (i.e. the in-process "qid" allows a process to have
-        multiple clients sending commands to multiple server
-        workers at once)
+        (i.e. the in-process "qid" allows a process to have multiple clients sending
+         commands to multiple server workers at once)
         """
         try:
-            client_loc = self.CLIENT_LOCK_TEMPLATE % dict(
-                port=self.port, pid=pid, qid=qid
-            )
-            client_lock = HybridLock(
-                client_loc.encode('utf-8'), CONNECT_TO_EXISTING
-            )
+            client_loc = self.LOCK_TEMPLATE % dict(port=self.port, pid=pid, qid=qid)
+            client_lock = HybridLock(client_loc.encode('utf-8'), CONNECT_TO_EXISTING)
             client_lock.destroy()
         except NoSuchSemaphoreException:
             pass
 
         try:
-            server_loc = self.SERVER_LOCK_TEMPLATE % dict(
-                port=self.port, pid=pid, qid=qid
-            )
-            server_lock = HybridLock(
-                server_loc.encode('utf-8'), CONNECT_TO_EXISTING
-            )
-            server_lock.destroy()
-        except NoSuchSemaphoreException:
-            pass
-
-        try:
-            mmap_loc = self.MMAP_TEMPLATE % dict(
-                port=self.port, pid=pid, qid=qid
-            )
+            mmap_loc = self.MMAP_TEMPLATE % dict(port=self.port, pid=pid, qid=qid)
             posix_ipc.unlink_shared_memory(mmap_loc)
         except posix_ipc.ExistentialError:
             pass
@@ -280,14 +243,9 @@ class _SHMResourceManager(JSONMMapBase):
         # The alternatives like just raising an error, or having multipart
         # mode seemed too limiting and too complicated/high overhead
         # for it to be worthwhile.
-        socket_name = self.MMAP_TEMPLATE % dict(
-            port=self.port, pid=pid, qid=qid
-        )
-        mmap = get_mmap(
-            socket_name.encode('utf-8'),
-            create=True,
-            new_size=min_size
-        )
+        socket_name = self.MMAP_TEMPLATE % dict(port=self.port, pid=pid, qid=qid)
+        mmap = get_mmap(socket_name.encode('utf-8'), create=True, new_size=min_size)
+        mmap[0] = CLIENT
         return mmap
 
     def connect_to_pid_mmap(self, pid, qid):
@@ -297,13 +255,8 @@ class _SHMResourceManager(JSONMMapBase):
         connecting to a semaphore/shared memory that
         (should've been) already created.
         """
-        socket_name = self.MMAP_TEMPLATE % dict(
-            port=self.port, pid=pid, qid=qid
-        )
-        return get_mmap(
-            socket_name.encode('utf-8'),
-            create=False
-        )
+        socket_name = self.MMAP_TEMPLATE % dict(port=self.port, pid=pid, qid=qid)
+        return get_mmap(socket_name.encode('utf-8'), create=False)
 
     #===============================================================#
     #                     Server PID management                     #
@@ -416,7 +369,7 @@ class _SHMResourceManager(JSONMMapBase):
         LServerPIDs, LClientPIDs = self._decode()
         while [pid, qid] in LClientPIDs:
             LClientPIDs.remove([pid, qid])
-        self.unlink_client_resources(pid, qid)
+        self.unlink_resources(pid, qid)
         self._encode([LServerPIDs, LClientPIDs])
 
     @lock_fn
@@ -426,5 +379,5 @@ class _SHMResourceManager(JSONMMapBase):
         """
         LServerPIDs, LClientPIDs = self._decode()
         for pid, qid in LClientPIDs:
-            self.unlink_client_resources(pid, qid)
+            self.unlink_resources(pid, qid)
         self._encode([LServerPIDs, []])

@@ -5,8 +5,7 @@ from warnings import warn
 from os import getpid
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
-from speedysvc.client_server.shared_memory.shared_params import \
-    PENDING, INVALID, SERVER, CLIENT
+from speedysvc.client_server.shared_memory.shared_params import INVALID, SERVER, CLIENT
 from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager
 from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
 
@@ -29,31 +28,34 @@ class ResendError(Exception):
     pass
 
 
+def debug(*s):
+    if False:
+        print(*s)
+
+
 class SHMClient(ClientProviderBase, SHMBase):
     def __init__(self, server_methods, port=None, use_spinlock=True):
         self.pid = getpid()
         self.use_spinlock = use_spinlock
-        # Create the shared mmap space/client+server semaphores.
+        self._in_process_lock = _thread.allocate_lock()
 
+        # Create the shared mmap space/client+server semaphores.
+        #
         # Connect to a shared shm/semaphore which stores the
         # current processes which are associated with this service,
         # and add this process' PID.
         ClientProviderBase.__init__(self, server_methods, port)
         assert not hasattr(self, 'qid')
         self.qid = new_qid(self.port)
-        self.resource_manager = SHMResourceManager(
-            self.port, server_methods.__dict__.get('name')
-        )
-        # (Note the pid/qid of this connection is registered here)
-        self.mmap, self.client_lock, self.server_lock = \
-            self.resource_manager.create_client_resources(getpid(), self.qid)
+        self.resource_manager = SHMResourceManager(self.port, server_methods.__dict__.get('name'))
 
+        # (Note the pid/qid of this connection is registered here)
+        self.mmap, self.lock = self.resource_manager.create_resources(getpid(), self.qid)
+        self.lock.lock()
         self.cleaned_up = False
 
-        # Add a handler for when the program is
-        # exiting to reduce the probability of
-        # resources being left over when __del__
-        # isn't called in time
+        # Add a handler for when the program is exiting to reduce the probability of
+        # resources being left over when __del__ isn't called in time
         atexit.register(self.__del__)
 
     def __del__(self):
@@ -61,24 +63,24 @@ class SHMClient(ClientProviderBase, SHMBase):
         Clean up resources and tell server
         workers this qid no longer exists
         """
-        self.resource_manager.unlink_client_resources(getpid(), self.qid)
+        self.resource_manager.unlink_resources(getpid(), self.qid)
 
     def get_server_methods(self):
         return self.server_methods
 
     def send(self, cmd, args, timeout=-1):
-        num_times = 0
-        while True:
-            try:
-                return self._send(cmd, args, timeout)
-            except ResendError:
-                if num_times > 20:
-                    raise ResendError(
-                        f"Client [pid {getpid()}:qid {self.qid}]: "
-                        "Resent too many times!"
-                    )
-                num_times += 1
-                continue
+        with self._in_process_lock:
+            num_times = 0
+            while True:
+                try:
+                    return self._send(cmd, args, timeout)
+                except ResendError:
+                    if num_times > 20:
+                        raise ResendError(
+                            f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!"
+                        )
+                    num_times += 1
+                    continue
 
     def _send(self, cmd, args, timeout=-1):
         if isinstance(cmd, bytes):
@@ -94,114 +96,65 @@ class SHMClient(ClientProviderBase, SHMBase):
         #  so as to potentially allow for more remote commands from
         #  different threads)
         args = serialiser.dumps(args)
-        encoded_request = self.request_serialiser.pack(
-            len(cmd), len(args)
-        ) + cmd + args
+        encoded_request = \
+            self.request_serialiser.pack(len(cmd), len(args)) + cmd + args
 
-        self.client_lock.lock(
-            timeout=timeout,
-            spin=int(self.use_spinlock)
-        )
+        #debug("LOCKING CLIENT LOCK -> SERVER!")
+        #self.lock.unlock(timeout=timeout, spin=int(self.use_spinlock))
+        #debug("LOCKED!")
 
-        try:
-            # Next line must be in critical area!
-            mmap = self.mmap
+        # Next line must be in critical area!
+        mmap = self.mmap
 
-            # Send the result to the server!
-            if len(encoded_request) >= len(mmap)-1:
-                mmap = self.mmap = self.__resize_mmap(mmap, encoded_request)
+        if mmap[0] == SERVER:
+            raise Exception()
 
-            assert len(mmap) > len(encoded_request), \
-                (len(mmap), len(encoded_request))
-            mmap[1:1+len(encoded_request)] = encoded_request
+        # Send the result to the server!
+        if len(encoded_request) >= len(mmap)-1:
+            mmap = self.mmap = self.__resize_mmap(mmap, encoded_request)
 
-            # Wait for the server to begin processing
-            mmap[0] = PENDING
-            try:
-                self.server_lock.unlock()
-            except SystemError:
-                # Server has probably crashed
-                pass
+        assert len(mmap) > len(encoded_request), (len(mmap), len(encoded_request))
+        mmap[1:1+len(encoded_request)] = encoded_request
 
-            checked_server_exists = False
-            t_from = time.time()
-            while mmap[0] == PENDING:
-                # Give up and try to reconnect if this goes on
-                # for too long - in that case, chances are something's
-                # gone wrong on the server end
-                #
-                # Preferably, this should be done in cython, if I find time to do it.
+        # Wait for the server to begin processing
+        mmap[0] = SERVER
 
-                # Spin! - should check to make sure this isn't being called too often
-                if timeout != -1:
-                    if time.time()-t_from > timeout:
-                        raise TimeoutError()
+        # Release the lock for the server
+        #print("UNLOCKING!")
+        self.lock.unlock()
 
-                # Prevent spinning for no reason
-                if time.time()-t_from > 0.1:
-                    if not checked_server_exists:
-                        checked_server_exists = True
+        # Make sure response state ok,
+        # reconnecting to mmap if resized
+        num_times = 0
 
-                        self.resource_manager.check_for_missing_pids()
-                        if not self.resource_manager.get_server_pids():
-                            warn(
-                                f"Client [pid {getpid()}:qid {self.qid}]: "
-                                f"Could not find worker processes for service "
-                                f"{self.server_methods.name} - "
-                                f"it probably needs to be restarted!"
-                            )
-                    time.sleep(0.01)
+        while True:
+            if not num_times:
+                #debug("LOCKING CLIENT LOCK <- SERVER!", mmap[0] == SERVER, mmap[0] == CLIENT)
+                self.lock.lock(timeout=-1, spin=int(self.use_spinlock))
+                #debug("LOCKED!")
 
-            self.server_lock.lock(
-                timeout=-1,
-                spin=int(self.use_spinlock)
-            )  # CHECK ME!!!!
+            if mmap[0] == CLIENT:
+                # OK
+                break
+            elif mmap[0] == INVALID:
+                # Need to reconnect
+                mmap = self.mmap = self.__reconnect_to_mmap(mmap)
+                assert num_times < 1000, "Shouldn't get here!"
+                num_times += 1
+            elif mmap[0] == SERVER:
+                # Server hasn't caught the request yet!
+                self.lock.unlock()
+                continue
+            else:
+                raise Exception("Unknown state: %s" % chr(mmap[0]))
 
-            try:
-                # Make sure response state ok,
-                # reconnecting to mmap if resized
-                num_times = 0
+        # Next line must be in critical area!
+        mmap = self.mmap
+        size = self.response_serialiser.size
 
-                while True: # WARNING
-                    if mmap[0] == CLIENT:
-                        break  # OK
-
-                    elif mmap[0] == INVALID:
-                        mmap = self.mmap = self.__reconnect_to_mmap(mmap)
-                        assert num_times < 1000, "Shouldn't get here!"
-                        num_times += 1
-
-                    elif mmap[0] == SERVER or mmap[0] == PENDING:
-                        warn(f"Client [pid {getpid()}:qid {self.qid}]: "
-                             f"Lock was released, but still belonged "
-                             f"to a server worker - the worker likely has crashed. "
-                             f"Resending request to hopefully allow another server "
-                             f"pid to handle!")
-                        try:
-                            self.server_lock.unlock()
-                        except:
-                            pass
-                        raise ResendError()
-                    else:
-                        raise Exception("Unknown state: %s" % mmap[0])
-
-                # Decode the result!
-                response_status, data_size = self.response_serialiser.unpack(
-                    mmap[1:1+self.response_serialiser.size]
-                )
-                response_data = mmap[
-                    1+self.response_serialiser.size:
-                    1+self.response_serialiser.size+data_size
-                ]
-            finally:
-                pass
-        finally:
-            try:
-                self.client_lock.unlock()
-            except:
-                # Currently, this method prints error information using perror
-                # but this should be replaced with a less blanket handler ===============================================
-                pass  # WARNING!
+        # Decode the result!
+        response_status, data_size = self.response_serialiser.unpack(mmap[1:1+size])
+        response_data = mmap[1+size : 1+size+data_size]
 
         if response_status == b'+':
             return serialiser.loads(response_data)
@@ -217,16 +170,14 @@ class SHMClient(ClientProviderBase, SHMBase):
         :param encoded_request:
         :return:
         """
-        #print(f"[pid {getpid()}:qid {self.qid}] "
+        #debug(f"[pid {getpid()}:qid {self.qid}] "
         #      f"Client: Recreating memory map to be at "
         #      f"least {len(encoded_request)} bytes")
 
         old_mmap = mmap
         assert self.pid == getpid()
         mmap = self.resource_manager.create_pid_mmap(
-            min_size=len(encoded_request) * 2,
-            pid=getpid(),
-            qid=self.qid
+            min_size=len(encoded_request)*2, pid=getpid(), qid=self.qid
         )
 
         # Assign the new mmap
@@ -237,7 +188,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         # Make the old one invalid
         old_mmap[0] = INVALID
         old_mmap.close()
-        #print(f"Client: New mmap size is {len(mmap)} bytes "
+        #debug(f"Client: New mmap size is {len(mmap)} bytes "
         #      f"for encoded_request length {len(encoded_request)}")
         return mmap
 
@@ -254,10 +205,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         # Make sure that fork() hasn't caused PIDs to
         # get out of sync (if fork() is being used)!
         assert self.pid == getpid()
-        mmap = self.resource_manager.connect_to_pid_mmap(
-            pid=getpid(),
-            qid=self.qid
-        )
+        mmap = self.resource_manager.connect_to_pid_mmap(pid=getpid(), qid=self.qid)
 
         # Make sure it actually is larger than the previous one,
         # so as to reduce the risk of an infinite loop

@@ -66,8 +66,8 @@
                 <td><a href="/service_info?port={{ port }}">{{ svc }}</a></td>
                 <td>{{ method_name }}</td>
                 <td>{{ num_calls }}</td>
-                <td>{{ '%0.5f'| format(total_time|float) }}</td>
-                <td>{{ '%0.6f'| format(avg_call_time|float) }}</td>
+                <td>{{ '%0.6f'| format(total_time|float) }}</td>
+                <td>{{ '%0.7f'| format(avg_call_time|float) }}</td>
             </tr>
         {% endfor %}
     </table>
@@ -116,8 +116,8 @@
             <tr>
                 <td>{{ method_name }}</td>
                 <td>{{ num_calls }}</td>
-                <td>{{ '%0.5f'| format(total_time|float) }}</td>
-                <td>{{ '%0.5f'| format(avg_call_time|float) }}</td>
+                <td>{{ '%0.6f'| format(total_time|float) }}</td>
+                <td>{{ '%0.7f'| format(avg_call_time|float) }}</td>
             </tr>
         {% endfor %}
     </table>
@@ -125,7 +125,7 @@
 
 {% macro accuracy_warning_message() %}
     <div style="color: brown; font-size: 0.9em">
-        * Note: the times do not include the lock overhead, which often is 0.00005s+ per call.
+        * Note: the times do not include the lock overhead, which often is 0.000005s+ per call.
         <br>Remote network (tcp) mode can also have an 0.001s+ overhead.
     </div>
 {% endmacro %}

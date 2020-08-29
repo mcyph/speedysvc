@@ -16,7 +16,7 @@ in every web worker process.
 
 Unlike other similar modules for client-server communication
 (which typically use sockets or HTTP REST), this module uses local `shared
-memory`_, which typically performs around 5-20 times faster with much lower latency.
+memory`_, which typically performs around 10-30 times faster with much lower latency.
 ``speedysvc`` servers can also be remotely communicated with over the network 
 using TCP sockets. The TCP protocol is fast and efficient, and optionally compresses 
 traffic using snappy_/zlib to minimise bandwidth.

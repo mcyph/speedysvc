@@ -1,3 +1,4 @@
+import sys
 import time
 import posix_ipc
 import traceback
@@ -6,10 +7,8 @@ from _thread import start_new_thread
 from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
-from speedysvc.client_server.shared_memory.shared_params import \
-    PENDING, INVALID, SERVER, CLIENT
-from speedysvc.client_server.shared_memory.SHMResourceManager import \
-    SHMResourceManager
+from speedysvc.client_server.shared_memory.shared_params import INVALID, SERVER, CLIENT
+from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager
 from hybrid_lock import SemaphoreDestroyedException
 
 
@@ -38,14 +37,18 @@ def _monitor_pids():
         time.sleep(0.5)
 
 
+def debug(*s):
+    if True:
+        print(*s)
+
+
 class SHMServer(SHMBase, ServerProviderBase):
     def __init__(self, server_methods, use_spinlock=True):
         # NOTE: init_resources should only be called if creating from scratch -
         # if connecting to an existing socket, init_resources should be False!
         ServerProviderBase.__init__(self, server_methods)
 
-        #print(f'{server_methods.name}:{server_methods.port}:'
-        #      f'Starting new SHMServer on port:',
+        #debug(f'{server_methods.name}:{server_methods.port}: Starting new SHMServer on port:',
         #      server_methods.port)
 
         self.port = server_methods.port
@@ -58,9 +61,7 @@ class SHMServer(SHMBase, ServerProviderBase):
          current processes which are associated with this service.
         """
         self.SPIDThreads = set()
-        self.resource_manager = SHMResourceManager(
-            server_methods.port, server_methods.name
-        )
+        self.resource_manager = SHMResourceManager(server_methods.port, server_methods.name)
         self.resource_manager.check_for_missing_pids()
         self.resource_manager.add_server_pid(getpid())
 
@@ -94,14 +95,11 @@ class SHMServer(SHMBase, ServerProviderBase):
         If the client PID no longer exists, also clean up its resources,
         as needed.
         """
-        SCreated, SExited = \
-            self.resource_manager.get_created_exited_client_pids(
-                self.SPIDThreads
-            )
+        SCreated, SExited = self.resource_manager.get_created_exited_client_pids(self.SPIDThreads)
         #if SCreated or SExited:
-        #    print(f"{self.name}:{self.port}[{self.SPIDThreads}] SCREATED: {SCreated} SEXITED: {SExited}")
+            #debug(f"{self.name}:{self.port}[{self.SPIDThreads}] SCREATED: {SCreated} SEXITED: {SExited}")
         #else:
-        #    print(self.SPIDThreads, self.resource_manager.get_client_pids())
+            #debug(self.SPIDThreads, self.resource_manager.get_client_pids())
 
         for pid, qid in SCreated:
             # Add newly created client connections
@@ -121,16 +119,16 @@ class SHMServer(SHMBase, ServerProviderBase):
         Continuously poll for commands, responding as needed.
         """
         try:
-            mmap, client_lock, server_lock = \
-                self.resource_manager.open_existing_client_resources(
-                    pid, qid
-                )
+            mmap, lock = self.resource_manager.open_existing_resources(
+                pid, qid
+            )
         except posix_ipc.ExistentialError:
             # Resources might've been destroyed
             # in the meantime by the client?
+            #debug("EXISTENTIAL ERROR:", pid, qid)
             return
 
-        #print(f"SHMServer {self.name} started new worker "
+        #debug(f"SHMServer {self.name} started new worker "
         #      f"thread for pid {pid} subid {qid}")
         do_spin = True
 
@@ -145,70 +143,56 @@ class SHMServer(SHMBase, ServerProviderBase):
                     pass
 
                 self.shutdown_ok = not len(self.SPIDThreads)
-                #print(f"Signal to shutdown SHMServer {self.name} "
+                #debug(f"Signal to shutdown SHMServer {self.name} "
                 #      f"in worker thread for pid {pid} subid {qid} caught: "
                 #      f"returning ({len(self.SPIDThreads)} remaining)")
                 return
 
             try:
-                do_spin, mmap = self.handle_command(
-                    mmap, server_lock, pid, qid, do_spin
-                )
+                do_spin, mmap = self.handle_command(mmap, lock, pid, qid, do_spin)
             except SemaphoreDestroyedException:
                 # In this case, the lock was likely destroyed by the client
                 # and should propagate the error, rather than forever logging
-                #print(f"Lock for service {self.name} "
+                #debug(f"Lock for service {self.name} "
                 #      f"in worker thread for pid {pid} subid {qid} was destroyed: "
                 #      f"returning ({len(self.SPIDThreads)} remaining)")
                 return
             except:
-                #import traceback
-                #traceback.print_exc()
+                import traceback
+                traceback.print_exc()
                 # There's error handling for calls themselves, so may be an
                 # AssertionError.
                 raise
 
-    def handle_command(self, mmap, server_lock, pid, qid, do_spin):
+    def handle_command(self, mmap, lock, pid, qid, do_spin):
+        #debug("SERVER LOCK:", pid, qid, do_spin)
         try:
-            server_lock.lock(
-                timeout=4,
-                spin=int(do_spin and self.use_spinlock)
-            )
+            lock.lock(timeout=4, spin=int(do_spin and self.use_spinlock))
             do_spin = True
         except TimeoutError:
             # Disable spinning for subsequent tries!
             do_spin = False
             return do_spin, mmap
+        #debug("SERVER LOCK OBTAINED:", pid, qid, do_spin, mmap[0] == SERVER, mmap[0] == CLIENT)
 
         try:
             num_times = 0
             while True: # WARNING
                 # Prepare for handling command
-                if mmap[0] == PENDING:
-                    break # OK
+                if mmap[0] == CLIENT:
+                    # No command to process!
+                    return do_spin, mmap
+                elif mmap[0] == SERVER:
+                    # Command to process sent from client!
+                    break
                 elif mmap[0] == INVALID:
                     # Size change - re-open the mmap!
                     mmap = self.__reconnect_to_mmap(pid, qid, mmap)
                     assert num_times < 1000, "Shouldn't get here!"
                     num_times += 1
-
-                elif mmap[0] == CLIENT:
-                    # We'll just return here, as we
-                    # shouldn't have obtained the lock
-                    return False, mmap # Should this not spin??? ========================================
-                elif mmap[0] == SERVER:
-                    raise Exception(
-                        f"Service {self.name} pid/qid {pid}:{qid} "
-                        f"should never get here!"
-                    )
-                elif mmap[0] == 0:
-                    # mmap likely has been freed by client/resource manager(?)
-                    time.sleep(0.1)
-                    return False, mmap
                 else:
                     raise Exception(
-                        f"Service {self.name} pid/qid {pid}:{qid} "
-                        f"unknown state: %s" % mmap[0]
+                        f"Service {self.name} pid/qid {pid}:{qid} unknown state: %s" % mmap[0]
                     )
 
             # Measure for complete time it takes from
@@ -218,18 +202,10 @@ class SHMServer(SHMBase, ServerProviderBase):
             fn = None
 
             # Get the command+parameters
-            mmap[0] = SERVER
-            cmd_len, args_len = self.request_serialiser.unpack(
-                mmap[1:1 + self.request_serialiser.size]
-            )
-            cmd = mmap[
-                1 + self.request_serialiser.size:
-                1 + self.request_serialiser.size + cmd_len
-            ].decode('ascii')
-            args = mmap[
-                1 + self.request_serialiser.size + cmd_len:
-                1 + self.request_serialiser.size + cmd_len + args_len
-            ]
+            size = self.request_serialiser.size
+            cmd_len, args_len = self.request_serialiser.unpack(mmap[1:1 + self.request_serialiser.size])
+            cmd = mmap[1+size : 1+size+cmd_len].decode('ascii')
+            args = mmap[1+size+cmd_len : 1+size+cmd_len+args_len]
 
             try:
                 # Handle the command
@@ -240,22 +216,17 @@ class SHMServer(SHMBase, ServerProviderBase):
                 else:
                     result = serialiser.dumps(fn(*serialiser.loads(args)))
 
-                encoded = self.response_serialiser.pack(
-                    b'+', len(result)
-                ) + result
+                encoded = self.response_serialiser.pack(b'+', len(result)) + result
 
             except Exception as exc:
                 # Output to stderr log for the service
-                import sys
                 sys.stderr.write(f"Service {self.name} error handling method: {fn}\n")
                 traceback.print_exc()
 
                 # Just send a basic Exception instance for now, but would be nice
                 # if could recreate some kinds of exceptions on the other end
                 result = b'-' + repr(exc).encode('utf-8')
-                encoded = self.response_serialiser.pack(
-                    b'-', len(result)
-                ) + result
+                encoded = self.response_serialiser.pack(b'-', len(result)) + result
 
             # Resize the mmap as needed
             if len(encoded) >= len(mmap)-1:
@@ -271,24 +242,17 @@ class SHMServer(SHMBase, ServerProviderBase):
                 fn.metadata['total_time'] += time.time() - t_from
 
         finally:
-            try:
-                server_lock.unlock()
-            except SystemError:
-                pass
+            lock.unlock()
         return do_spin, mmap
 
     def __resize_mmap(self, pid, qid, mmap, encoded):
-        #print(
+        #debug(
         #    f"[pid {pid}:qid {qid}] "
         #    f"Server: Recreating memory map to be at "
         #    f"least {len(encoded) + 1} bytes"
         #)
         old_mmap = mmap
-        mmap = self.resource_manager.create_pid_mmap(
-            min_size=len(encoded) * 2,
-            pid=pid,
-            qid=qid
-        )
+        mmap = self.resource_manager.create_pid_mmap(min_size=len(encoded) * 2, pid=pid, qid=qid)
 
         # Assign the new mmap
         assert len(mmap) > len(old_mmap), (len(old_mmap), len(mmap))
@@ -301,7 +265,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         return mmap
 
     def __reconnect_to_mmap(self, pid, qid, mmap):
-        #print(f"Server: memory map has been marked as invalid")
+        #debug(f"Server: memory map has been marked as invalid")
         prev_len = len(mmap)
         mmap.close()
         mmap = self.resource_manager.connect_to_pid_mmap(pid, qid)

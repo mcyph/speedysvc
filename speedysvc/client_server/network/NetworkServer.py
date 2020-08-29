@@ -48,7 +48,7 @@ class NetworkServer(ServerProviderBase):
 
     def __listen_for_conns_loop(self):
         server = self.sock
-        print("Multithreaded server: waiting for connections...")
+        #print("Multithreaded server: waiting for connections...")
 
         while True:
             server.listen(4)

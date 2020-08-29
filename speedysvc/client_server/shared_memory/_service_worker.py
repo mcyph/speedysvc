@@ -11,16 +11,21 @@ from speedysvc.client_server.network.NetworkServer import NetworkServer
 from speedysvc.client_server.shared_memory.SHMServer import SHMServer
 
 
+def debug(*s):
+    if False:
+        print(*s)
+
+
 def _service_worker(server_methods):
     """
     In child processes of MultiProcessManager
     """
-    #print(f"{server_methods.name} child: Creating logger client")
+    debug(f"{server_methods.name} child: Creating logger client")
     logger_client = LoggerClient(server_methods)
-    #print(f"{server_methods.name} child: Creating server methods")
+    debug(f"{server_methods.name} child: Creating server methods")
     smi = server_methods(logger_client)
-    #print(f"{server_methods.name} child: "
-    #      f"Server methods created, starting implementations")
+    debug(f"{server_methods.name} child: "
+          f"Server methods created, starting implementations")
 
     L = []
     L.append(SHMServer(server_methods=smi))
@@ -30,7 +35,7 @@ def _service_worker(server_methods):
     # if one depends on another.
     logger_client.set_service_status('started')
 
-    print(f"{server_methods.name} worker PID [{getpid()}]: "
+    debug(f"{server_methods.name} worker PID [{getpid()}]: "
           f"Server methods created - listening for commands")
 
     _handling_sigint = [False]
@@ -42,12 +47,12 @@ def _service_worker(server_methods):
         print(f"Intercepted keyboard interrupt for {smi.name} [PID {getpid()}]")
         for inst in L:
             if hasattr(inst, 'shutdown'):
-                print(f"Calling shutdown for {smi.name} [PID {getpid()}]..")
+                debug(f"Calling shutdown for {smi.name} [PID {getpid()}]..")
                 inst.shutdown()
-                print(f"Shutdown OK for {smi.name} [PID {getpid()}]")
+                debug(f"Shutdown OK for {smi.name} [PID {getpid()}]")
 
         time.sleep(2)
-        print(f"{smi.name} worker PID [{getpid()}]: exiting")
+        debug(f"{smi.name} worker PID [{getpid()}]: exiting")
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)

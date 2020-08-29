@@ -35,7 +35,7 @@ if __name__ == '__main__':
     def run_test():
         client = TestClientMethods(
             connect(srv, address=(
-               'tcp://192.168.0.44', # Shouldn't work
+               #'tcp://192.168.0.44', # Shouldn't work
                #'tcp://127.0.0.1',
                'shm://',
             )
@@ -96,7 +96,7 @@ if __name__ == '__main__':
     for x in range(1):
         p = multiprocessing.Process(target=run_test)
         p.start()
+
     import time
-    
     while 1:
         time.sleep(1)

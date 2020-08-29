@@ -45,7 +45,6 @@ def get_mmap(location, create, new_size=None):
 INVALID = b'I'[0]
 SERVER = b'S'[0]
 CLIENT = b'C'[0]
-PENDING = b'P'[0]
 
 if __name__ == '__main__':
     map_1 = get_mmap(b'service_5555_pids', True, 32768)
