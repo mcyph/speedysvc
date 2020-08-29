@@ -1,6 +1,4 @@
 from datetime import datetime
-from flask import render_template_string
-from speedysvc.kill_pid_and_children import kill_pid_and_children
 
 
 LColours = [
@@ -12,7 +10,8 @@ LColours = [
 
 
 class WebServiceManager:
-    def __init__(self):
+    def __init__(self, jinja2_env):
+        self.jinja2_env = jinja2_env
         self.DServices = {}  # TODO: Replace me, directly using the Services instance!
 
     def set_services(self, services):
@@ -114,9 +113,10 @@ class WebServiceManager:
         :param add_links:
         :return:
         """
-        return render_template_string(
+        return self.jinja2_env.from_string(
             '{% from "service_macros.html" import service_status_table %}\n'
-            '{{ service_status_table(LServiceTable, add_links) }}',
+            '{{ service_status_table(LServiceTable, add_links) }}'
+        ).render(
             LServiceTable=self.get_overall_service_table(),
             add_links=add_links
         )
@@ -162,9 +162,10 @@ class WebServiceManager:
 
     def get_overall_service_methods_html(self, max_methods=15):
         L = self.get_overall_service_methods(max_methods)
-        return render_template_string(
+        return self.jinja2_env.from_string(
             '{% from "service_macros.html" import overall_method_stats_html %}\n'
-            '{{ overall_method_stats_html(LMethodStats) }}',
+            '{{ overall_method_stats_html(LMethodStats) }}'
+        ).render(
             LMethodStats=L
         )
 
@@ -210,9 +211,10 @@ class WebServiceManager:
             for method_name, D
             in DMethodStats.items()
         ]
-        return render_template_string(
+        return self.jinja2_env.from_string(
             '{% from "service_macros.html" import method_stats_html %}\n'
-            '{{ method_stats_html(LMethodStats) }}',
+            '{{ method_stats_html(LMethodStats) }}'
+        ).render(
             LMethodStats=LMethodStats
         )
 
@@ -290,8 +292,9 @@ class WebServiceManager:
         :param DService:
         :return:
         """
-        return render_template_string(
+        return self.jinja2_env.from_string(
             '{% from "service_macros.html" import service_status_table %}\n'
-            '{{ service_status_table([DService]) }}',
+            '{{ service_status_table([DService]) }}'
+        ).render(
             DService=DService
         )

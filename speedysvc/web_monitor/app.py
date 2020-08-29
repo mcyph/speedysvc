@@ -1,16 +1,16 @@
 import os
 import json
-from flask import Flask, send_from_directory, render_template, request, redirect, url_for
+import atexit
+import cherrypy
+from jinja2 import Environment, FileSystemLoader
+
 from speedysvc.web_monitor.WebServiceManager import WebServiceManager
 
 
-app = Flask(
-    __name__,
-    template_folder=os.path.join(
-        os.path.dirname(__file__), 'templates'
-    )
-)
-web_service_manager = WebServiceManager()
+env = Environment(loader=FileSystemLoader(os.path.join(
+    os.path.dirname(__file__), 'templates'
+)))
+web_service_manager = WebServiceManager(env)
 
 
 def run_server(services=(), debug=False, host='127.0.0.1', port=5155):
@@ -21,105 +21,109 @@ def run_server(services=(), debug=False, host='127.0.0.1', port=5155):
     for service in services:
         web_service_manager.add_service(service)
 
-    app.jinja_env.auto_reload = True
-    app.config['TEMPLATES_AUTO_RELOAD'] = True
-    app.run(debug=debug, host=host, port=port)
+    print(f"Web interface starting on http://{host}:{port}:", end=" ")
+
+    config = {
+        'global': {
+            'server.socket_host': host,
+            'server.socket_port': port,
+            'environment': (
+                'production' if not debug else 'debug'
+            ),
+        },
+        '/': {
+
+        },
+        '/static': {
+            'tools.staticdir.root': os.path.join(
+                os.path.dirname(__file__), 'static'
+            ),
+            'tools.staticdir.on': True,
+            'tools.staticdir.dir': ""
+        }
+    }
+    cherrypy._global_conf_alias.update(config)
+    cherrypy.tree.mount(App(), '', config)
+
+    cherrypy.engine.signals.subscribe()
+    cherrypy.engine.start()
+    atexit.register(cherrypy.engine.exit)
+    print("[OK]")
+    print("Serving forever: use [ctrl+c] to shut down cleanly.")
+    cherrypy.engine.block()
 
 
-#================================================#
-# Static file serving
-#================================================#
+class App:
+    #================================================#
+    # Main index methods
+    #================================================#
 
+    @cherrypy.expose
+    def index(self):
+        console_offset, console_text = web_service_manager.get_overall_log()
+        return env.get_template("index.html").render(
+            LServices=web_service_manager.get_overall_service_table(),
+            console_text=console_text,
+            console_offset=console_offset,
+            LOverallServiceMethods=web_service_manager.get_overall_service_methods(),
+            services_json=([
+                (service.name, service.port)
+                for service
+                in web_service_manager.iter_services_by_name()
+            ])
+        )
 
-@app.route('/static/<path:path>')
-def send_js(path):
-    # Probably not needed, but to be absolutely certain..
-    assert not '..' in path
-    assert not '//' in path
-    assert path[0] != '/'
-    return send_from_directory('static', path)
+    @cherrypy.expose
+    def poll(self, offset):
+        service_table_html = web_service_manager.get_overall_table_html(add_links=True)
+        console_offset, console_text = web_service_manager.get_overall_log(
+            offset=int(offset)
+        )
+        overall_service_methods_html = web_service_manager.get_overall_service_methods_html()
 
+        return json.dumps({
+            'service_table_html': service_table_html,
+            'overall_service_methods_html': overall_service_methods_html,
+            'console_text': console_text,
+            'console_offset': console_offset
+        })
 
-#================================================#
-# Main index methods
-#================================================#
+    #================================================#
+    # Service detailed info methods
+    #================================================#
 
+    @cherrypy.expose
+    def service_info(self, port):
+        port = int(port)
+        DService = web_service_manager.get_D_service_info(port)
 
-@app.route('/')
-def index():
-    console_offset, console_text = web_service_manager.get_overall_log()
-    return render_template(
-        "index.html",
-        LServices=web_service_manager.get_overall_service_table(),
-        console_text=console_text,
-        console_offset=console_offset,
-        LOverallServiceMethods=web_service_manager.get_overall_service_methods(),
-        services_json=([
-            (service.name, service.port)
-            for service
-            in web_service_manager.iter_services_by_name()
-        ])
-    )
+        return env.get_template("service_info.html").render(
+            service_name=DService['name'],
+            port=port,
+            DService=DService
+        )
 
+    @cherrypy.expose
+    def poll_service_info(self, port, console_offset):
+        port = int(port)
+        console_offset = int(console_offset)
+        DServiceInfo = web_service_manager.get_D_service_info(
+            port, console_offset
+        )
+        return json.dumps(DServiceInfo)
 
-@app.route('/poll')
-def poll():
-    service_table_html = web_service_manager.get_overall_table_html(add_links=True)
-    console_offset, console_text = web_service_manager.get_overall_log(
-        offset=int(request.args.get('offset'))
-    )
-    overall_service_methods_html = web_service_manager.get_overall_service_methods_html()
+    #================================================#
+    # Manage services
+    #================================================#
 
-    return json.dumps({
-        'service_table_html': service_table_html,
-        'overall_service_methods_html': overall_service_methods_html,
-        'console_text': console_text,
-        'console_offset': console_offset
-    })
+    @cherrypy.expose
+    def start_service(self, port):
+        port = int(port)
+        web_service_manager.start_service(port)
+        raise cherrypy.HTTPRedirect('/')
 
-
-#================================================#
-# Service detailed info methods
-#================================================#
-
-
-@app.route('/service_info')
-def service_info():
-    port = int(request.args.get('port'))
-    DService = web_service_manager.get_D_service_info(port)
-
-    return render_template(
-        "service_info.html",
-        service_name=DService['name'],
-        port=port,
-        DService=DService
-    )
-
-
-@app.route('/poll_service_info')
-def poll_service_info():
-    port = int(request.args.get('port'))
-    console_offset = int(request.args.get('console_offset'))
-    DServiceInfo = web_service_manager.get_D_service_info(
-        port, console_offset
-    )
-    return json.dumps(DServiceInfo)
-
-
-#================================================#
-# Manage services
-#================================================#
-
-
-@app.route('/start_service')
-def start_service():
-    port = int(request.args.get('port'))
-    web_service_manager.start_service(port)
-    return redirect('/')
-
-
-@app.route('/stop_service')
-def stop_service():
-    port = int(request.args.get('port'))
-    web_service_manager.stop_service(port)
-    return redirect('/')
+    @cherrypy.expose
+    def stop_service(self, port):
+        port = int(port)
+        web_service_manager.stop_service(port)
+        raise cherrypy.HTTPRedirect('/')

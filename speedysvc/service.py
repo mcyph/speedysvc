@@ -238,7 +238,7 @@ class Services:
 
                                 fifo_json_log_parent=None):
 
-        print(f"{server_methods.name} parent: starting service")
+        print(f"Starting service {server_methods.name}:", end=" ")
 
         # Create the logger server, which allows
         # the services to communicate back with us
@@ -295,11 +295,13 @@ class Services:
             while logger_server.get_service_status() != 'started':
                 time.sleep(0.1)
 
+        print('[OK]')
+
 
 if __name__ == '__main__':
     services = Services()
     web_service_manager.set_services(services)
-    print("Services started - starting web monitoring interface")
+    #print("Services started - starting web monitoring interface")
 
     # OPEN ISSUE: Allow binding to a specific address here? ====================================
     # For security reasons, it's probably (in almost all cases)

@@ -58,7 +58,8 @@ setup(
         'msgpack',
         'posix_ipc',
         'python-snappy',
-        'flask',
+        'cherrypy',
+        'jinja2',
         'psutil',
     ],
     package_data = {

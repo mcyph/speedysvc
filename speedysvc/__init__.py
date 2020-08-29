@@ -1,3 +1,4 @@
+"""
 from hybrid_lock import HybridLock
 from hybrid_lock import \
     CONNECT_OR_CREATE, CONNECT_TO_EXISTING, \
@@ -14,3 +15,4 @@ from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.logger.time_series_data.ServiceTimeSeriesData import \
     ServiceTimeSeriesData
 from speedysvc.client_server.connect import connect
+"""
