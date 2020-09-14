@@ -164,43 +164,24 @@ class TimeSeriesData(ABC):
                      relative to the first item
         :return: a dict
         """
-        # OPEN ISSUE: Should this support slices??? =================================================================
-
-        # TODO: GRAB FROM CACHE IF POSSIBLE!!! ======================================================================
-
-        with self.lock:
-            return self.deque[item]
+        return self.deque[item]
 
     def __iter__(self):
-        for i in self.iterate_forwards():
-            yield i
+        with self.lock:
+            for i in self.iterate_forwards():
+                yield i
 
     def iterate_forwards(self):
         """
         Simply iterate thru using the __getitem__ method
         from the first to the last entry.
         """
-        for x in range(len(self)):
+        for x in range(len(self)-1, -1, -1):
             yield self[x]
 
     def iterate_backwards(self):
-        """
-        TODO: Seek in chunks of say 256 items each, so as to
-        allow for faster reading in the reverse direction
-        """
-        x = len(self)
-        AMOUNT_TO_GET = 256
-
-        while x > 0:
-            x -= AMOUNT_TO_GET
-            if x < 0:
-                x = 0
-
-            LYield = []
-            for y in range(x, min(x+AMOUNT_TO_GET, len(self))):
-                LYield.append(self[y])
-            for i in LYield[::-1]:
-                yield i
+        for x in range(len(self)):
+            yield self[x]
 
     def select_range(self, from_time, to_time):
         """
@@ -234,9 +215,7 @@ class TimeSeriesData(ABC):
         DVals = Counter()
         num_vals = 0
 
-        # the last value in self.deque is the least recent
-        if from_time >= self.deque[-1]['timestamp']:
-            # Use the recent values cache if range in memory
+        with self.lock:
             for DRecord in self.deque:
                 if from_time <= DRecord['timestamp'] <= to_time:
                     for property in DRecord:
@@ -244,13 +223,6 @@ class TimeSeriesData(ABC):
                             continue
                         DVals[property] += DRecord[property]
                     num_vals += 1
-        elif self.deque:
-            # I've disabled the below code grabbing from disk,
-            # as should always have enough data in cache
-            # (at least in the current interface).
-            # If I ever need to do long-term analytics,
-            # will uncomment the below.
-            raise Exception(f"Averaging should always be in memory! (from_time: {from_time}; last deque: {self.deque[-1]}; first dequeue: {self.deque[0]}")
 
         return {
             key: val / num_vals
@@ -298,6 +270,9 @@ class TimeSeriesData(ABC):
         """
         val = 0
         num_vals = 0
-        for DRecord in self.deque:
-            val += DRecord[property]
+
+        with self.lock:
+            for DRecord in self.deque:
+                val += DRecord[property]
+
         return val / num_vals
