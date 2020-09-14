@@ -32,7 +32,7 @@ def _time_series_loop():
 
 
 class TimeSeriesData(ABC):
-    def __init__(self, path, LFormat,
+    def __init__(self, LFormat,
                  fifo_cache_len=300,
                  sample_interval_secs=5,
                  start_collecting_immediately=False):
@@ -60,7 +60,6 @@ class TimeSeriesData(ABC):
         self.sample_interval_secs = sample_interval_secs
 
         self.lock = allocate_lock()
-        self.f = open(path, 'ab+')
 
         # Start off with a timestamp, down to the second
         # (4 bytes as in Unix seconds since epoch)
@@ -71,24 +70,6 @@ class TimeSeriesData(ABC):
 
         # Get the number of items in the file (if it was previously written to)
         self.deque = deque(maxlen=fifo_cache_len)
-        if exists(path):
-            assert getsize(path) % self.struct.size == 0
-            self.__size = int(getsize(path)/self.struct.size)
-
-            # OPEN ISSUE: Start off with blank data in the cache,
-            # as that data normally isn't that useful in between sessions.
-            # The disadvantage would be __getitem__ wouldn't be cacheable
-            LAppend = []
-            for x, DProperties in enumerate(self.iterate_backwards()):
-                LAppend.append(DProperties)
-                if x >= fifo_cache_len:
-                    break
-
-            for DProperties in reversed(LAppend):
-                # Make sure appended in order oldest first
-                self.deque.appendleft(DProperties)
-        else:
-            self.__size = 0
 
         # Fill the rest of the FIFO cache with blank values
         for i in range(fifo_cache_len - len(self.deque)):
@@ -163,16 +144,7 @@ class TimeSeriesData(ABC):
 
         items = items.copy()
         items['timestamp'] = int(time())
-        encoded = self.struct.pack(*(
-            [items['timestamp']] +
-            [items[name] for _, name in self.LFormat]
-        ))
         self.deque.appendleft(items)
-
-        with self.lock:
-            self.f.seek(0, 2) # Seek to end of file
-            self.f.write(encoded)
-            self.__size += 1
 
     #=========================================================================#
     #                      Retrieval of Data From Disk                        #
@@ -183,7 +155,7 @@ class TimeSeriesData(ABC):
         Get total number of entries
         :return: Get the total number of entries as an int
         """
-        return self.__size
+        return len(self.deque)
 
     def __getitem__(self, item):
         """
@@ -197,23 +169,7 @@ class TimeSeriesData(ABC):
         # TODO: GRAB FROM CACHE IF POSSIBLE!!! ======================================================================
 
         with self.lock:
-            self.f.seek(item*self.struct.size)
-            encoded = self.f.read(self.struct.size)
-
-            if len(encoded) != self.struct.size:
-                # If not enough returned here, it's probably
-                # data not written to disk due to OS buffering
-                self.f.flush()
-                self.f.seek(item * self.struct.size)
-                encoded = self.f.read(self.struct.size)
-                assert len(encoded) == self.struct.size
-
-        data = self.struct.unpack(encoded)
-
-        return dict(zip(
-            ['timestamp'] + [i[1] for i in self.LFormat],
-            data
-        ))
+            return self.deque[item]
 
     def __iter__(self):
         for i in self.iterate_forwards():
@@ -295,23 +251,6 @@ class TimeSeriesData(ABC):
             # If I ever need to do long-term analytics,
             # will uncomment the below.
             raise Exception(f"Averaging should always be in memory! (from_time: {from_time}; last deque: {self.deque[-1]}; first dequeue: {self.deque[0]}")
-
-        """
-        elif self.deque:
-            # Otherwise grab from disk (**very slow**)
-            # only if there actually have been values
-            import warnings
-            warnings.warn(
-                f"TimeSeriesData averaging from disk data: "
-                f"{from_time}->{to_time}"
-            )
-            for DRecord in self.select_range(from_time, to_time):
-                for property in DRecord:
-                    if property == 'timestamp':
-                        continue
-                    DVals[property] += DRecord[property]
-                num_vals += 1
-        """
 
         return {
             key: val / num_vals

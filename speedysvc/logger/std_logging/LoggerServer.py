@@ -81,9 +81,7 @@ class LoggerServer:
         )
         # Create the time series statistics data instance
         # (e.g. to record how much RAM etc each process is using)
-        self.service_time_series_data = ServiceTimeSeriesData(
-            path=f'{log_dir}/time_series_data.bin'
-        )
+        self.service_time_series_data = ServiceTimeSeriesData()
 
         # Start the server
         assert port == self.port, (port, self.port)

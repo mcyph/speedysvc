@@ -6,7 +6,7 @@ from speedysvc.logger.time_series_data.TimeSeriesData import TimeSeriesData
 class ServiceTimeSeriesData(TimeSeriesData):
     path_suffix = 'procdata'
 
-    def __init__(self, path,
+    def __init__(self,
                  fifo_cache_len=300,
                  sample_interval_secs=5,
                  start_collecting_immediately=False):
@@ -40,7 +40,7 @@ class ServiceTimeSeriesData(TimeSeriesData):
             ('H', 'cpu_usage_pc'),
         )
         TimeSeriesData.__init__(
-            self, path, LFormat,
+            self, LFormat,
             fifo_cache_len, sample_interval_secs,
             start_collecting_immediately
         )
