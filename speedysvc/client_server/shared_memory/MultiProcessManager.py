@@ -489,20 +489,6 @@ if __name__ == '__main__':
             # Not started anyway
             pass
 
-        # Windows in particular needs signals
-        # sent up the tree for some reason
-        debug("MultiProcesssManager: exiting", getpid())
-        parent = psutil.Process(getpid()).parent()
-        parent_parent = parent.parent()
-        parent.terminate()
-        parent_parent.terminate()
-
-        try:
-            parent.kill()
-            parent_parent.kill()
-        except psutil.NoSuchProcess:
-            pass
-
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)

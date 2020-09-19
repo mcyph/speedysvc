@@ -3,10 +3,12 @@ import sys
 import json
 import time
 import signal
+import psutil
 import _thread
 import importlib
 import subprocess
 from sys import argv
+from os import getpid
 from multiprocessing import cpu_count
 
 from speedysvc.logger.std_logging.LoggerServer import LoggerServer
@@ -45,6 +47,16 @@ def signal_handler(sig, frame):
 
     while waiting_num[0]:
         time.sleep(0.01)
+
+    # Windows in particular needs to be more
+    # forcibly shut down for some reason
+    me = psutil.Process(getpid())
+    me.terminate()
+    try:
+        me.kill()
+    except psutil.NoSuchProcess:
+        pass
+
     sys.exit(0)
 
 
@@ -53,6 +65,9 @@ signal.signal(signal.SIGINT, signal_handler)
 
 class Services:
     def __init__(self):
+        global services
+        services = self
+
         self.DProcByPort = {}
         self.DProcByName = {}
         self.DLoggerServersByPort = {}
@@ -318,5 +333,9 @@ if __name__ == '__main__':
         'host': services.DWebMonitor.get('host', '127.0.0.1'),
         'port': int(services.DWebMonitor.get('port', '5155')),
     })
+
     while True:
-        time.sleep(10)
+        if hasattr(signal, 'pause'):
+            signal.pause()
+        else:
+            time.sleep(60)

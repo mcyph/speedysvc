@@ -24,8 +24,8 @@ else:
         'posix_ipc',
     ]
     extensions = [Extension(
-        'hybrid_lock',
-        ["speedysvc/hybrid_lock/hybrid_lock.pyx"],
+        'HybridLock',
+        ["speedysvc/hybrid_lock/HybridLock.pyx"],
         libraries=[
             "rt",  # POSIX functions seem to require this
         ],

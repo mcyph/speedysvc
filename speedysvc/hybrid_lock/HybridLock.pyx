@@ -1,5 +1,5 @@
 cimport cython
-cimport hybrid_lock
+from HybridLock cimport *
 
 from libc.errno cimport ENOENT, ETIMEDOUT, errno
 from libc.stdio cimport printf, perror
@@ -13,6 +13,7 @@ from posix.time cimport clock_gettime, timespec, CLOCK_REALTIME
 from posix.mman cimport PROT_READ, PROT_WRITE, MAP_SHARED, MAP_FAILED
 from posix.mman cimport mmap, shm_open, shm_unlink
 
+STUFF = "hi"
 
 class SemaphoreExistsException(Exception):
     pass
