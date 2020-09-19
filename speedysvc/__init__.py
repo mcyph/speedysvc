@@ -1,5 +1,5 @@
-from hybrid_lock import HybridLock
-from hybrid_lock import \
+from speedysvc.hybrid_lock import HybridLock
+from speedysvc.hybrid_lock import \
     CONNECT_OR_CREATE, CONNECT_TO_EXISTING, \
     CREATE_NEW_OVERWRITE, CREATE_NEW_EXCLUSIVE
 from speedysvc.client_server.shared_memory.SHMClient import SHMClient

@@ -17,7 +17,7 @@ from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.client_server.network.NetworkServer import NetworkServer
 from speedysvc.client_server.shared_memory.SHMResourceManager import \
     SHMResourceManager, CONNECT_TO_EXISTING
-from hybrid_lock import SemaphoreDestroyedException, NoSuchSemaphoreException
+from speedysvc.hybrid_lock import SemaphoreDestroyedException, NoSuchSemaphoreException
 
 
 MONITOR_PROCESS_EVERY_SECS = 5
@@ -38,7 +38,7 @@ _DStatusStrings = {
 
 
 def debug(*s):
-    if False:
+    if True:
         print(*s)
 
 
@@ -132,6 +132,7 @@ class MultiProcessServer:
         # TODO: It would also be nice to remove self.LPIDs, and only rely on
         #   SHMResourceManager for storing server worker PIDs
         # OPEN ISSUE: Should check_for_missing_pids be called periodically?
+        debug(f"Creating resource manager for {self.name}:{self.port}")
         self.resource_manager = SHMResourceManager(self.port, self.name)
         self.resource_manager.check_for_missing_pids()
         self.resource_manager.reset_all_server_pids(kill=True)
@@ -141,6 +142,7 @@ class MultiProcessServer:
         self.last_proc_op_time = 0
         self.shutting_down = False
         self.started_collecting_data = False
+        debug("Creating logger client...")
         self.logger_client = LoggerClient(server_methods)
 
         self.start_service()
@@ -160,17 +162,17 @@ class MultiProcessServer:
         """
         Start a stopped service.
         """
-        #debug("Starting service...")
+        debug("Starting service...")
         assert self.logger_client.get_service_status() in ('stopped', 'forking'), \
             f"Can't start a service that isn't stopped (current status: {self.logger_client.get_service_status()})!"
-        #debug("SET SERVICE STATUS!")
+        debug("SET SERVICE STATUS!")
         self.logger_client.set_service_status('starting')
 
         for x in range(self.min_proc_num):
             # Make sure the initial processes have booted up
             # from the main thread, so it can block as necessary
             # (assuming wait_until_completed is set)
-            #debug("NEW CHILD PROCESS!")
+            debug("NEW CHILD PROCESS!")
             self.new_child_process()
 
         if self.tcp_bind:
@@ -187,7 +189,7 @@ class MultiProcessServer:
 
             _thread.start_new_thread(start_network_server, ())
 
-        #debug("Starting monitor process loop!")
+        debug("Starting monitor process loop!")
         _thread.start_new_thread(self.__monitor_process_loop, ())
 
     def stop_service(self):
@@ -214,7 +216,8 @@ class MultiProcessServer:
             'import_from': self.import_from,
             'section': self.section,
         }
-        if True:
+
+        if sys.platform != 'win32':
             from speedysvc.client_server.shared_memory._service_worker import _service_worker
             from os import fork
 
@@ -232,8 +235,9 @@ class MultiProcessServer:
                 )
                 _service_worker(**DArgs)
         else:
+            print("STARTING PROCESS!")
             proc = subprocess.Popen([
-                'python3', '-m',
+                sys.executable, '-m',
                 'speedysvc.client_server.shared_memory._service_worker',
                 json.dumps(DArgs)
             ], env=DEnv)
@@ -254,10 +258,10 @@ class MultiProcessServer:
                 self.logger_client.start_collecting()
 
         if self.wait_until_completed:
-            #debug(f"{self.server_methods.name} parent: Waiting for child to initialise...")
+            debug(f"{self.server_methods.name} parent: Waiting for child to initialise...")
             while not self.logger_client.get_service_status() == 'started':
                 time.sleep(0.1)
-            #debug(f"{self.server_methods.name} parent: child signaled it has initialised OK")
+            debug(f"{self.server_methods.name} parent: child signaled it has initialised OK")
 
             start_collecting_data()
         else:
@@ -295,7 +299,7 @@ class MultiProcessServer:
     #========================================================#
 
     def __monitor_process_loop(self):
-        #debug(f"{self.server_methods.name}: Process monitor started")
+        debug(f"{self.server_methods.name}: Process monitor started")
 
         while (
             (not self.shutting_down) and
@@ -489,4 +493,7 @@ if __name__ == '__main__':
 
     signal.signal(signal.SIGINT, signal_handler)
     while 1:
-        signal.pause()
+        if hasattr(signal, 'pause'):
+            signal.pause()
+        else:
+            time.sleep(60)

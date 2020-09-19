@@ -1,16 +1,17 @@
+sys
 import json
 import time
 import psutil
 import _thread
-import posix_ipc
 from psutil import pid_exists
+
+from speedysvc.hybrid_lock import HybridLock, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE, \
+    NoSuchSemaphoreException, SemaphoreExistsException
 from speedysvc.kill_pid_and_children import kill_pid_and_children
 from speedysvc.is_pid_still_alive import is_pid_still_alive
-from hybrid_lock import HybridLock, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE, \
-    NoSuchSemaphoreException, SemaphoreExistsException
 from speedysvc.ipc.JSONMMapBase import JSONMMapBase
 # TODO: Move get_mmap somewhere more appropriate!
-from speedysvc.client_server.shared_memory.shared_params import get_mmap
+from speedysvc.client_server.shared_memory.shared_params import get_mmap, unlink_shared_memory
 from speedysvc.client_server.shared_memory.shared_params import INVALID, SERVER, CLIENT
 
 
@@ -174,8 +175,14 @@ class _SHMResourceManager(JSONMMapBase):
         so as to inform servers to respond to requests
         :return: (the shared mmap, client HybridLock, server HybridLock)
         """
-        mmap = self.create_pid_mmap(min_size=1024, pid=pid, qid=qid)
+        if sys.platform == 'win32':
+            # HACK: Support 4mb base size for win32 while resize functionality doesn't work!
+            mmap = self.create_pid_mmap(min_size=1024*1024*4, pid=pid, qid=qid)
+        else:
+            mmap = self.create_pid_mmap(min_size=1024, pid=pid, qid=qid)
+
         lock = self.get_lock(pid, qid, CREATE_NEW_OVERWRITE)
+
         # Inform servers
         self.add_client_pid_qid(pid, qid)
         return mmap, lock
@@ -212,10 +219,10 @@ class _SHMResourceManager(JSONMMapBase):
         except NoSuchSemaphoreException:
             pass
 
+        mmap_loc = self.MMAP_TEMPLATE % dict(port=self.port, pid=pid, qid=qid)
         try:
-            mmap_loc = self.MMAP_TEMPLATE % dict(port=self.port, pid=pid, qid=qid)
-            posix_ipc.unlink_shared_memory(mmap_loc)
-        except posix_ipc.ExistentialError:
+            unlink_shared_memory(mmap_loc)
+        except FileNotFoundError:
             pass
 
     #===============================================================#

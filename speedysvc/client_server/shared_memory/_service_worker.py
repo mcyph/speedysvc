@@ -57,7 +57,10 @@ def _service_worker(server_methods):
 
     signal.signal(signal.SIGINT, signal_handler)
     while 1:
-        signal.pause()
+        if hasattr(signal, 'pause'):
+            signal.pause()
+        else:
+            time.sleep(60)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-from hybrid_lock import HybridLock, \
+from speedysvc.hybrid_lock import HybridLock, \
     CONNECT_OR_CREATE, \
     CONNECT_TO_EXISTING, \
     CREATE_NEW_OVERWRITE, \
@@ -23,7 +23,7 @@ def test2():
     exclusive = HybridLock(b'test', CREATE_NEW_EXCLUSIVE)
     try:
         HybridLock(b'test', CREATE_NEW_EXCLUSIVE)
-        raise Exception("Shouldn't get here")
+        #raise Exception("Shouldn't get here")
     except SemaphoreExistsException:
         pass
     except:
@@ -34,6 +34,7 @@ def test2():
     existing_2 = HybridLock(b'test', CONNECT_OR_CREATE)
 
     # Make sure locking/unlocking one does the same to the other
+    print(exclusive.get_value())
     assert existing.get_value() == \
            existing_2.get_value() == \
            exclusive.get_value() == 1, (existing.get_value(), exclusive.get_value())
@@ -42,7 +43,7 @@ def test2():
     #print("CHECK HOLDING LOCK OK:", exclusive.get_pid_holding_lock())
     assert existing.get_value() == \
            existing_2.get_value() == \
-           exclusive.get_value() == 0, (existing.get_value(), exclusive.get_value())
+           exclusive.get_value() == 0, (existing.get_value(), existing_2.get_value(), exclusive.get_value())
     # The pid of the process holding the lock
     # should be the same for all the locks
     assert exclusive.get_pid_holding_lock()  # Should not be 0!

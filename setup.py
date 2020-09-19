@@ -1,9 +1,9 @@
-from setuptools import setup, find_packages
-from setuptools import Extension
-from Cython.Build import cythonize
-from codecs import open
+import sys
 from os import path
 from os.path import join, dirname, abspath
+from setuptools import setup, find_packages
+from setuptools import Extension
+from codecs import open
 
 here = path.abspath(path.dirname(__file__))
 
@@ -11,20 +11,31 @@ here = path.abspath(path.dirname(__file__))
 with open(join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
-
-extensions = [Extension(
-    'hybrid_lock',
-    ["speedysvc/hybrid_lock/hybrid_lock.pyx"],
-    libraries=[
-        "rt",  # POSIX functions seem to require this
-    ],
-    library_dirs=[
-        join(
-            dirname(abspath(__file__)),
-            "speedysvc/hybrid_lock"
-        )
+if sys.platform == 'win32':
+    PLATFORM_EXTRAS = [
+        'pywin32',
     ]
-)]
+    extensions = None
+else:
+    from Cython.Build import cythonize
+
+    PLATFORM_EXTRAS = [
+        'cython',
+        'posix_ipc',
+    ]
+    extensions = [Extension(
+        'hybrid_lock',
+        ["speedysvc/hybrid_lock/hybrid_lock.pyx"],
+        libraries=[
+            "rt",  # POSIX functions seem to require this
+        ],
+        library_dirs=[
+            join(
+                dirname(abspath(__file__)),
+                "speedysvc/hybrid_lock"
+            )
+        ]
+    )]
 
 setup(
     name='speedysvc',
@@ -48,20 +59,18 @@ setup(
 
     keywords='mmap sockets',
     packages=find_packages(),
-    ext_modules=cythonize(
+    ext_modules=None if extensions is None else cythonize(
         extensions,
         include_path=[join(dirname(abspath(__file__)), "speedysvc/hybrid_lock")],
         language_level=3
     ),
     install_requires=[
-        'cython',
         'msgpack',
-        'posix_ipc',
         'python-snappy',
         'cherrypy',
         'jinja2',
         'psutil',
-    ],
+    ] + PLATFORM_EXTRAS,
     package_data = {
         '': ['*.json', '*.ini', '*.html'],
     },

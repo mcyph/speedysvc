@@ -1,6 +1,6 @@
 import traceback
 
-from hybrid_lock import NoSuchSemaphoreException, SemaphoreDestroyedException
+from speedysvc.hybrid_lock import NoSuchSemaphoreException, SemaphoreDestroyedException
 from speedysvc.compression.compression_types import snappy_compression
 from speedysvc.client_server.shared_memory.SHMClient import SHMClient
 from speedysvc.client_server.network.NetworkClient import NetworkClient

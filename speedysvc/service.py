@@ -280,7 +280,7 @@ class Services:
             'wait_until_completed': wait_until_completed
         }
         proc = subprocess.Popen([
-            'python3', '-m',
+            sys.executable, '-m',
             'speedysvc.client_server.shared_memory.MultiProcessManager',
             json.dumps(DArgs)
         ], env=DEnv)
@@ -301,7 +301,7 @@ class Services:
 if __name__ == '__main__':
     services = Services()
     web_service_manager.set_services(services)
-    #print("Services started - starting web monitoring interface")
+    print("Services started - starting web monitoring interface")
 
     # OPEN ISSUE: Allow binding to a specific address here? ====================================
     # For security reasons, it's probably (in almost all cases)
