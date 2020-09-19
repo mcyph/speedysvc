@@ -135,6 +135,7 @@ class WinHybridLock(object):
         """
 
         """
+        #print("LOCKGETVAL")
         try:
             self.lock(0)
             self.unlock()
@@ -146,6 +147,7 @@ class WinHybridLock(object):
         """
         Return the Python representation of this mutex.
         """
+        #print("LOCKREPR:", self.name)
         return '{0}({1!r}, acquired={2})'.format(
             self.__class__.__name__, self.name, self.get_value())
 
@@ -158,13 +160,16 @@ class WinHybridLock(object):
         is specified, it will wait a maximum of timeout seconds to acquire the mutex,
         returning True if acquired, False on timeout. Raises WindowsError on error.
         """
+        if timeout == -1:
+            timeout = None
+
         #print("LOCK:", self.name, timeout)
-        if timeout is not None:
-            if not self.__lock.acquire(timeout=timeout):
-                raise TimeoutError()
-        else:
-            if not self.__lock.acquire():
-                raise OSError()
+        #if timeout is not None:
+        #    if not self.__lock.acquire(timeout=timeout):
+        #        raise TimeoutError()
+        #else:
+        #    if not self.__lock.acquire():
+        #        raise OSError()
 
         if timeout is None:
             # Wait forever (INFINITE)
@@ -189,7 +194,7 @@ class WinHybridLock(object):
         """
         Release an acquired mutex. Raises WindowsError on error.
         """
-        self.__lock.release()
+        #self.__lock.release()
         ret = _ReleaseSemaphore(self.handle, 1, None)
         if not ret:
             raise OSError(ctypes.GetLastError())

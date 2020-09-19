@@ -27,7 +27,7 @@ class ClientProviderBase(ABC):
         #print('Acquire shm lock:', end=' ')
 
         x = 0
-        while 1:
+        while True:
             lock_file_path = self.lock_file_path = self.PATH % (
                 self.port, str(x) + '.clientlock'
             )
@@ -47,7 +47,7 @@ class ClientProviderBase(ABC):
                     raise Exception('too many connections!')
                 continue
 
-            print('Lock %s acquired!' % x)
+            #print('Lock %s acquired!' % x)
             self.lock_file = lock_file
             return x
 

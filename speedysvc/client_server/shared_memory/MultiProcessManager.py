@@ -11,8 +11,8 @@ from sys import argv
 from os import getpid
 from warnings import warn
 from multiprocessing import cpu_count
-from speedysvc.kill_pid_and_children import kill_pid_and_children
 
+from speedysvc.kill_pid_and_children import kill_pid_and_children
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.client_server.network.NetworkServer import NetworkServer
 from speedysvc.client_server.shared_memory.SHMResourceManager import \
@@ -38,7 +38,7 @@ _DStatusStrings = {
 
 
 def debug(*s):
-    if True:
+    if False:
         print(*s)
 
 
@@ -235,7 +235,6 @@ class MultiProcessServer:
                 )
                 _service_worker(**DArgs)
         else:
-            print("STARTING PROCESS!")
             proc = subprocess.Popen([
                 sys.executable, '-m',
                 'speedysvc.client_server.shared_memory._service_worker',
@@ -429,6 +428,9 @@ class MultiProcessServer:
                 # Unlock locks which are held by dead PIDs!
                 should_clean_up = False
                 pid = lock.get_pid_holding_lock()
+                if pid == -1:
+                    continue  # HACK!!!! ======================================================================================================
+
                 if not psutil.pid_exists(pid):
                     should_clean_up = True
                 else:
@@ -492,7 +494,7 @@ if __name__ == '__main__':
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
-    while 1:
+    while True:
         if hasattr(signal, 'pause'):
             signal.pause()
         else:

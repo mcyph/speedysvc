@@ -99,10 +99,6 @@ class SHMClient(ClientProviderBase, SHMBase):
         encoded_request = \
             self.request_serialiser.pack(len(cmd), len(args)) + cmd + args
 
-        #debug("LOCKING CLIENT LOCK -> SERVER!")
-        #self.lock.unlock(timeout=timeout, spin=int(self.use_spinlock))
-        #debug("LOCKED!")
-
         # Next line must be in critical area!
         mmap = self.mmap
 
@@ -120,7 +116,6 @@ class SHMClient(ClientProviderBase, SHMBase):
         mmap[0] = SERVER
 
         # Release the lock for the server
-        #print("UNLOCKING!")
         self.lock.unlock()
 
         # Make sure response state ok,
@@ -129,7 +124,7 @@ class SHMClient(ClientProviderBase, SHMBase):
 
         while True:
             if not num_times:
-                #debug("LOCKING CLIENT LOCK <- SERVER!", mmap[0] == SERVER, mmap[0] == CLIENT)
+                #debug("LOCKING CLIENT LOCK <- SERVER!", mmap[0] == SERVER, mmap[0] == CLIENT, cmd)
                 self.lock.lock(timeout=-1, spin=int(self.use_spinlock))
                 #debug("LOCKED!")
 
@@ -170,9 +165,9 @@ class SHMClient(ClientProviderBase, SHMBase):
         :param encoded_request:
         :return:
         """
-        #debug(f"[pid {getpid()}:qid {self.qid}] "
-        #      f"Client: Recreating memory map to be at "
-        #      f"least {len(encoded_request)} bytes")
+        debug(f"[pid {getpid()}:qid {self.qid}] "
+              f"Client: Recreating memory map to be at "
+              f"least {len(encoded_request)} bytes")
 
         old_mmap = mmap
         assert self.pid == getpid()
@@ -188,8 +183,8 @@ class SHMClient(ClientProviderBase, SHMBase):
         # Make the old one invalid
         old_mmap[0] = INVALID
         old_mmap.close()
-        #debug(f"Client: New mmap size is {len(mmap)} bytes "
-        #      f"for encoded_request length {len(encoded_request)}")
+        debug(f"Client: New mmap size is {len(mmap)} bytes "
+              f"for encoded_request length {len(encoded_request)}")
         return mmap
 
     def __reconnect_to_mmap(self, mmap):
@@ -198,7 +193,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         :param mmap:
         :return:
         """
-        #print(f"Client: memory map has been marked as invalid")
+        debug(f"Client: memory map has been marked as invalid")
         prev_len = len(mmap)
         mmap.close()
 

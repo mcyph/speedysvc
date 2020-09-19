@@ -48,7 +48,7 @@ class ReadStrArray:
             x = item
             check_idx(item)
 
-            while 1:
+            while True:
                 s += self.mmap[x+offset]
                 if not x & 128:
                     # utf-8 break!

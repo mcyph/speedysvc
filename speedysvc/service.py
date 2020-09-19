@@ -318,5 +318,5 @@ if __name__ == '__main__':
         'host': services.DWebMonitor.get('host', '127.0.0.1'),
         'port': int(services.DWebMonitor.get('port', '5155')),
     })
-    while 1:
+    while True:
         time.sleep(10)

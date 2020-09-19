@@ -7,7 +7,7 @@ import signal
 
 def wait_for_pid(pid, timeout=None):
     elapsed = 0
-    while 1:
+    while True:
         if timeout and elapsed >= timeout:
             raise TimeoutError()
 

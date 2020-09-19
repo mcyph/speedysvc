@@ -56,7 +56,7 @@ def _service_worker(server_methods):
         sys.exit(0)
 
     signal.signal(signal.SIGINT, signal_handler)
-    while 1:
+    while True:
         if hasattr(signal, 'pause'):
             signal.pause()
         else:

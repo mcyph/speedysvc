@@ -91,7 +91,7 @@ def run_test():
         ))
 
     import time
-    while 1:
+    while True:
         time.sleep(1)
 
 
@@ -101,5 +101,5 @@ if __name__ == '__main__':
         p.start()
 
     import time
-    while 1:
+    while True:
         time.sleep(1)

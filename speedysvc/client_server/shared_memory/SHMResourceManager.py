@@ -1,4 +1,4 @@
-sys
+import sys
 import json
 import time
 import psutil
@@ -93,18 +93,18 @@ class _SHMResourceManager(JSONMMapBase):
         # TODO: Specify the actual mmap location of the JSON Map!!
         try:
             JSONMMapBase.__init__(self, port, create=False)
-            #debug(f"SHMResourceManager for {name}:{port}: connected")
+            debug(f"SHMResourceManager for {name}:{port}: connected")
         except NoSuchSemaphoreException:
             JSONMMapBase.__init__(self, port, create=True)
-            #debug(f"SHMResourceManager for {name}:{port}: created")
+            debug(f"SHMResourceManager for {name}:{port}: created")
 
         pid_holding_lock = self.lock.get_pid_holding_lock()
         if (pid_holding_lock and not is_pid_still_alive(pid_holding_lock)) or not pid_holding_lock:
             # If the process which is holding the
             # lock no longer exists, force unlock
             try:
-                #debug(f"SHMResourceManager for {name}: "
-                #      f"PID {pid_holding_lock} no longer exists - unlocking!")
+                debug(f"SHMResourceManager for {name}: "
+                      f"PID {pid_holding_lock} no longer exists - unlocking!")
                 self.lock.unlock()
             except:
                 pass
@@ -175,12 +175,7 @@ class _SHMResourceManager(JSONMMapBase):
         so as to inform servers to respond to requests
         :return: (the shared mmap, client HybridLock, server HybridLock)
         """
-        if sys.platform == 'win32':
-            # HACK: Support 4mb base size for win32 while resize functionality doesn't work!
-            mmap = self.create_pid_mmap(min_size=1024*1024*4, pid=pid, qid=qid)
-        else:
-            mmap = self.create_pid_mmap(min_size=1024, pid=pid, qid=qid)
-
+        mmap = self.create_pid_mmap(min_size=1024, pid=pid, qid=qid)
         lock = self.get_lock(pid, qid, CREATE_NEW_OVERWRITE)
 
         # Inform servers

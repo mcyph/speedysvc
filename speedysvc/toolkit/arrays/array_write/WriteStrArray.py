@@ -26,7 +26,7 @@ class WriteStrArray:
     def tofile(self, f):
         self.f.seek(0)
 
-        while 1:
+        while True:
             data = self.f.read(1024)
             if not data:
                 break

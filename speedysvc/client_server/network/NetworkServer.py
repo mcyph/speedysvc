@@ -61,7 +61,7 @@ class NetworkServer(ServerProviderBase):
 
     def run(self, conn, shm_client):
         # TODO: Provide basic support for REST-based RPC
-        #       if the client starts with an HTTP header! =============================================================
+        #       if the client starts with an HTTP header! =============================================================s
 
         conn.setblocking(True)
 
@@ -135,5 +135,5 @@ if __name__ == '__main__':
         'echo': lambda data: data
     }, port=5555)
 
-    while 1:
+    while True:
         time.sleep(1)

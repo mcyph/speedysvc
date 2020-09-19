@@ -38,6 +38,7 @@ if sys.platform == 'win32':
 
 
     def get_mmap_tagname_size(tagname):
+        #print("REGION SIZE:", tagname)
         hMap = kernel32.OpenFileMappingW(FILE_MAP_ALL_ACCESS, False, tagname)
         pBuf = kernel32.MapViewOfFile(hMap, FILE_MAP_ALL_ACCESS, 0, 0, 0)
         kernel32.CloseHandle(hMap)
@@ -51,8 +52,13 @@ if sys.platform == 'win32':
         pass  # TODO!!!! =======================================================================================================
 
 
+    _flip_ids = {}
+
     def get_mmap(location, create, new_size=None):
-        location = 'ssvc_' + location.decode('ascii')
+        #print("GET MMAP:", location, create)
+
+        _flip_ids[location] = not _flip_ids.get(location, True)
+        location = 'ssvc%s_' % int(_flip_ids[location]) + location.decode('ascii')
 
         if new_size is not None:
             chk_size = mmap.PAGESIZE
