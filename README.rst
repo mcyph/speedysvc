@@ -2,17 +2,26 @@
 About
 ===========================
 
-    NOTE: ``speedysvc``'s status is beta - it should be functional and 
+    NOTE: ``speedysvc``'s status is alpha - it should be functional and
     don't intend to make major changes, but the web management and configuration 
-    interface API might be changed later. 
-    
-This module for python 3.6+ on Linux allows separating larger, more complex 
+    interface API might be changed later. It's under active development
+    and there may well be bugs!
+
+    Service clients on Windows currently need to manually reconnect after
+    a server process is rebooted, as servers don't support continuing on
+    from where the previous server left off. Currently spinlocks aren't used
+    on Windows, and so may be around 4-5 times slower than the figures
+    quoted below for Linux.
+
+    Mac OSX may not ever be supported, as to my knowledge it doesn't support
+    timeouts for named semaphores.
+
+This module for python 3.6+ on Linux and Windows allows separating larger, more complex
 applications into smaller components (microservices). For example, you could 
-build a text-to-speech service, a fulltext search service,
-an optical character recognition service, etc. Then, you could 
-have web frontends or other clients communicate with these services. 
-This can often require less RAM, as there is no need to load the components 
-in every web worker process.
+build a text-to-speech service, an optical character recognition service, etc.
+Then, you could have web frontends or other clients communicate with these
+services. This can often require less RAM, as there is no need to load the
+components in every web worker process.
 
 Unlike other similar modules for client-server communication
 (which typically use sockets or HTTP REST), this module uses local `shared
@@ -50,9 +59,17 @@ Requirements
 Install
 -------------------
 
+Windows:
+
+.. code-block:: bash
+
+    pip3 install --upgrade pip
+    pip3 install git+https://github.com/mcyph/speedysvc
+
+Linux:
+
 .. code-block:: bash
     
-    apt install git libsnappy-dev
     pip3 install --upgrade pip
     pip3 install Cython
     pip3 install git+https://github.com/mcyph/speedysvc

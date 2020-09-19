@@ -1,5 +1,11 @@
-import snappy
+try:
+    import snappy
+except ImportError:
+    snappy = None
 from speedysvc.compression.CompressionBase import CompressionBase
+
+
+_PACKAGE_ERROR = "The python-snappy package must be installed for snappy support to be available!"
 
 
 class SnappyCompression(CompressionBase):
@@ -13,9 +19,13 @@ class SnappyCompression(CompressionBase):
     minimum_data_size = 860
 
     def decompress(self, o):
+        if not snappy:
+            raise ImportError(_PACKAGE_ERROR)
         return snappy.decompress(o)
 
     def compress(self, o):
+        if not snappy:
+            raise ImportError(_PACKAGE_ERROR)
         do_compression = len(o) >= self.minimum_data_size
 
         if do_compression:

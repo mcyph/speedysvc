@@ -1,8 +1,14 @@
 import os
+import sys
 import time
 import errno
 import psutil
 import signal
+
+
+def debug(*s):
+    if False:
+        print(*s)
 
 
 def wait_for_pid(pid, timeout=None):
@@ -13,6 +19,7 @@ def wait_for_pid(pid, timeout=None):
 
         try:
             _pid, err_code = os.waitpid(pid, os.WNOHANG)
+
             if err_code == errno.ECHILD:
                 # Child should no longer exist?
                 # but it seems it often still does, hence this additional check
@@ -40,7 +47,7 @@ def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
         [pid]
     )
     for pid in LKillPIDs:
-        #print(f"Sending SIGINT to pid: [{pid}]")
+        debug(f"Sending SIGINT to pid: [{pid}]")
         try:
             os.kill(pid, signal.SIGINT)
         except ProcessLookupError:
@@ -48,25 +55,38 @@ def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
 
     for pid in LKillPIDs:
         try:
-            wait_for_pid(pid, timeout=sigint_timeout)
+            process = psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            continue
+
+        try:
+            if sys.platform != 'win32':
+                debug(f"Waiting for PID: [{pid}]")
+                wait_for_pid(pid, timeout=sigint_timeout)
+            else:
+                time.sleep(0.5)
         except TimeoutError:
             # If that fails, send SIGTERM
-            #print(f"Sending SIGTERM to pid: [{pid}]")
+            debug(f"Sending SIGTERM to pid: [{pid}]")
             try:
-                os.kill(pid, signal.SIGTERM)
+                process.terminate()
             except ProcessLookupError:
                 sigint_timeout = 0.01
                 continue
             sigint_timeout = 0.01
 
             try:
-                wait_for_pid(pid, timeout=sigterm_timeout)
+                if sys.platform != 'win32':
+                    wait_for_pid(pid, timeout=sigterm_timeout)
+                else:
+                    pass
             except TimeoutError:
                 # Send SIGKILLs if all else fails
-                #print(f"Sending SIGKILL to pid: [{pid}]")
+                debug(f"Sending SIGKILL to pid: [{pid}]")
                 try:
-                    os.kill(pid, signal.SIGKILL)
+                    process.kill()
                 except ProcessLookupError:
                     sigterm_timeout = 0.01
                     continue
                 sigterm_timeout = 0.01
+

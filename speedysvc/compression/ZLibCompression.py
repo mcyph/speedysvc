@@ -14,7 +14,9 @@ class ZLibCompression(CompressionBase):
     # of a space saving, anyway.
     minimum_data_size = 860
 
-    def __init__(self, compression_level=7):
+    def __init__(self, compression_level=4):
+        # Level 4 seems a reasonable tradeoff between CPU and compression ratio
+        # https://www.snellman.net/blog/archive/2015-06-05-updated-zlib-benchmarks/
         self.compression_level = compression_level
 
     def decompress(self, o):

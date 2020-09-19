@@ -66,7 +66,7 @@ setup(
     ),
     install_requires=[
         'msgpack',
-        'python-snappy',
+        #'python-snappy',
         'cherrypy',
         'jinja2',
         'psutil',

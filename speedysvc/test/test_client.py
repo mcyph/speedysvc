@@ -96,9 +96,11 @@ def run_test():
 
 
 if __name__ == '__main__':
-    for x in range(1):
-        p = multiprocessing.Process(target=run_test)
-        p.start()
+    #for x in range(1):
+    #    p = multiprocessing.Process(target=run_test)
+    #    p.start()
+    while True:
+        run_test()
 
     import time
     while True:

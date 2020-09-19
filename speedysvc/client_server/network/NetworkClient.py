@@ -7,14 +7,14 @@ from speedysvc.toolkit.documentation.copydoc import copydoc
 
 from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
 from speedysvc.client_server.network.consts import len_packer, response_packer
-from speedysvc.compression.compression_types import snappy_compression
+from speedysvc.compression.compression_types import zlib_compression
 
 
 class NetworkClient(ClientProviderBase):
     def __init__(self,
                  server_methods,
                  host='127.0.0.1', port=None,
-                 compression_inst=snappy_compression):
+                 compression_inst=zlib_compression):
         """
 
         :param server_methods:
