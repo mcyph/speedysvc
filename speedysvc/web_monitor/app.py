@@ -45,7 +45,11 @@ def run_server(services=(), debug=False, host='127.0.0.1', port=5155):
     cherrypy._global_conf_alias.update(config)
     cherrypy.tree.mount(App(), '', config)
 
-    cherrypy.engine.signals.subscribe()
+    # This call stops windows from being able to exit
+    # from ctrl+c events!
+    # I think it's better to just add atexit handlers
+    #cherrypy.engine.signals.subscribe()
+
     cherrypy.engine.start()
     atexit.register(cherrypy.engine.exit)
     print("[OK]")

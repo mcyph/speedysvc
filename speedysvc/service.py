@@ -335,7 +335,11 @@ if __name__ == '__main__':
     })
 
     while True:
-        if hasattr(signal, 'pause'):
-            signal.pause()
-        else:
-            time.sleep(60)
+        try:
+            if hasattr(signal, 'pause'):
+                signal.pause()
+            else:
+                time.sleep(60)
+        except KeyboardInterrupt:
+            signal_handler(None, None)
+
