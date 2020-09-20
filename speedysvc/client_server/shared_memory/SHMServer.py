@@ -190,12 +190,10 @@ class SHMServer(SHMBase, ServerProviderBase):
                     assert num_times < 1000, "Shouldn't get here!"
                     num_times += 1
                 else:
-                    # Only just created?
-                    #raise Exception(
-                    #    f"Service {self.name} pid/qid {pid}:{qid} unknown state: %s" % mmap[0]
-                    #)
-                    time.sleep(0.01)
-                    return do_spin, mmap
+                    # Connection destroyed? (Windows)
+                    raise SemaphoreDestroyedException(
+                        f"Service {self.name} pid/qid {pid}:{qid} unknown state: %s" % mmap[0]
+                    )
 
             # Measure for complete time it takes from
             # getting/putting back to the shm block
