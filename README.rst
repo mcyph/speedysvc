@@ -55,7 +55,9 @@ Requirements
 
 * OS: Windows or Linux (tested on Ubuntu 18.04 LTS, other POSIX systems other than Mac OS X may also be supported)
 * Python: 3.6 or above
-* Module Dependencies: cython, msgpack, posix_ipc, python-snappy, flask, psutil
+* Module Dependencies: msgpack, cherrypy, psutil
+* Module Dependencies for Linux/POSIX only: cython, posix_ipc
+* Optional: python-snappy for faster network compression
 
 Install
 -------------------
