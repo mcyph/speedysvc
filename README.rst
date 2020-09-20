@@ -5,7 +5,8 @@ About
     NOTE: ``speedysvc``'s status is alpha - it should be functional and
     don't intend to make major changes, but the web management and configuration 
     interface API might be changed later. It's under active development
-    and there may well be bugs!
+    and am using it for my https://langlynx.com service but there may well
+    be bugs!
 
     Service clients on Windows currently need to manually reconnect after
     a server process is rebooted, as servers don't support continuing on
@@ -52,7 +53,7 @@ See also `Implementation Considerations`_.
 Requirements
 -------------------
 
-* OS: Linux (tested on Ubuntu 18.04 LTS, other POSIX systems may also be supported)
+* OS: Windows or Linux (tested on Ubuntu 18.04 LTS, other POSIX systems other than Mac OS X may also be supported)
 * Python: 3.6 or above
 * Module Dependencies: cython, msgpack, posix_ipc, python-snappy, flask, psutil
 
