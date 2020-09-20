@@ -7,7 +7,11 @@ URL: https://code.activestate.com/recipes/577794-win32-named-mutex-class-for-sys
 Modifications by David Morrissey 2020
 """
 
+from os import getpid
+import mmap
+from time import time
 import ctypes
+import struct
 import _thread
 from ctypes import wintypes
 
@@ -65,6 +69,13 @@ UNLOCKED = 1
 DESTROYED = 2  # STUB!
 
 
+# spin lock char, process query lock, process holding lock
+SPINLOCK_IDX = 0
+PROCESS_QUERY_LOCK = 1
+PROCESS_HOLDING_LOCK = 2
+PROCESS_HOLDING_ENC = struct.Struct('@l')
+
+
 class WinHybridLock(object):
     """A named, system-wide mutex that can be acquired and released."""
     # sem_loc, int mode,
@@ -96,8 +107,6 @@ class WinHybridLock(object):
             raise Exception(mode)
 
         self.handle = ret
-        #print(name, self.handle)
-
         assert initial_value == UNLOCKED  # HACK!
 
         if mode in (CREATE_NEW_OVERWRITE, CREATE_NEW_EXCLUSIVE):
@@ -106,18 +115,40 @@ class WinHybridLock(object):
             except (WindowsError, RuntimeError):
                 pass
 
+        self._mmap = mmap.mmap(-1,
+                               length=mmap.PAGESIZE,
+                               tagname='ssvclk_'+name.decode('utf-8'),
+                               access=mmap.ACCESS_WRITE)
+        if not self._mmap[0]:
+            self._mmap[0] = UNLOCKED
+            self._mmap[PROCESS_QUERY_LOCK] = UNLOCKED
+
     def get_pid_holding_lock(self):
-        return -1  # HACK!
+        """
+        Warning: This is not strictly threadsafe!!
+        This method is mainly used when cleaning up resources
+        """
+        if self.get_value() == UNLOCKED:
+            return None
+
+        return PROCESS_HOLDING_ENC.unpack(
+            self._mmap[PROCESS_HOLDING_LOCK:PROCESS_HOLDING_LOCK+PROCESS_HOLDING_ENC.size]
+        )[0]
 
     def destroy(self):
         """
-
+        Make the lock unusable for this and other processes
         """
+        if self._mmap[0] == DESTROYED:
+            # Already destroyed!
+            return
+
         try:
             self.unlock()
         except (WindowsError, RuntimeError):
             pass
         self.close()
+        self._mmap[0] = DESTROYED
 
     def close(self):
         """
@@ -133,9 +164,12 @@ class WinHybridLock(object):
 
     def get_value(self):
         """
-
+        Get the current value: 1 for unlocked and 0 for locked
+        This can be unreliable, as the value could change during calling
         """
-        #print("LOCKGETVAL")
+        if self._mmap[0] == DESTROYED:
+            raise SemaphoreDestroyedException()
+
         try:
             self.lock(0)
             self.unlock()
@@ -147,7 +181,9 @@ class WinHybridLock(object):
         """
         Return the Python representation of this mutex.
         """
-        #print("LOCKREPR:", self.name)
+        if self._mmap[0] == DESTROYED:
+            return "(Destroyed WinHybridLock)"
+
         return '{0}({1!r}, acquired={2})'.format(
             self.__class__.__name__, self.name, self.get_value())
 
@@ -160,16 +196,28 @@ class WinHybridLock(object):
         is specified, it will wait a maximum of timeout seconds to acquire the mutex,
         returning True if acquired, False on timeout. Raises WindowsError on error.
         """
+        # print("LOCK:", self.name, timeout)
+
+        if self._mmap[0] == DESTROYED:
+            raise SemaphoreDestroyedException()
+
         if timeout == -1:
             timeout = None
 
-        #print("LOCK:", self.name, timeout)
-        #if timeout is not None:
-        #    if not self.__lock.acquire(timeout=timeout):
-        #        raise TimeoutError()
-        #else:
-        #    if not self.__lock.acquire():
-        #        raise OSError()
+        # Very basic in-python spinlock
+        # All its meant to do is reduce the probability calling WaitForSingleObject
+        # will cause the process slice scheduler to put this process to the back
+        # It would be better to do this in cython, though would prefer to not
+        # require a C compiler on Windows
+
+        if spin:
+            t = time()
+            while True:
+                if self._mmap[0] == UNLOCKED:
+                    self._mmap[0] = LOCKED
+                    break
+                elif time()-t > 0.01:
+                    break
 
         if timeout is None:
             # Wait forever (INFINITE)
@@ -181,6 +229,8 @@ class WinHybridLock(object):
 
         if ret == 0:
             # normally acquired (0)
+            self._mmap[PROCESS_HOLDING_LOCK:PROCESS_HOLDING_LOCK+PROCESS_HOLDING_ENC.size] = \
+                PROCESS_HOLDING_ENC.pack(getpid())
             return True
         elif ret == 0x102:
             # Timeout
@@ -194,7 +244,10 @@ class WinHybridLock(object):
         """
         Release an acquired mutex. Raises WindowsError on error.
         """
-        #self.__lock.release()
+        if self._mmap[0] == DESTROYED:
+            raise SemaphoreDestroyedException()
+        self._mmap[0] = UNLOCKED
+
         ret = _ReleaseSemaphore(self.handle, 1, None)
         if not ret:
             raise OSError(ctypes.GetLastError())

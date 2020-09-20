@@ -104,9 +104,9 @@ class LoggerClient(ClientMethodsBase):
                     self._update_method_stats_()
                     method_stats_last_updated = time.time()
 
-                #elif not cur_stderr_msg and not cur_stderr_msg and sys.platform == 'win32':
+                elif not cur_stderr_msg and not cur_stderr_msg and sys.platform == 'win32':
                     # win32 doesn't seem to allow for timeouts with the queue here
-                #    time.sleep(2.0)
+                    time.sleep(2.0)
 
             except Exception as e:
                 # WARNING WARNING - should (hopefully) never get here
