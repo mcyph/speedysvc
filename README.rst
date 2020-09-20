@@ -10,9 +10,7 @@ About
 
     Service clients on Windows currently need to manually reconnect after
     a server process is rebooted, as servers don't support continuing on
-    from where the previous server left off. Currently spinlocks aren't used
-    on Windows, and so may be around 4-5 times slower than the figures
-    quoted below for Linux.
+    from where the previous server left off.
 
     Mac OSX may not ever be supported, as to my knowledge it doesn't support
     timeouts for named semaphores.
