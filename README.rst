@@ -4,16 +4,16 @@ About
 
     NOTE: ``speedysvc``'s status is alpha - it should be functional and
     don't intend to make major changes, but the web management and configuration 
-    interface API might be changed later. It's under active development
+    interface API might be changed later. It's actively maintained
     and am using it for my https://langlynx.com service but there may well
     be bugs!
 
-    Service clients on Windows currently need to manually reconnect after
-    a server process is rebooted, as servers don't support continuing on
-    from where the previous server left off.
-
-    Mac OSX may not ever be supported, as to my knowledge it doesn't support
-    timeouts for named semaphores.
+    On Windows, service clients currently need to be shut down before
+    shutting down the servers, as this can result in a deadlock, but
+    performance and functionality-wise it should be similar to Linux. I'm
+    currently investigating a fix. Mac OSX may not ever be supported,
+    as to my knowledge it doesn't support timeouts for named semaphores,
+    though it might be possible to make it work with reduced features.
 
 This module for python 3.6+ on Linux and Windows allows separating larger, more complex
 applications into smaller components (microservices). For example, you could 
