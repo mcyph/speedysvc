@@ -28,7 +28,7 @@ def run_server(services=(), debug=False, host='127.0.0.1', port=5155):
             'server.socket_host': host,
             'server.socket_port': port,
             'environment': (
-                'production' if not debug else 'debug'
+                'production' if not debug else 'staging'
             ),
         },
         '/': {

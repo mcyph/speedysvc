@@ -216,7 +216,8 @@ class WinHybridLock(object):
                 if self._mmap[0] == UNLOCKED:
                     self._mmap[0] = LOCKED
                     break
-                elif time()-t > 0.01:
+                elif time()-t > 0.015:
+                    # Windows time slice is 15 milliseconds tops
                     break
 
         if timeout is None:

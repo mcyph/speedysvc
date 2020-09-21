@@ -121,9 +121,8 @@ class TimeSeriesData(ABC):
                 if DSample: # WARNING!!! ======================================
                     self.__add_sample(**DSample)
             except:
-                pass
-                #import traceback
-                #traceback.print_exc()
+                import traceback
+                traceback.print_exc()
 
     @abstractmethod
     def sample_data(self):

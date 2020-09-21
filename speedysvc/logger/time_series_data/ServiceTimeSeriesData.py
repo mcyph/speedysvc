@@ -1,3 +1,4 @@
+import sys
 from collections import Counter
 from psutil import Process, pid_exists
 from speedysvc.logger.time_series_data.TimeSeriesData import TimeSeriesData
@@ -24,21 +25,32 @@ class ServiceTimeSeriesData(TimeSeriesData):
         self.SPIDs = set()
         self.DProcesses = {}
 
-        LFormat = (
-            # ('I', 'num_successful_reqs'),
-            # ('I', 'num_failed_reqs'),
+        if sys.platform == 'win32':
+            LFormat = (
+                ('H', 'num_processes'),
 
-            ('H', 'num_processes'),
+                ('f', 'physical_mem'),
+                ('f', 'virtual_mem'),
 
-            ('f', 'physical_mem'),
-            ('f', 'shared_mem'),
-            ('f', 'virtual_mem'),
+                ('I', 'io_read'),
+                ('I', 'io_written'),
 
-            ('I', 'io_read'),
-            ('I', 'io_written'),
+                ('H', 'cpu_usage_pc'),
+            )
+        else:
+            LFormat = (
+                ('H', 'num_processes'),
 
-            ('H', 'cpu_usage_pc'),
-        )
+                ('f', 'physical_mem'),
+                ('f', 'shared_mem'),
+                ('f', 'virtual_mem'),
+
+                ('I', 'io_read'),
+                ('I', 'io_written'),
+
+                ('H', 'cpu_usage_pc'),
+            )
+
         TimeSeriesData.__init__(
             self, LFormat,
             fifo_cache_len, sample_interval_secs,
@@ -98,12 +110,20 @@ class ServiceTimeSeriesData(TimeSeriesData):
 
     def __get_mem_info(self, proc):
         mem_info = proc.memory_full_info()
+        # OPEN ISSUE: Support shared memory on Windows?
+        # https://stackoverflow.com/questions/33216150/getting-same-process-details-as-task-manager-in-windows/33228050#33228050
 
-        return {
-            'shared_mem': mem_info.shared, # TODO: Make this check for shared memory between like processes?
-            'physical_mem': mem_info.rss,
-            'virtual_mem': mem_info.vms # TODO: Make this not include physical memory???
-        }
+        if sys.platform == 'win32':
+            return {
+                'physical_mem': mem_info.rss,
+                'virtual_mem': mem_info.vms # TODO: Make this not include physical memory???
+            }
+        else:
+            return {
+                'shared_mem': mem_info.shared, # TODO: Make this check for shared memory between like processes?
+                'physical_mem': mem_info.rss,
+                'virtual_mem': mem_info.vms # TODO: Make this not include physical memory???
+            }
 
     def __get_disk_info(self, proc):
         # Note: read_bytes/write_bytes differ from read_chars/write_chars, in that

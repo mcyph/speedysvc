@@ -1,3 +1,4 @@
+import sys
 from datetime import datetime
 
 
@@ -253,7 +254,11 @@ class WebServiceManager:
             "labels": labels,
             "ram": self.__get_data_for_keys(
                 recent_values,
-                'shared_mem', 'physical_mem', 'virtual_mem',
+                *(
+                    ('shared_mem', 'physical_mem', 'virtual_mem')
+                    if sys.platform != 'win32'
+                    else ('physical_mem', 'virtual_mem')
+                ),
                 divisor=1024 * 1024
             ),
             "io": self.__get_data_for_keys(
