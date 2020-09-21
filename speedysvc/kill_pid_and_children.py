@@ -70,7 +70,7 @@ def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
             debug(f"Sending SIGTERM to pid: [{pid}]")
             try:
                 process.terminate()
-            except ProcessLookupError:
+            except psutil.NoSuchProcess:
                 sigint_timeout = 0.01
                 continue
             sigint_timeout = 0.01
@@ -85,7 +85,7 @@ def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
                 debug(f"Sending SIGKILL to pid: [{pid}]")
                 try:
                     process.kill()
-                except ProcessLookupError:
+                except psutil.NoSuchProcess:
                     sigterm_timeout = 0.01
                     continue
                 sigterm_timeout = 0.01
