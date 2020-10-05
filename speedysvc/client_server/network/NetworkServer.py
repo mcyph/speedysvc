@@ -25,7 +25,11 @@ class NetworkServer(ServerProviderBase):
             self.__check_security()
 
         sock = self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
         sock.bind((tcp_bind_address, server_methods.port))
         sock.listen(0)
 
@@ -68,6 +72,9 @@ class NetworkServer(ServerProviderBase):
         # If this setting isn't set, then there's a high
         # probability of there being much higher latency
         conn.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
+        conn.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)
+        conn.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
+        conn.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
         def recv(amount):
             # Note string concatenation is slower in earlier versions

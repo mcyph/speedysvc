@@ -28,12 +28,12 @@ class NetworkClient(ClientProviderBase):
         self.__connect()
 
     def __connect(self):
-        self.conn_to_server = conn_to_server = socket.socket(
-            socket.AF_INET, socket.SOCK_STREAM
-        )
-        conn_to_server.setsockopt(
-            socket.SOL_TCP, socket.TCP_NODELAY, 1
-        )
+        self.conn_to_server = conn_to_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        conn_to_server.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
+        conn_to_server.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)
+        conn_to_server.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
+        conn_to_server.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+
         port = (
             self.port
             if self.port is not None
