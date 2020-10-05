@@ -3,84 +3,15 @@ import mmap
 
 
 if sys.platform == 'win32':
-    import struct
-    import ctypes
-    from ctypes import wintypes
-
-    # https://stackoverflow.com/questions/31495461/mmap-cant-attach-to-existing-region-without-knowing-its-size-windows
-    kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
-
-    FILE_MAP_ALL_ACCESS = 0x001f
-
-
-    class MEMORY_BASIC_INFORMATION(ctypes.Structure):
-        _fields_ = (('BaseAddress', wintypes.LPVOID),
-                    ('AllocationBase', wintypes.LPVOID),
-                    ('AllocationProtect', wintypes.DWORD),
-                    ('RegionSize', ctypes.c_size_t),
-                    ('State', wintypes.DWORD),
-                    ('Protect', wintypes.DWORD),
-                    ('Type', wintypes.DWORD))
-
-
-    PMEMORY_BASIC_INFORMATION = ctypes.POINTER(MEMORY_BASIC_INFORMATION)
-
-    kernel32.VirtualQuery.restype = ctypes.c_size_t
-    kernel32.VirtualQuery.argtypes = (wintypes.LPCVOID, PMEMORY_BASIC_INFORMATION, ctypes.c_size_t)
-
-    kernel32.OpenFileMappingW.restype = wintypes.HANDLE
-    kernel32.OpenFileMappingW.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR)
-
-    kernel32.MapViewOfFile.restype = wintypes.LPVOID
-    kernel32.MapViewOfFile.argtypes = (wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD, wintypes.DWORD, ctypes.c_size_t)
-
-    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
-
-
-    def get_mmap_tagname_size(tagname):
-        #print("REGION SIZE:", tagname)
-        hMap = kernel32.OpenFileMappingW(FILE_MAP_ALL_ACCESS, False, tagname)
-        pBuf = kernel32.MapViewOfFile(hMap, FILE_MAP_ALL_ACCESS, 0, 0, 0)
-        kernel32.CloseHandle(hMap)
-
-        mbi = MEMORY_BASIC_INFORMATION()
-        kernel32.VirtualQuery(pBuf, ctypes.byref(mbi), mmap.PAGESIZE)
-        return mbi.RegionSize
-
+    from speedysvc.client_server.shared_memory.Win32SHM import Win32SHM
 
     def unlink_shared_memory(location):
         pass  # TODO!!!! =======================================================================================================
 
 
-    _flip_ids = {}
-
     def get_mmap(location, create, new_size=None):
         #print("GET MMAP:", location, create)
-
-        _flip_ids[location] = not _flip_ids.get(location, True)
-        location = 'ssvc%s_' % int(_flip_ids[location]) + location.decode('ascii')
-
-        if new_size is not None:
-            chk_size = mmap.PAGESIZE
-            while chk_size < new_size:
-                chk_size *= 2
-            assert chk_size >= new_size
-            new_size = chk_size
-
-        if create:
-            assert new_size is not None
-            memory = mmap.mmap(-1,
-                               length=new_size,
-                               tagname=location,
-                               access=mmap.ACCESS_WRITE)
-            if any(memory[:]):
-                raise Exception("Memory should be all zeroes!")
-        else:
-            memory = mmap.mmap(-1,
-                               length=get_mmap_tagname_size(location),
-                               tagname=location,
-                               access=mmap.ACCESS_WRITE)
-        return memory
+        return Win32SHM(location, create, new_size)
 
 else:
     import posix_ipc
@@ -136,7 +67,7 @@ else:
             raise FileExistsError(location)
 
 
-INVALID = b'I'[0]
+INVALID = 0
 SERVER = b'S'[0]
 CLIENT = b'C'[0]
 

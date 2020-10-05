@@ -28,22 +28,17 @@ class JSONMMapBase(ABC):
 
     def _decode(self):
         assert self.lock_acquired
-        amount = self.len_struct.unpack(
-            self.mmap[0:self.len_struct.size]
-        )[0]
-        data = self.mmap[
-            self.len_struct.size:
-            self.len_struct.size+amount
-        ].decode('utf-8')
+        amount = self.len_struct.unpack(self.mmap[1:self.len_struct.size+1])[0]
+        data = self.mmap[self.len_struct.size+1:self.len_struct.size+amount+1].decode('utf-8')
         #print("DECODING:", data, self.len_struct.size, self.len_struct.size+len(data))
         return json.loads(data)
 
     def _encode(self, L):
         assert self.lock_acquired
         encoded = json.dumps(L).encode('utf-8')
-        self.mmap[0:self.len_struct.size] = \
-            self.len_struct.pack(len(encoded))
-        from_ = self.len_struct.size
+        self.mmap[1:self.len_struct.size+1] = self.len_struct.pack(len(encoded))
+
+        from_ = self.len_struct.size + 1
         to = from_ + len(encoded)
         #print("ENCODED:", encoded, from_, to, type(from_), type(to))
         #print("REPLACING:", self.mmap[from_:to], "WITH:", encoded, len(self.mmap))

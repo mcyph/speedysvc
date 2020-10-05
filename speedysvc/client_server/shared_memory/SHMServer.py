@@ -246,28 +246,31 @@ class SHMServer(SHMBase, ServerProviderBase):
         return do_spin, mmap
 
     def __resize_mmap(self, pid, qid, mmap, encoded):
-        debug(
-            f"[pid {pid}:qid {qid}] "
-            f"Server: Recreating memory map to be at "
-            f"least {len(encoded) + 1} bytes"
-        )
-        old_mmap = mmap
+        #debug(
+        #    f"[pid {pid}:qid {qid}] "
+        #    f"Server: Recreating memory map to be at "
+        #    f"least {len(encoded) + 1} bytes"
+        #)
+
+        old_mmap_len = len(mmap)
+        old_mmap_statuscode = mmap[0]
+
+        # Make the old one invalid
+        mmap[0] = INVALID
+        mmap.close()
+
+        # Assign the new mmap
         mmap = self.resource_manager.create_pid_mmap(
             min_size=len(encoded) * 2, pid=pid, qid=qid
         )
-
-        # Assign the new mmap
-        assert len(mmap) > len(old_mmap), (len(old_mmap), len(mmap))
-        mmap[0] = old_mmap[0]
+        assert len(mmap) > old_mmap_len, (old_mmap_len, len(mmap))
+        mmap[0] = old_mmap_statuscode
         assert mmap[0] != INVALID
 
-        # Make the old one invalid
-        old_mmap[0] = INVALID
-        old_mmap.close()
         return mmap
 
     def __reconnect_to_mmap(self, pid, qid, mmap):
-        debug(f"Server: memory map has been marked as invalid")
+        #debug(f"Server: memory map has been marked as invalid")
         prev_len = len(mmap)
         mmap.close()
         mmap = self.resource_manager.connect_to_pid_mmap(pid, qid)

@@ -34,7 +34,9 @@ def debug(*s):
 
 
 class SHMClient(ClientProviderBase, SHMBase):
-    def __init__(self, server_methods, port=None, use_spinlock=True):
+    def __init__(self, server_methods, port=None,
+                 use_spinlock=True, use_in_process_lock=True):
+
         self.pid = getpid()
         self.use_spinlock = use_spinlock
         self._in_process_lock = _thread.allocate_lock()
@@ -53,6 +55,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         self.mmap, self.lock = self.resource_manager.create_resources(getpid(), self.qid)
         self.lock.lock()
         self.cleaned_up = False
+        self.use_in_process_lock = use_in_process_lock
 
         # Add a handler for when the program is exiting to reduce the probability of
         # resources being left over when __del__ isn't called in time
@@ -69,7 +72,20 @@ class SHMClient(ClientProviderBase, SHMBase):
         return self.server_methods
 
     def send(self, cmd, args, timeout=-1):
-        with self._in_process_lock:
+        if self.use_in_process_lock:
+            with self._in_process_lock:
+                num_times = 0
+                while True:
+                    try:
+                        return self._send(cmd, args, timeout)
+                    except ResendError:
+                        if num_times > 20:
+                            raise ResendError(
+                                f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!"
+                            )
+                        num_times += 1
+                        continue
+        else:
             num_times = 0
             while True:
                 try:
@@ -165,26 +181,29 @@ class SHMClient(ClientProviderBase, SHMBase):
         :param encoded_request:
         :return:
         """
-        debug(f"[pid {getpid()}:qid {self.qid}] "
-              f"Client: Recreating memory map to be at "
-              f"least {len(encoded_request)} bytes")
+        #debug(f"[pid {getpid()}:qid {self.qid}] "
+        #      f"Client: Recreating memory map to be at "
+        #      f"least {len(encoded_request)} bytes")
 
-        old_mmap = mmap
-        assert self.pid == getpid()
-        mmap = self.resource_manager.create_pid_mmap(
-            min_size=len(encoded_request)*2, pid=getpid(), qid=self.qid
-        )
-
-        # Assign the new mmap
-        assert len(mmap) > len(old_mmap), (len(old_mmap), len(mmap))
-        mmap[0] = old_mmap[0]
-        assert mmap[0] != INVALID
+        old_mmap_size = len(mmap)
+        old_mmap_statuscode = mmap[0]
 
         # Make the old one invalid
-        old_mmap[0] = INVALID
-        old_mmap.close()
-        debug(f"Client: New mmap size is {len(mmap)} bytes "
-              f"for encoded_request length {len(encoded_request)}")
+        mmap[0] = INVALID
+        mmap.close()
+
+        assert self.pid == getpid()
+
+        # Assign the new mmap
+        mmap = self.resource_manager.create_pid_mmap(
+            min_size=len(encoded_request) * 2, pid=getpid(), qid=self.qid
+        )
+        assert len(mmap) > old_mmap_size, (old_mmap_size, len(mmap))
+        mmap[0] = old_mmap_statuscode
+        assert mmap[0] != INVALID
+
+        #debug(f"Client: New mmap size is {len(mmap)} bytes "
+        #      f"for encoded_request length {len(encoded_request)}")
         return mmap
 
     def __reconnect_to_mmap(self, mmap):
@@ -193,7 +212,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         :param mmap:
         :return:
         """
-        debug(f"Client: memory map has been marked as invalid")
+        #debug(f"Client: memory map has been marked as invalid")
         prev_len = len(mmap)
         mmap.close()
 

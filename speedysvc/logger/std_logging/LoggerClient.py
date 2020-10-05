@@ -35,7 +35,8 @@ class LoggerClient(ClientMethodsBase):
         # associated with the service itself.
         self.service_server_methods = service_server_methods
 
-        self.client = SHMClient(LoggerServer, port=f'{service_server_methods.port}_log', use_spinlock=False)
+        self.client = SHMClient(LoggerServer, port=f'{service_server_methods.port}_log',
+                                use_spinlock=False, use_in_process_lock=True)
         ClientMethodsBase.__init__(self, client_provider=self.client)
         self.stderr_logger = self._StdErrLogger(self)
         self.stdout_logger = self._StdOutLogger(self)
