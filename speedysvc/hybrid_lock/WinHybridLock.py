@@ -211,14 +211,17 @@ class WinHybridLock(object):
         # require a C compiler on Windows
 
         if spin:
-            t = time()
-            while True:
-                if self._mmap[0] == UNLOCKED:
-                    self._mmap[0] = LOCKED
-                    break
-                elif time()-t > 0.015:
+            _time = time  # Micro-optimization: put in local scope
+            _mmap = self._mmap
+            t = _time()
+            xx = 0
+
+            while _mmap[0] == LOCKED:
+                if xx % 100 == 0 and _time()-t > 0.015:
                     # Windows time slice is 15 milliseconds tops
                     break
+                xx += 1
+            _mmap[0] = LOCKED
 
         if timeout is None:
             # Wait forever (INFINITE)

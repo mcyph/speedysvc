@@ -104,6 +104,9 @@ class Win32SHM:
 
         memory[0] = 1
         self.memory = memory
+        self.__getitem__ = self.memory.__getitem__
+        #self.__setitem__ = self.memory.__setitem__
+        self.__len__ = self.memory.__len__
 
     def _connect(self):
         while True:
@@ -120,12 +123,18 @@ class Win32SHM:
                 break
 
         self.memory = memory
+        self.__getitem__ = self.memory.__getitem__
+        #self.__setitem__ = self.memory.__setitem__
+        self.__len__ = self.memory.__len__
 
     def _reconnect(self):
         # Emulate access to the old data by copying
         # it before we can open the new data
         old_memory = self.memory
         self.memory = old_memory[:]
+        self.__getitem__ = self.memory.__getitem__
+        #self.__setitem__ = self.memory.__setitem__
+        self.__len__ = self.memory.__len__
         old_memory.close()
 
         self._connect()
