@@ -7,47 +7,26 @@ URL: https://code.activestate.com/recipes/577794-win32-named-mutex-class-for-sys
 Modifications by David Morrissey 2020
 """
 
-from os import getpid
 import mmap
-from time import time
-import ctypes
 import struct
-import _thread
-from ctypes import wintypes
+#import cython
+#import time
+from os import getpid
+from libc.time cimport time,time_t
+from HybridLock cimport *
 
 
-FILE_MAP_ALL_ACCESS = 0xF001F
-STANDARD_RIGHTS_REQUIRED = 0xF0000
-SYNCHRONIZE = 0x100000
-MUTANT_QUERY_STATE = 0x1
-SEMAPHORE_MODIFY_STATE = 0x0002
-MUTEX_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | MUTANT_QUERY_STATE
-WAIT_OBJECT_0 = 0
-WAIT_TIMEOUT = 0x102
-WAIT_ABANDONED = 0x80
+cdef DWORD FILE_MAP_ALL_ACCESS = 0xF001F
+cdef DWORD STANDARD_RIGHTS_REQUIRED = 0xF0000
+cdef DWORD SYNCHRONIZE = 0x100000
+cdef DWORD MUTANT_QUERY_STATE = 0x1
+cdef DWORD SEMAPHORE_MODIFY_STATE = 0x0002
+cdef DWORD MUTEX_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | MUTANT_QUERY_STATE
+cdef DWORD WAIT_OBJECT_0 = 0
+cdef DWORD WAIT_TIMEOUT = 0x102
+cdef DWORD WAIT_ABANDONED = 0x80
 
-# Create ctypes wrapper for Win32 functions we need, with correct argument/return types
-_CreateSemaphore = ctypes.windll.kernel32.CreateSemaphoreW
-_CreateSemaphore.argtypes = [wintypes.LPVOID, wintypes.LONG, wintypes.LONG, wintypes.LPWSTR]
-_CreateSemaphore.restype = wintypes.HANDLE
-
-_OpenSemaphore = ctypes.windll.kernel32.OpenSemaphoreW
-_OpenSemaphore.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPWSTR]
-_OpenSemaphore.restype = wintypes.HANDLE
-
-_WaitForSingleObject = ctypes.windll.kernel32.WaitForSingleObject
-_WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
-_WaitForSingleObject.restype = wintypes.DWORD
-
-_ReleaseSemaphore = ctypes.windll.kernel32.ReleaseSemaphore
-_ReleaseSemaphore.argtypes = [wintypes.HANDLE, wintypes.LONG, wintypes.LPLONG]
-_ReleaseSemaphore.restype = wintypes.BOOL
-
-_CloseHandle = ctypes.windll.kernel32.CloseHandle
-_CloseHandle.argtypes = [wintypes.HANDLE]
-_CloseHandle.restype = wintypes.BOOL
-
-
+cdef DWORD DEFAULT_MODE = SYNCHRONIZE|SEMAPHORE_MODIFY_STATE
 
 
 # TODO: PROVIDE SUPPORT FOR THESE CONDITIONS!!!! =======================================================================
@@ -70,15 +49,33 @@ LOCKED = 0
 UNLOCKED = 1
 DESTROYED = 2  # STUB!
 
-
 # spin lock char, process query lock, process holding lock
 SPINLOCK_IDX = 0
 PROCESS_QUERY_LOCK = 1
 PROCESS_HOLDING_LOCK = 2
 PROCESS_HOLDING_ENC = struct.Struct('@l')
 
+STUFF = "hi"
 
-class WinHybridLock(object):
+cdef uint64_t get_time():
+    cdef FILETIME ft
+    cdef LARGE_INTEGER li
+
+    GetSystemTimeAsFileTime(&ft)
+    li.LowPart = ft.dwLowDateTime
+    li.HighPart = ft.dwHighDateTime
+
+    cdef uint64_t ret = li.QuadPart
+    ret /= 10000
+    return ret
+
+
+cdef class HybridLock(object):
+    cdef HANDLE handle
+
+    cdef public:
+        object name, _mmap
+
     """A named, system-wide mutex that can be acquired and released."""
     # sem_loc, int mode,
     #                   int initial_value=UNLOCKED,
@@ -90,21 +87,20 @@ class WinHybridLock(object):
         valid mutex name. Raises WindowsError on error.
         """
         self.name = name
-        self.handle = None
-        self.__lock = _thread.allocate_lock()
+        cdef HANDLE ret
 
         if mode == CONNECT_TO_EXISTING:
-            ret = _OpenSemaphore(SYNCHRONIZE|SEMAPHORE_MODIFY_STATE, False, name.decode('utf-8'))
+            ret = OpenSemaphoreW(DEFAULT_MODE, 0, name.decode('ascii'))
             if not ret: raise NoSuchSemaphoreException()
         elif mode == CONNECT_OR_CREATE:
-            ret = _OpenSemaphore(SYNCHRONIZE|SEMAPHORE_MODIFY_STATE, False, name.decode('utf-8')) or \
-                  _CreateSemaphore(None, 1, 1, name.decode('utf-8'))
+            ret = OpenSemaphoreW(DEFAULT_MODE, 0, name.decode('ascii')) or \
+                  CreateSemaphoreW(NULL, 1, 1, name.decode('ascii'))
         elif mode == CREATE_NEW_EXCLUSIVE:
-            ret = _OpenSemaphore(SYNCHRONIZE|SEMAPHORE_MODIFY_STATE, False, name.decode('utf-8'))
-            if ret: raise SemaphoreExistsException(name.decode('utf-8'))
-            ret = _CreateSemaphore(None, 1, 1, name.decode('utf-8'))
+            ret = OpenSemaphoreW(DEFAULT_MODE, 0, name.decode('ascii'))
+            if ret: raise SemaphoreExistsException(name.decode('ascii'))
+            ret = CreateSemaphoreW(NULL, 1, 1, name.decode('ascii'))
         elif mode == CREATE_NEW_OVERWRITE:
-            ret = _CreateSemaphore(None, 1, 1, name.decode('utf-8'))
+            ret = CreateSemaphoreW(NULL, 1, 1, name.decode('ascii'))
         else:
             raise Exception(mode)
 
@@ -113,7 +109,7 @@ class WinHybridLock(object):
 
         if mode in (CREATE_NEW_OVERWRITE, CREATE_NEW_EXCLUSIVE):
             try:
-                _ReleaseSemaphore(self.handle, 1, None)
+                ReleaseSemaphore(self.handle, 1, NULL)
             except (WindowsError, RuntimeError):
                 pass
 
@@ -150,19 +146,19 @@ class WinHybridLock(object):
         except (WindowsError, RuntimeError):
             pass
         self.close()
-        self._mmap[0] = DESTROYED
+        self._mmap[0] = bytes([DESTROYED])
 
     def close(self):
         """
         Close the mutex and release the handle.
         """
-        if self.handle is None:
+        if self.handle == NULL:
             # Already closed
             return
-        ret = _CloseHandle(self.handle)
+        ret = CloseHandle(self.handle)
         if not ret:
             raise OSError()
-        self.handle = None
+        self.handle = NULL
 
     def get_value(self):
         """
@@ -192,19 +188,29 @@ class WinHybridLock(object):
     __del__ = close
     __str__ = __repr__
 
-    def lock(self, timeout=None, spin=1):
+    def lock(self, timeout=-1, int spin=1):
         """
         Acquire ownership of the mutex, returning True if acquired. If a timeout
         is specified, it will wait a maximum of timeout seconds to acquire the mutex,
         returning True if acquired, False on timeout. Raises WindowsError on error.
         """
         # print("LOCK:", self.name, timeout)
+        cdef DWORD ret
+        cdef HANDLE handle = self.handle
+        cdef DWORD _timeout
+        cdef uint64_t t1, t2
+
+        if timeout is None:
+            timeout = -1
+
+        if timeout == -1:
+            # Wait forever (INFINITE)
+            _timeout = 0xFFFFFFFF
+        else:
+            _timeout = int(round(timeout * 1000))
 
         if self._mmap[0] == DESTROYED:
             raise SemaphoreDestroyedException()
-
-        if timeout == -1:
-            timeout = None
 
         # Very basic in-python spinlock
         # All its meant to do is reduce the probability calling WaitForSingleObject
@@ -212,27 +218,23 @@ class WinHybridLock(object):
         # It would be better to do this in cython, though would prefer to not
         # require a C compiler on Windows
 
-        if spin:
-            _time = time  # Micro-optimization: put in local scope
-            _mmap = self._mmap
-            _getitem = _mmap.__getitem__
-            t = _time()
-            xx = 0
+        #if spin:
+        #    t1 = get_time()
 
-            while _getitem(0) == LOCKED:
-                if xx % 100 == 0 and _time()-t > 0.015:
+        #    _mmap = self._mmap
+        #    _getitem = _mmap.__getitem__
+
+        #    while _getitem(0) == LOCKED:
+        #        t2 = get_time()
+
+        #        if t2-t1 > 15:
                     # Windows time slice is 15 milliseconds tops
-                    break
-                xx += 1
-            _mmap[0] = LOCKED
+        #            break
 
-        if timeout is None:
-            # Wait forever (INFINITE)
-            timeout = 0xFFFFFFFF
-        else:
-            timeout = int(round(timeout * 1000))
+        #    _mmap[0] = bytes([LOCKED])
 
-        ret = _WaitForSingleObject(self.handle, timeout)
+        with nogil:
+            ret = WaitForSingleObject(handle, _timeout)
 
         if ret == 0:
             # normally acquired (0)
@@ -251,31 +253,36 @@ class WinHybridLock(object):
         """
         Release an acquired mutex. Raises WindowsError on error.
         """
+        cdef BOOL ret
+        cdef HANDLE handle = self.handle
+
         if self._mmap[0] == DESTROYED:
             raise SemaphoreDestroyedException()
-        self._mmap[0] = UNLOCKED
+        self._mmap[0] = bytes([UNLOCKED])
 
-        ret = _ReleaseSemaphore(self.handle, 1, None)
-        if not ret:
-            raise OSError(ctypes.GetLastError())
+        with nogil:
+            ret = ReleaseSemaphore(handle, 1, NULL)
+
+            if not ret:
+                raise OSError(GetLastError())
 
 
-if __name__ == '__main__':
-    lock = WinHybridLock(b"my semaphore", CONNECT_OR_CREATE)
-    lock.lock()
+#if __name__ == '__main__':
+#    lock = WinHybridLock(b"my semaphore", CONNECT_OR_CREATE)
+#    lock.lock()
 
-    try:
-        lock.lock(1)
-    except TimeoutError:
-        pass
+#    try:
+#        lock.lock(1)
+#    except TimeoutError:
+#        pass
 
-    lock2 = WinHybridLock(b"my semaphore", CONNECT_TO_EXISTING)
+#    lock2 = WinHybridLock(b"my semaphore", CONNECT_TO_EXISTING)
 
     #lock2.lock()
     #print("SHOULDN'T GET HERE!")
 
-    lock.unlock()
-    lock.lock()
-    lock.unlock()
-    lock.lock(1)
+#    lock.unlock()
+#    lock.lock()
+#    lock.unlock()
+#    lock.lock(1)
     #lock.lock(1)

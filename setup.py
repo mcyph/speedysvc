@@ -3,6 +3,7 @@ from os import path
 from os.path import join, dirname, abspath
 from setuptools import setup, find_packages
 from setuptools import Extension
+from Cython.Build import cythonize
 from codecs import open
 
 here = path.abspath(path.dirname(__file__))
@@ -12,29 +13,30 @@ with open(join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 if sys.platform == 'win32':
+    EXT_MODULE_INCLUDE_PATH = join(dirname(abspath(__file__)), "speedysvc/hybrid_lock/win32")
     PLATFORM_EXTRAS = [
+        'cython',
         'pywin32',
     ]
-    extensions = None
+    extensions = [Extension(
+        'HybridLock',
+        ["speedysvc/hybrid_lock/win32/HybridLock.pyx"],
+        libraries=[],
+        library_dirs=[EXT_MODULE_INCLUDE_PATH]
+    )]
 else:
-    from Cython.Build import cythonize
-
+    EXT_MODULE_INCLUDE_PATH = join(dirname(abspath(__file__)), "speedysvc/hybrid_lock/linux")
     PLATFORM_EXTRAS = [
         'cython',
         'posix_ipc',
     ]
     extensions = [Extension(
         'HybridLock',
-        ["speedysvc/hybrid_lock/HybridLock.pyx"],
+        ["speedysvc/hybrid_lock/linux/HybridLock.pyx"],
         libraries=[
             "rt",  # POSIX functions seem to require this
         ],
-        library_dirs=[
-            join(
-                dirname(abspath(__file__)),
-                "speedysvc/hybrid_lock"
-            )
-        ]
+        library_dirs=[EXT_MODULE_INCLUDE_PATH]
     )]
 
 setup(
@@ -61,7 +63,7 @@ setup(
     packages=find_packages(),
     ext_modules=None if extensions is None else cythonize(
         extensions,
-        include_path=[join(dirname(abspath(__file__)), "speedysvc/hybrid_lock")],
+        include_path=[EXT_MODULE_INCLUDE_PATH],
         language_level=3
     ),
     install_requires=[
@@ -70,6 +72,7 @@ setup(
         'cherrypy',
         'jinja2',
         'psutil',
+        'Cython',
     ] + PLATFORM_EXTRAS,
     package_data = {
         '': ['*.json', '*.ini', '*.html'],
