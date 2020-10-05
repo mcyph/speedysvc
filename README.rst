@@ -8,12 +8,8 @@ About
     and am using it for my https://langlynx.com service but there may well
     be bugs!
 
-    On Windows, service clients currently need to be shut down before
-    shutting down the servers, as this can result in a deadlock, but
-    performance and functionality-wise it should be similar to Linux. I'm
-    currently investigating a fix. Mac OSX may not ever be supported,
-    as to my knowledge it doesn't support timeouts for named semaphores,
-    though it might be possible to make it work with reduced features.
+    Mac OSX is not currently supported, though there I plan to investigate
+    whether this is feasible.
 
 This module for python 3.6+ on Linux and Windows allows separating larger, more complex
 applications into smaller components (microservices). For example, you could 
