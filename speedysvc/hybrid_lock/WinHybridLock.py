@@ -48,6 +48,8 @@ _CloseHandle.argtypes = [wintypes.HANDLE]
 _CloseHandle.restype = wintypes.BOOL
 
 
+
+
 # TODO: PROVIDE SUPPORT FOR THESE CONDITIONS!!!! =======================================================================
 class SemaphoreExistsException(Exception):
     pass
@@ -213,10 +215,11 @@ class WinHybridLock(object):
         if spin:
             _time = time  # Micro-optimization: put in local scope
             _mmap = self._mmap
+            _getitem = _mmap.__getitem__
             t = _time()
             xx = 0
 
-            while _mmap[0] == LOCKED:
+            while _getitem(0) == LOCKED:
                 if xx % 100 == 0 and _time()-t > 0.015:
                     # Windows time slice is 15 milliseconds tops
                     break

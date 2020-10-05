@@ -110,17 +110,21 @@ class Win32SHM:
 
     def _connect(self):
         while True:
-            memory = mmap.mmap(-1,
-                               length=get_mmap_tagname_size(self.tagname),
-                               tagname=self.tagname,
-                               access=mmap.ACCESS_WRITE)
+            try:
+                memory = mmap.mmap(-1,
+                                   length=get_mmap_tagname_size(self.tagname),
+                                   tagname=self.tagname,
+                                   access=mmap.ACCESS_WRITE)
 
-            if memory[0] == INVALID:
-                memory.close()
+                if memory[0] == INVALID:
+                    memory.close()
+                    time.sleep(0.01)
+                else:
+                    break
+
+            except PermissionError:
                 time.sleep(0.01)
                 continue
-            else:
-                break
 
         self.memory = memory
         self.__getitem__ = self.memory.__getitem__
