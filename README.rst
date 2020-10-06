@@ -47,29 +47,23 @@ See also `Implementation Considerations`_.
 Requirements
 -------------------
 
+The following are needed prior to installation:
+
 * OS: Windows or Linux (tested on Ubuntu 18.04 LTS, other POSIX systems other than Mac OS X may also be supported)
-* Python: 3.6 or above
-* Module Dependencies: msgpack, cherrypy, psutil
-* Software dependencies for Windows only: Visual Studio Build Tools
-* Module Dependencies for Linux/POSIX only: cython, posix_ipc
-* Optional: python-snappy for faster network compression
+* Python: version 3.6 or above
+* Dependencies for Windows only: You must first download the "Visual Studio Build Tools 2019" from https://visualstudio.microsoft.com/downloads/
+
+speedysvc also has the below dependencies, but these should be installed automatically
+with the `pip3 install` command in the "install" section.
+
+* Module Dependencies: cython, msgpack, cherrypy, psutil
+* Module Dependencies for Linux/POSIX only: posix_ipc
 
 Install
 -------------------
 
-Windows:
-
-To compile on Windows with Python 3.6 or later, you must first download the
-"Visual Studio Build Tools 2019" from
-https://visualstudio.microsoft.com/downloads/. After installing and
-rebooting your PC, execute the following commands from a command prompt window:
-
-.. code-block:: bash
-
-    pip3 install --upgrade pip
-    pip3 install git+https://github.com/mcyph/speedysvc
-
-Linux:
+Then, for both Windows or Linux, type the following commands into a
+command prompt/terminal window:
 
 .. code-block:: bash
     
