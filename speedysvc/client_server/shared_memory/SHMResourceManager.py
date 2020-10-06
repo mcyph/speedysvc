@@ -344,7 +344,7 @@ class _SHMResourceManager(JSONMMapBase):
         :return: (created pids/qids, exited pids/qids) as two sets
         """
         LServerPIDs, LClientPIDs = self._decode()
-        SClientPIDs = set(tuple(i) for i in LClientPIDs)
+        SClientPIDs = set(tuple(i) for i in LClientPIDs if is_pid_still_alive(i[0]))
         return SClientPIDs-SPIDs, SPIDs-SClientPIDs
 
     @lock_fn
