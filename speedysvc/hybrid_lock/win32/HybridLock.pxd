@@ -1,5 +1,9 @@
+cdef extern from "process.h" nogil:
+    int _getpid();
+
 cdef extern from "windows.h" nogil:
     ctypedef unsigned long DWORD
+    ctypedef DWORD *LPDWORD
     ctypedef void *HANDLE
     ctypedef int BOOL
     ctypedef long LONG
@@ -12,6 +16,9 @@ cdef extern from "windows.h" nogil:
     ctypedef int* LPLONG
     ctypedef unsigned long long uint64_t
     ctypedef signed long long LONGLONG
+    ctypedef Py_ssize_t SIZE_T
+
+    BOOL TRUE, FALSE
 
     cdef struct SECURITY_ATTRIBUTES:
         pass
@@ -50,5 +57,41 @@ cdef extern from "windows.h" nogil:
         LPLONG lpPreviousCount
     ) nogil
     BOOL CloseHandle(HANDLE hObject)
+
+
+    # https://github.com/sturlamolden/sharedmem-numpy/blob/master/sharedmem/sharedmemory_win.pyx
+    DWORD ERROR_ALREADY_EXISTS, ERROR_INVALID_HANDLE
+
+    HANDLE OpenFileMapping(
+        DWORD dwDesiredAccess,
+        BOOL bInheritHandle,
+        LPCTSTR lpName)
+    HANDLE CreateFileMapping(
+        HANDLE hFile,
+        SECURITY_ATTRIBUTES *lpAttributes,
+        DWORD flProtect,
+        DWORD dwMaximumSizeHigh, DWORD dwMaximumSizeLow,
+        LPCTSTR lpName)
+    DWORD PAGE_READWRITE
+    LPVOID MapViewOfFile(
+        HANDLE hFileMappingObject,
+        DWORD dwDesiredAccess,
+        DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow,
+        DWORD dwNumberOfBytesToMap)
+    BOOL  UnmapViewOfFile(LPCVOID lpBaseAddress)
+
+    HANDLE LoadLibrary(LPCTSTR lpFileName)
+    BOOL FreeLibrary(HANDLE hModule)
+    LPVOID GetProcAddress(HANDLE hModule, LPCSTR lpProcName)
+
+    HANDLE OpenProcess(
+        DWORD dwDesiredAccess,
+        BOOL  bInheritHandle,
+        DWORD dwProcessId
+    )
+    BOOL GetExitCodeProcess(
+        HANDLE  hProcess,
+        LPDWORD lpExitCode
+    );
 
 

@@ -7,13 +7,12 @@ URL: https://code.activestate.com/recipes/577794-win32-named-mutex-class-for-sys
 Modifications by David Morrissey 2020
 """
 
-import mmap
-import struct
-#import cython
-#import time
-from os import getpid
-from libc.time cimport time,time_t
+from libc.string cimport memcpy
 from HybridLock cimport *
+
+
+# cython refuses to compile unless this is here
+STUFF = "hi"
 
 
 cdef DWORD FILE_MAP_ALL_ACCESS = 0xF001F
@@ -25,6 +24,9 @@ cdef DWORD MUTEX_ALL_ACCESS = STANDARD_RIGHTS_REQUIRED | SYNCHRONIZE | MUTANT_QU
 cdef DWORD WAIT_OBJECT_0 = 0
 cdef DWORD WAIT_TIMEOUT = 0x102
 cdef DWORD WAIT_ABANDONED = 0x80
+cdef DWORD ERROR_INVALID_PARAMETER = 0x57
+cdef DWORD STILL_ACTIVE = 259
+cdef DWORD PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 cdef DWORD DEFAULT_MODE = SYNCHRONIZE|SEMAPHORE_MODIFY_STATE
 
@@ -45,81 +47,144 @@ CONNECT_TO_EXISTING = 1
 CREATE_NEW_OVERWRITE = 2
 CREATE_NEW_EXCLUSIVE = 3
 
-LOCKED = 0
-UNLOCKED = 1
-DESTROYED = 2  # STUB!
+cdef unsigned char LOCKED = 1
+cdef unsigned char UNLOCKED = 2
+cdef unsigned char DESTROYED = 3  # STUB!
 
 # spin lock char, process query lock, process holding lock
-SPINLOCK_IDX = 0
-PROCESS_QUERY_LOCK = 1
-PROCESS_HOLDING_LOCK = 2
-PROCESS_HOLDING_ENC = struct.Struct('@l')
+cdef int SPINLOCK_IDX = 0
+#cdef const int PROCESS_QUERY_LOCK = 1
+cdef int PROCESS_HOLDING_LOCK = 2
 
-STUFF = "hi"
 
 cdef uint64_t get_time():
     cdef FILETIME ft
-    cdef LARGE_INTEGER li
-
+    cdef uint64_t fileTime64;
     GetSystemTimeAsFileTime(&ft)
-    li.LowPart = ft.dwLowDateTime
-    li.HighPart = ft.dwHighDateTime
 
-    cdef uint64_t ret = li.QuadPart
-    ret /= 10000
-    return ret
+    memcpy(&fileTime64, &ft, sizeof(uint64_t))
+    return fileTime64
+
+
+cdef int pid_is_running(DWORD pid):
+    cdef HANDLE process_handle
+    cdef DWORD exitCode
+
+    if pid == 0: return 1
+    elif pid < 0: return 0
+
+    process_handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid)
+    if process_handle == NULL:
+        if GetLastError() == ERROR_INVALID_PARAMETER:
+            return 0
+        return -1
+
+    if GetExitCodeProcess(process_handle, &exitCode):
+        CloseHandle(process_handle)
+        return exitCode == STILL_ACTIVE
+
+    CloseHandle(process_handle)
+    return -1
 
 
 cdef class HybridLock(object):
     cdef HANDLE handle
+    cdef HANDLE mmap_handle
+    cdef LPVOID _mmap
+    cdef int * _process_holding_lock
+    cdef unsigned char * _lock_status
 
     cdef public:
-        object name, _mmap
+        object name
 
-    """A named, system-wide mutex that can be acquired and released."""
-    # sem_loc, int mode,
-    #                   int initial_value=UNLOCKED,
-    #                   int permissions=0666
-    def __init__(self, name, mode, initial_value=UNLOCKED, permissions=0o0666):
+    def __init__(self, name, mode, initial_value=1, permissions=0o0666):
         """
         Create named mutex with given name, also acquiring mutex if acquired is True.
         Mutex names are case sensitive, and a filename (with backslashes in it) is not a
         valid mutex name. Raises WindowsError on error.
         """
         self.name = name
+        name = name.decode('ascii')
         cdef HANDLE ret
+        cdef unsigned char * lock_status
 
+        # Open or create the named semaphore
         if mode == CONNECT_TO_EXISTING:
-            ret = OpenSemaphoreW(DEFAULT_MODE, 0, name.decode('ascii'))
+            ret = OpenSemaphoreW(DEFAULT_MODE, 0, name)
             if not ret: raise NoSuchSemaphoreException()
         elif mode == CONNECT_OR_CREATE:
-            ret = OpenSemaphoreW(DEFAULT_MODE, 0, name.decode('ascii')) or \
-                  CreateSemaphoreW(NULL, 1, 1, name.decode('ascii'))
+            ret = OpenSemaphoreW(DEFAULT_MODE, 0, name) or \
+                  CreateSemaphoreW(NULL, 1, 1, name)
         elif mode == CREATE_NEW_EXCLUSIVE:
-            ret = OpenSemaphoreW(DEFAULT_MODE, 0, name.decode('ascii'))
-            if ret: raise SemaphoreExistsException(name.decode('ascii'))
-            ret = CreateSemaphoreW(NULL, 1, 1, name.decode('ascii'))
+            #ret = OpenSemaphoreW(DEFAULT_MODE, 0, name)
+            #if ret: raise SemaphoreExistsException(name)
+            ret = CreateSemaphoreW(NULL, 1, 1, name)
         elif mode == CREATE_NEW_OVERWRITE:
-            ret = CreateSemaphoreW(NULL, 1, 1, name.decode('ascii'))
+            ret = CreateSemaphoreW(NULL, 1, 1, name)
         else:
             raise Exception(mode)
 
         self.handle = ret
-        assert initial_value == UNLOCKED  # HACK!
+        assert initial_value == 1  # HACK!
 
         if mode in (CREATE_NEW_OVERWRITE, CREATE_NEW_EXCLUSIVE):
+            # Try to reset the semaphore if it still exists
             try:
                 ReleaseSemaphore(self.handle, 1, NULL)
             except (WindowsError, RuntimeError):
                 pass
 
-        self._mmap = mmap.mmap(-1,
-                               length=mmap.PAGESIZE,
-                               tagname='ssvclk_'+name.decode('utf-8'),
-                               access=mmap.ACCESS_WRITE)
-        if not self._mmap[0]:
-            self._mmap[0] = UNLOCKED
-            self._mmap[PROCESS_QUERY_LOCK] = UNLOCKED
+        # Open or create the shared memory
+        name = ("Local\\ssvclk_%s" % name).encode('ascii')
+
+        if mode == CREATE_NEW_EXCLUSIVE or mode == CREATE_NEW_OVERWRITE:
+            self.mmap_handle = CreateFileMapping(<HANDLE>-1, NULL, PAGE_READWRITE, 0, 0x1000, <char *>name)
+
+            if self.mmap_handle == NULL:
+                if (GetLastError() == ERROR_INVALID_HANDLE):
+                    raise SemaphoreExistsException(name)
+                else:
+                    raise OSError(GetLastError())
+            #elif mode == CREATE_NEW_EXCLUSIVE and GetLastError() == ERROR_ALREADY_EXISTS:
+            #    raise SemaphoreExistsException(name)
+
+        elif mode == CONNECT_OR_CREATE:
+            self.mmap_handle = OpenFileMapping(FILE_MAP_ALL_ACCESS, TRUE, <char*>name)
+            if self.mmap_handle == NULL:
+                self.mmap_handle = CreateFileMapping(<HANDLE>-1, NULL, PAGE_READWRITE, 0, 0x1000, <char *>name)
+                if self.mmap_handle == NULL:
+                    raise OSError(GetLastError())
+
+        elif mode == CONNECT_TO_EXISTING:
+            self.mmap_handle = OpenFileMapping(FILE_MAP_ALL_ACCESS, TRUE, <char *>name)
+            if self.mmap_handle == NULL:
+                raise OSError(GetLastError())
+        else:
+            raise Exception(mode)
+
+        self._mmap = MapViewOfFile(self.mmap_handle, FILE_MAP_ALL_ACCESS, 0, 0, <SIZE_T>0x1000)
+        if self._mmap == NULL:
+            raise OSError(GetLastError())
+
+        lock_status = <unsigned char *>self._mmap
+        if mode == CREATE_NEW_EXCLUSIVE and not (lock_status[0] == 0 or lock_status[0] == DESTROYED):
+            raise SemaphoreExistsException(name)
+        if mode == CREATE_NEW_OVERWRITE or mode == CREATE_NEW_EXCLUSIVE:
+            lock_status[0] = UNLOCKED
+        if mode == CONNECT_TO_EXISTING and lock_status[0] == DESTROYED:
+            raise NoSuchSemaphoreException(name)
+
+        #self._mmap[PROCESS_QUERY_LOCK] = UNLOCKED
+        self._process_holding_lock = &(<int *>self._mmap)[PROCESS_HOLDING_LOCK]
+
+        if self._process_holding_lock[0] and pid_is_running(self._process_holding_lock[0]) == 0:
+            try:
+                self.unlock()
+            except OSError:
+                pass
+
+    def __del__(self):
+        self.close()
 
     def get_pid_holding_lock(self):
         """
@@ -129,43 +194,59 @@ cdef class HybridLock(object):
         if self.get_value() == UNLOCKED:
             return None
 
-        return PROCESS_HOLDING_ENC.unpack(
-            self._mmap[PROCESS_HOLDING_LOCK:PROCESS_HOLDING_LOCK+PROCESS_HOLDING_ENC.size]
-        )[0]
+        return self._process_holding_lock[0]
 
     def destroy(self):
         """
         Make the lock unusable for this and other processes
         """
-        if self._mmap[0] == DESTROYED:
-            # Already destroyed!
-            return
+        cdef unsigned char * lock_status = <unsigned char *>self._mmap
 
-        try:
-            self.unlock()
-        except (WindowsError, RuntimeError):
-            pass
-        self.close()
-        self._mmap[0] = bytes([DESTROYED])
+        if lock_status[0] == DESTROYED:
+            # Already destroyed!
+            self.close()
+            return
+        else:
+            try:
+                self.unlock()
+            except (WindowsError, RuntimeError):
+                pass
+
+            lock_status[0] = DESTROYED
+            self._process_holding_lock[0] = 0
+            self.close()
 
     def close(self):
         """
         Close the mutex and release the handle.
         """
-        if self.handle == NULL:
+        if self.handle == NULL or self.mmap_handle == NULL:
             # Already closed
             return
+
         ret = CloseHandle(self.handle)
         if not ret:
-            raise OSError()
+            raise OSError(GetLastError())
+
+        ret = UnmapViewOfFile(self._mmap)
+        if not ret:
+            raise OSError(GetLastError())
+
+        ret = CloseHandle(self.mmap_handle)
+        if not ret:
+            raise OSError(GetLastError())
+
         self.handle = NULL
+        self.mmap_handle = NULL
+        self._mmap = NULL
 
     def get_value(self):
         """
         Get the current value: 1 for unlocked and 0 for locked
         This can be unreliable, as the value could change during calling
         """
-        if self._mmap[0] == DESTROYED:
+        cdef unsigned char * lock_status = <unsigned char *>self._mmap
+        if lock_status[0] == DESTROYED:
             raise SemaphoreDestroyedException()
 
         try:
@@ -179,7 +260,8 @@ cdef class HybridLock(object):
         """
         Return the Python representation of this mutex.
         """
-        if self._mmap[0] == DESTROYED:
+        cdef unsigned char * lock_status = <unsigned char *>self._mmap
+        if lock_status[0] == DESTROYED:
             return "(Destroyed WinHybridLock)"
 
         return '{0}({1!r}, acquired={2})'.format(
@@ -198,7 +280,9 @@ cdef class HybridLock(object):
         cdef DWORD ret
         cdef HANDLE handle = self.handle
         cdef DWORD _timeout
-        cdef uint64_t t1, t2
+        cdef uint64_t t1
+        cdef uint64_t t2
+        cdef unsigned char * lock_status = <unsigned char *>self._mmap
 
         if timeout is None:
             timeout = -1
@@ -209,7 +293,7 @@ cdef class HybridLock(object):
         else:
             _timeout = int(round(timeout * 1000))
 
-        if self._mmap[0] == DESTROYED:
+        if lock_status[0] == DESTROYED:
             raise SemaphoreDestroyedException()
 
         # Very basic in-python spinlock
@@ -218,28 +302,24 @@ cdef class HybridLock(object):
         # It would be better to do this in cython, though would prefer to not
         # require a C compiler on Windows
 
-        #if spin:
-        #    t1 = get_time()
+        if spin:
+            t1 = get_time()
 
-        #    _mmap = self._mmap
-        #    _getitem = _mmap.__getitem__
+            while lock_status[0] == LOCKED:
+                t2 = get_time()
 
-        #    while _getitem(0) == LOCKED:
-        #        t2 = get_time()
-
-        #        if t2-t1 > 15:
+                if t2-t1 > 15000:
                     # Windows time slice is 15 milliseconds tops
-        #            break
+                    break
 
-        #    _mmap[0] = bytes([LOCKED])
+            lock_status[0] = LOCKED
 
         with nogil:
             ret = WaitForSingleObject(handle, _timeout)
 
         if ret == 0:
             # normally acquired (0)
-            self._mmap[PROCESS_HOLDING_LOCK:PROCESS_HOLDING_LOCK+PROCESS_HOLDING_ENC.size] = \
-                PROCESS_HOLDING_ENC.pack(getpid())
+            self._process_holding_lock[0] = _getpid()
             return True
         elif ret == 0x102:
             # Timeout
@@ -255,34 +335,14 @@ cdef class HybridLock(object):
         """
         cdef BOOL ret
         cdef HANDLE handle = self.handle
+        cdef unsigned char * lock_status = <unsigned char *>self._mmap
 
-        if self._mmap[0] == DESTROYED:
+        if lock_status[0] == DESTROYED:
             raise SemaphoreDestroyedException()
-        self._mmap[0] = bytes([UNLOCKED])
+        lock_status[0] = UNLOCKED
 
         with nogil:
             ret = ReleaseSemaphore(handle, 1, NULL)
 
             if not ret:
                 raise OSError(GetLastError())
-
-
-#if __name__ == '__main__':
-#    lock = WinHybridLock(b"my semaphore", CONNECT_OR_CREATE)
-#    lock.lock()
-
-#    try:
-#        lock.lock(1)
-#    except TimeoutError:
-#        pass
-
-#    lock2 = WinHybridLock(b"my semaphore", CONNECT_TO_EXISTING)
-
-    #lock2.lock()
-    #print("SHOULDN'T GET HERE!")
-
-#    lock.unlock()
-#    lock.lock()
-#    lock.unlock()
-#    lock.lock(1)
-    #lock.lock(1)
