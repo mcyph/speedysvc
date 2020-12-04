@@ -24,8 +24,8 @@ else:
             raise FileNotFoundError(location)
 
     def get_mmap(location, create, new_size=None):
-        try:
-            if create:
+        if create:
+            try:
                 assert new_size is not None
 
                 # Make sure the size is a power of the OS's
@@ -54,7 +54,10 @@ else:
                 memory.close_fd()
 
                 return mapfile
-            else:
+            except posix_ipc.ExistentialError:
+                raise FileExistsError(location)
+        else:
+            try:
                 # Connect to the existing memory map
                 #print("CONNECT TO SHARED MEMORY:", location)
                 memory = posix_ipc.SharedMemory(location.decode('ascii'))
@@ -62,9 +65,8 @@ else:
                 mapfile = mmap.mmap(memory.fd, memory.size)
                 memory.close_fd()
                 return mapfile
-
-        except posix_ipc.ExistentialError:
-            raise FileExistsError(location)
+            except posix_ipc.ExistentialError:
+                raise FileNotFoundError(location)
 
 
 INVALID = 0

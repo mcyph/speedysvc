@@ -4,7 +4,7 @@ Named mutex handling (for Win32).
 Licensed under the MIT license by Ben Hoyt 2011
 URL: https://code.activestate.com/recipes/577794-win32-named-mutex-class-for-system-wide-mutex/
 
-Modifications by David Morrissey 2020
+Modifications by Dave Morrissey 2020
 """
 
 from libc.string cimport memcpy

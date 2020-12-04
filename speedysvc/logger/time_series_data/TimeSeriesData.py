@@ -120,6 +120,8 @@ class TimeSeriesData(ABC):
                 DSample = self.sample_data()
                 if DSample: # WARNING!!! ======================================
                     self.__add_sample(**DSample)
+            except AccessDenied:
+                self.stop_collecting()
             except:
                 import traceback
                 traceback.print_exc()

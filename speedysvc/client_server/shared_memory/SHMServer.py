@@ -9,7 +9,7 @@ from speedysvc.serialisation.RawSerialisation import RawSerialisation
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
 from speedysvc.client_server.shared_memory.shared_params import INVALID, SERVER, CLIENT
 from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager
-from speedysvc.hybrid_lock import SemaphoreDestroyedException, SemaphoreExistsException
+from speedysvc.hybrid_lock import NoSuchSemaphoreException, SemaphoreDestroyedException, SemaphoreExistsException
 
 
 _monitor_pids_started = [False]
@@ -120,7 +120,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         """
         try:
             mmap, lock = self.resource_manager.open_existing_resources(pid, qid)
-        except SemaphoreExistsException:
+        except (NoSuchSemaphoreException, FileNotFoundError):
             # Resources might've been destroyed
             # in the meantime by the client?
             debug("EXISTENTIAL ERROR:", pid, qid)
