@@ -4,6 +4,7 @@ from collections import deque, Counter
 from abc import ABC, abstractmethod
 from os.path import getsize, exists
 from _thread import allocate_lock, start_new_thread
+from psutil import AccessDenied
 
 
 # OPEN ISSUE: It might be easier to keep this to stats obtained by psutil,
