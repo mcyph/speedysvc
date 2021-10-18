@@ -81,6 +81,7 @@ echoserver.py:
 .. code-block:: python
 
     from speedysvc import ServerMethodsBase, json_method
+    from speedysvc.client_server.base_classes.ServerMethodsBase import ServerMethodsBase
 
     class EchoServer(ServerMethodsBase):
         port = 5555
@@ -94,7 +95,8 @@ echoclient.py:
 
 .. code-block:: python
 
-    from speedysvc import ClientMethodsBase, connect
+    from speedysvc import connect
+    from speedysvc.client_server.base_classes.ClientMethodsBase import ClientMethodsBase
     from echoserver import EchoServer
 
     class EchoClient(ClientMethodsBase):
