@@ -9,9 +9,6 @@ _PACKAGE_ERROR = "The lz4 package must be installed for lz4 support to be availa
 
 
 class LZ4Compression(CompressionBase):
-    """
-
-    """
     typecode = b'L'
     # 860 seems a good minimum, as space savings below that seem to
     # often be minimal (and if choosing snappy over zlib, chances are

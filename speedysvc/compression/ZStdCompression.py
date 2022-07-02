@@ -9,9 +9,6 @@ _PACKAGE_ERROR = "The zstd package must be installed for Zstandard compression s
 
 
 class ZStdCompression(CompressionBase):
-    """
-
-    """
     typecode = b'T'
     # 860 seems a good minimum, as space savings below that seem to
     # often be minimal (and if choosing zstd over zlib, chances are

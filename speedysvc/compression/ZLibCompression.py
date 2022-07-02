@@ -3,9 +3,6 @@ from speedysvc.compression.CompressionBase import CompressionBase
 
 
 class ZLibCompression(CompressionBase):
-    """
-
-    """
     typecode = b'Z'
     # As at https://webmasters.stackexchange.com/questions/31750/
     #       what-is-recommended-minimum-object-size-for-gzip-performance-benefits
