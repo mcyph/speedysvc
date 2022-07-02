@@ -5,35 +5,7 @@ class ClientMethodsBase:
 
         :param server_methods:
         """
-        #assert isinstance(server_methods, ServerMethodsBase)
         self.client_provider = client_provider
-        server_methods = client_provider.get_server_methods()
-
-        if server_methods is not None:
-            self.__verify_methods_exist(server_methods)
-
-        self.server_methods = server_methods
-
-    def __verify_methods_exist(self, server_methods):
-        # Get all client RPC call methods
-        LClientMethods = []
-        for name in dir(self):
-            attr = getattr(self, name)
-            if callable(attr):
-                LClientMethods.append(name)
-
-        # Make sure all possible methods in server exist in client
-        for name in dir(server_methods):
-            attr = getattr(server_methods, name)
-
-            if (
-                hasattr(attr, 'serialiser') and
-                not name in LClientMethods
-            ):
-                raise NotImplementedError(
-                    f"Method {name} does not exist on client, "
-                    f"despite being required by server"
-                )
 
     def send(self, cmd, data):
         """

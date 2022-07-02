@@ -2,19 +2,19 @@ import time
 import socket
 from _thread import start_new_thread
 
-from speedysvc.client_server.shared_memory.SHMClient import SHMClient
-from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
-from speedysvc.client_server.network.consts import len_packer, response_packer
-from speedysvc.compression.NullCompression import NullCompression
-from speedysvc.serialisation.MarshalSerialisation import MarshalSerialisation
-from speedysvc.serialisation.PickleSerialisation import PickleSerialisation
 from speedysvc.compression import compression_types
+from speedysvc.compression.NullCompression import NullCompression
+from speedysvc.client_server.shared_memory.SHMClient import SHMClient
+from speedysvc.serialisation.PickleSerialisation import PickleSerialisation
+from speedysvc.serialisation.MarshalSerialisation import MarshalSerialisation
+from speedysvc.client_server.network.consts import len_packer, response_packer
+from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
 
 
 class NetworkServer(ServerProviderBase):
     def __init__(self,
                  server_methods,
-                 tcp_bind_address='127.0.0.1',
+                 bind_interface='127.0.0.1',
                  force_insecure_serialisation=False):
         """
         Create a network TCP/IP server which can be used in
@@ -30,7 +30,7 @@ class NetworkServer(ServerProviderBase):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        sock.bind((tcp_bind_address, server_methods.port))
+        sock.bind((bind_interface, server_methods.port))
         sock.listen(0)
 
         ServerProviderBase.__init__(self, server_methods)

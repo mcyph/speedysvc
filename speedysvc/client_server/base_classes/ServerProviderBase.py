@@ -1,5 +1,4 @@
-from speedysvc.serialisation.RawSerialisation import \
-    RawSerialisation
+from speedysvc.serialisation.RawSerialisation import RawSerialisation
 
 
 class ServerProviderBase:

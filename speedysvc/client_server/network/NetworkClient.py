@@ -1,29 +1,24 @@
 import time
-import warnings
 import socket
-from _thread import allocate_lock
+import warnings
 from os import getpid
-from speedysvc.toolkit.documentation.copydoc import copydoc
+from _thread import allocate_lock
 
-from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
-from speedysvc.client_server.network.consts import len_packer, response_packer
+from speedysvc.toolkit.documentation.copydoc import copydoc
 from speedysvc.compression.compression_types import zlib_compression
+from speedysvc.client_server.network.consts import len_packer, response_packer
+from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
 
 
 class NetworkClient(ClientProviderBase):
     def __init__(self,
-                 server_methods,
-                 host='127.0.0.1', port=None,
+                 port: int,
+                 host: str = '127.0.0.1',
                  compression_inst=zlib_compression):
-        """
-
-        :param server_methods:
-        :param host:
-        """
         self.host = host
         self.port = port
         self.lock = allocate_lock()
-        ClientProviderBase.__init__(self, server_methods)
+        ClientProviderBase.__init__(self, port=port, service_name=None)
         self.compression_inst = compression_inst
         self.__connect()
 
@@ -34,15 +29,8 @@ class NetworkClient(ClientProviderBase):
         conn_to_server.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
         conn_to_server.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
-        port = (
-            self.port
-            if self.port is not None
-            else self.server_methods.port
-        )
-        conn_to_server.connect((self.host, port))
-        conn_to_server.send(
-            self.compression_inst.typecode
-        )
+        conn_to_server.connect((self.host, self.port))
+        conn_to_server.send(self.compression_inst.typecode)
 
     def __del__(self):
         self.conn_to_server.close()
@@ -88,7 +76,7 @@ class NetworkClient(ClientProviderBase):
                     warnings.warn(
                         f"Client [pid {getpid()}]: "
                         f"TCP connection to service "
-                        f"{self.server_methods.name} reset - "
+                        f"{self.service_name} reset - "
                         f"the service may need to be checked/restarted!"
                     )
 

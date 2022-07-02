@@ -34,8 +34,10 @@ def debug(*s):
 
 
 class SHMClient(ClientProviderBase, SHMBase):
-    def __init__(self, server_methods, port=None,
-                 use_spinlock=True, use_in_process_lock=True):
+    def __init__(self,
+                 service_name: str,
+                 use_spinlock=True,
+                 use_in_process_lock=True):
 
         self.pid = getpid()
         self.use_spinlock = use_spinlock
@@ -46,10 +48,10 @@ class SHMClient(ClientProviderBase, SHMBase):
         # Connect to a shared shm/semaphore which stores the
         # current processes which are associated with this service,
         # and add this process' PID.
-        ClientProviderBase.__init__(self, server_methods, port)
+        ClientProviderBase.__init__(self, port=None, service_name=service_name)
         assert not hasattr(self, 'qid')
         self.qid = new_qid(self.port)
-        self.resource_manager = SHMResourceManager(self.port, server_methods.__dict__.get('name'))
+        self.resource_manager = SHMResourceManager(self.port, service_name)
 
         # (Note the pid/qid of this connection is registered here)
         self.mmap, self.lock = self.resource_manager.create_resources(getpid(), self.qid)
@@ -67,9 +69,6 @@ class SHMClient(ClientProviderBase, SHMBase):
         workers this qid no longer exists
         """
         self.resource_manager.unlink_resources(getpid(), self.qid)
-
-    def get_server_methods(self):
-        return self.server_methods
 
     def send(self, cmd, args, timeout=-1):
         if self.use_in_process_lock:
