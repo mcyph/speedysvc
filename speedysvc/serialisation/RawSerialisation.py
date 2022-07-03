@@ -5,6 +5,7 @@ class RawSerialisation:
     (and making sure that bytes is indeed
     the type that is being sent/received).
     """
+    name = 'raw'
     mimetype = 'application/octet-stream'
 
     @staticmethod

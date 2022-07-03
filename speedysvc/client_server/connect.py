@@ -4,13 +4,14 @@ from typing import Union, List, Tuple
 from speedysvc.client_server.shared_memory.SHMClient import SHMClient
 from speedysvc.compression.compression_types import snappy_compression
 from speedysvc.client_server.network.NetworkClient import NetworkClient
+from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
 from speedysvc.hybrid_lock import NoSuchSemaphoreException, SemaphoreDestroyedException
 
 
 def connect(address: Union[List, Tuple, str],
             use_spinlock=True,
             use_in_process_lock=True,
-            compression_inst=snappy_compression):
+            compression_inst=snappy_compression) -> ClientProviderBase:
     """
     Connect to either a shared memory or tcp server.
 
@@ -43,8 +44,9 @@ def connect(address: Union[List, Tuple, str],
             if address.startswith('shm://'):
                 # TODO: Allow for prefixes to SHM so that
                 #  e.g. multiple copies of services can be run at once!
-                service_name = address.partition('//')[-1]
-                return SHMClient(service_name=service_name,
+                service_name, _, port = address.partition('//')[-1].rpartition(':')
+                return SHMClient(port=port,
+                                 service_name=service_name,
                                  use_spinlock=use_spinlock,
                                  use_in_process_lock=use_in_process_lock)
 

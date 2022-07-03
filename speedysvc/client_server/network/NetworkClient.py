@@ -36,13 +36,13 @@ class NetworkClient(ClientProviderBase):
         self.conn_to_server.close()
 
     @copydoc(ClientProviderBase.send)
-    def send(self, fn, data):
+    def send(self, fn, data: bytes):
         with self.lock:
             return self._send(fn, data)
 
-    def _send(self, fn, data):
+    def _send(self, fn, data: bytes):
         actually_compressed, data = \
-            self.compression_inst.compress(fn.serialiser.dumps(data))
+            self.compression_inst.compress(data)
         cmd = fn.__name__.encode('ascii')
         prefix = len_packer.pack(int(actually_compressed), len(data), len(cmd))
 
@@ -93,7 +93,7 @@ class NetworkClient(ClientProviderBase):
             data = self.compression_inst.decompress(data)
 
         if status == b'+':
-            return fn.serialiser.loads(data)
+            return data
         else:
             self._handle_exception(data)
             raise Exception(data.decode('utf-8'))

@@ -17,6 +17,7 @@ class MarshalSerialisation:
     issue where python versions are the same.
     """
 
+    name = 'marshal'
     mimetype = 'application/octet-stream'
 
     @staticmethod

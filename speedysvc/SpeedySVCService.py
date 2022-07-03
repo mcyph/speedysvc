@@ -3,24 +3,8 @@ from pathlib import Path
 from typing import IO, Union
 from inspect import Parameter, signature
 
-from speedysvc.client_server.connect import connect
-
-
-class MyExample:
-    def blah(self, arg1, arg2, *arg, blah=None, **kw):
-        return self._send_remote('blah', (arg1, arg2), arg, kw)
-
-
-class SpeedySVCClient:
-    def __init__(self,
-                 address: str):
-
-        self.__port_num = port_num
-        self.__service_name = service_name
-        self.__remote_host = remote_host
-
-        connect(server_methods=self)
-
+from speedysvc.client_server.shared_memory.SHMServer import SHMServer
+from speedysvc.client_server.network.NetworkServer import NetworkServer
 
 
 class SpeedySVCService:
@@ -36,9 +20,6 @@ class SpeedySVCService:
         self.__force_insecure_serialisation = force_insecure_serialisation
 
     def serve_forever(self):
-        from speedysvc.client_server.network.NetworkServer import NetworkServer
-        from speedysvc.client_server.shared_memory.SHMServer import SHMServer
-
         NetworkServer(server_methods=self,
                       port=self.__port_num,
                       service_name=self.__service_name,
@@ -126,7 +107,8 @@ class SpeedySVCService:
                         f'''   def {method_name}{str(sig)}:\n''' +
                         doc +
                         ''.join(i) +
-                        f'''       return self._call_remote({json.dumps(method_name)},\n'''
+                        f'''       return self._call_remote({method_name},\n'''
+                        f'''                                {json.dumps(method_name)},\n'''
                         f'''                                ({', '.join(positional)},)),\n'''
                         f'''                                {var_positional},\n'''
                         f'''                                {var_keyword})\n'''
@@ -137,7 +119,8 @@ class SpeedySVCService:
                 return (
                     f'''    def {method_name}{str(sig)}:\n''' +
                     doc +
-                    f'''        return self._call_remote({json.dumps(method_name)}, \n'''
+                    f'''        return self._call_remote({method_name},\n'''
+                    f'''                                 {json.dumps(method_name)}, \n'''
                     f'''                                 ({', '.join(positional)},)),\n'''
                     f'''                                 {var_positional},\n'''
                     f'''                                 {i})\n'''
@@ -148,22 +131,10 @@ class SpeedySVCService:
                 return (
                     f'''    def {method_name}{str(sig)}:\n''' +
                     doc +
-                    f'''        return self._call_remote({json.dumps(method_name)}, \n'''
+                    f'''        return self._call_remote({method_name},\n'''
+                    f'''                                 {json.dumps(method_name)}, \n'''
                     f'''                                 ({', '.join(positional)},)),\n'''
                     f'''                                 {var_positional},\n'''
                     f'''                                 {var_keyword})\n'''
                     f'''        \n'''
                 )
-
-
-def service_method(params='json', returns='json'):
-    """
-    Define a method which will be serialised using JSON types with
-    a suitable encoder (e.g. the json module, msgpack, bson etc).
-    """
-    def return_fn(fn):
-        fn.serialised_params = params
-        fn.serialised_return = returns
-        return fn
-    return return_fn
-

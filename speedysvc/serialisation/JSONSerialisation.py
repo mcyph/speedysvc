@@ -15,6 +15,7 @@ class JSONSerialisation:
     can be used in other languages than just python.
     """
 
+    name = 'json'
     mimetype = 'application/json'
 
     @staticmethod

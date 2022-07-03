@@ -1,11 +1,12 @@
 import atexit
 import _thread
 from os import getpid
-from speedysvc.serialisation.RawSerialisation import RawSerialisation
+
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
+from speedysvc.serialisation.RawSerialisation import RawSerialisation
+from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
 from speedysvc.client_server.shared_memory.shared_params import INVALID, SERVER, CLIENT
 from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager
-from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
 
 
 _qid_lock = _thread.allocate_lock()
@@ -33,6 +34,7 @@ def debug(*s):
 
 class SHMClient(ClientProviderBase, SHMBase):
     def __init__(self,
+                 port: int,
                  service_name: str,
                  use_spinlock=True,
                  use_in_process_lock=True):
@@ -47,7 +49,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         # current processes which are associated with this service,
         # and add this process' PID.
         ClientProviderBase.__init__(self,
-                                    port=None,
+                                    port=port,
                                     service_name=service_name)
 
         assert not hasattr(self, 'qid')
@@ -71,13 +73,17 @@ class SHMClient(ClientProviderBase, SHMBase):
         """
         self.resource_manager.unlink_resources(getpid(), self.qid)
 
-    def send(self, cmd, args, timeout=-1):
+    def send(self,
+             cmd: bytes,
+             data: bytes,
+             timeout: int = -1) -> bytes:
+
         if self.use_in_process_lock:
             with self._in_process_lock:
                 num_times = 0
                 while True:
                     try:
-                        return self._send(cmd, args, timeout)
+                        return self._send(cmd, data, timeout)
                     except ResendError:
                         if num_times > 20:
                             raise ResendError(f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!")
@@ -87,31 +93,19 @@ class SHMClient(ClientProviderBase, SHMBase):
             num_times = 0
             while True:
                 try:
-                    return self._send(cmd, args, timeout)
+                    return self._send(cmd, data, timeout)
                 except ResendError:
                     if num_times > 20:
                         raise ResendError(f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!")
                     num_times += 1
                     continue
 
-    def _send(self, cmd, args, timeout=-1):
-        if isinstance(cmd, bytes):
-            # cmd -> a bytes object, most likely heartbeat or shutdown
-            serialiser = RawSerialisation
-        else:
-            # cmd -> a function in the ServerMethods subclass
-            serialiser = cmd.serialiser
-            cmd = cmd.__name__.encode('ascii')
+    def _send(self,
+              cmd: bytes,
+              data: bytes,
+              timeout: int = -1) -> bytes:
 
-        # Encode the request command/arguments
-        # (I've put the encoding/decoding outside the critical area,
-        #  so as to potentially allow for more remote commands from
-        #  different threads)
-        args = serialiser.dumps(args)
-        encoded_request = self.request_serialiser.pack(len(cmd),
-                                                       len(args)) + cmd + args
-
-        # Next line must be in critical area!
+        encoded_request = self.request_serialiser.pack(len(cmd), len(data)) + cmd + data
         mmap = self.mmap
 
         if mmap[0] == SERVER:
@@ -164,19 +158,16 @@ class SHMClient(ClientProviderBase, SHMBase):
         response_data = mmap[1+size : 1+size+data_size]
 
         if response_status == b'+':
-            return serialiser.loads(response_data)
+            return response_data
         elif response_status == b'-':
             self._handle_exception(response_data)
         else:
             raise Exception("Unknown status response %s" % response_status)
 
-    def __resize_mmap(self, mmap, encoded_request):
-        """
+    def __resize_mmap(self,
+                      mmap,
+                      encoded_request: bytes):
 
-        :param mmap:
-        :param encoded_request:
-        :return:
-        """
         #debug(f"[pid {getpid()}:qid {self.qid}] "
         #      f"Client: Recreating memory map to be at "
         #      f"least {len(encoded_request)} bytes")
@@ -203,11 +194,6 @@ class SHMClient(ClientProviderBase, SHMBase):
         return mmap
 
     def __reconnect_to_mmap(self, mmap):
-        """
-
-        :param mmap:
-        :return:
-        """
         # debug(f"Client: memory map has been marked as invalid")
         prev_len = len(mmap)
         mmap.close()

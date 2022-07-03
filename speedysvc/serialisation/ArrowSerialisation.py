@@ -1,12 +1,8 @@
 import pyarrow
 
 
-
 class ArrowSerialisation:
-    """
-    TODO!
-    """
-
+    name = 'arrow'
     mimetype = 'application/octet-stream'
 
     @staticmethod
