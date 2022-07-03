@@ -182,8 +182,8 @@ class MultiProcessServer:
                     time.sleep(0.1)
 
                 self.network_server = NetworkServer(
-                    tcp_bind_address=self.tcp_bind,
                     server_methods=self.server_methods,
+                    bind_interface=self.tcp_bind,
                     force_insecure_serialisation=self.tcp_allow_insecure_serialisation
                 )
 

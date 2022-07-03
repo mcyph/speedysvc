@@ -14,8 +14,10 @@ from speedysvc.client_server.base_classes.ServerProviderBase import ServerProvid
 class NetworkServer(ServerProviderBase):
     def __init__(self,
                  server_methods,
-                 bind_interface='127.0.0.1',
-                 force_insecure_serialisation=False):
+                 port: int,
+                 service_name: str,
+                 bind_interface: str = '127.0.0.1',
+                 force_insecure_serialisation: bool = False):
         """
         Create a network TCP/IP server which can be used in
         combination with a ServerMethods subclass, and one
@@ -30,11 +32,13 @@ class NetworkServer(ServerProviderBase):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        sock.bind((bind_interface, server_methods.port))
+        sock.bind((bind_interface, port))
         sock.listen(0)
 
-        ServerProviderBase.__init__(self, server_methods)
-        start_new_thread(self.__listen_for_conns_loop, ())
+        ServerProviderBase.__init__(self,
+                                    server_methods=server_methods,
+                                    port=port,
+                                    service_name=service_name)
 
     def __check_security(self):
         for name in dir(self):
@@ -50,7 +54,10 @@ class NetworkServer(ServerProviderBase):
                         "depending on your use case."
                     )
 
-    def __listen_for_conns_loop(self):
+    def serve_forever_in_new_thread(self):
+        start_new_thread(self.serve_forever, ())
+
+    def serve_forever(self):
         server = self.sock
         #print("Multithreaded server: waiting for connections...")
 

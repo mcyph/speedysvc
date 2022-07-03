@@ -1,12 +1,8 @@
 import mmap
 import time
-import struct
 import ctypes
-import io
 import _thread
 import weakref
-from time import sleep
-
 from ctypes import wintypes
 
 INVALID = 0

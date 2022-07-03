@@ -11,11 +11,11 @@ from sys import argv
 from os import getpid
 from multiprocessing import cpu_count
 
-from speedysvc.logger.std_logging.LoggerServer import LoggerServer
-from speedysvc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
 from speedysvc.toolkit.io.make_dirs import make_dirs
 from speedysvc.toolkit.py_ini.read.ReadIni import ReadIni
+from speedysvc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
 from speedysvc.kill_pid_and_children import kill_pid_and_children
+from speedysvc.logger.std_logging.LoggerServer import LoggerServer
 from speedysvc.web_monitor.app import web_service_manager, run_server
 
 

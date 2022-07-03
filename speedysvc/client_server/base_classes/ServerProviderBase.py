@@ -4,23 +4,25 @@ from speedysvc.serialisation.RawSerialisation import RawSerialisation
 class ServerProviderBase:
     ___init = False
 
-    def __init__(self, server_methods):
-        """
-        TODO!!!! ===========================================================
+    def __init__(self,
+                 server_methods,
+                 port: int,
+                 service_name: str):
 
-        :param server_inst:
-        """
         # Couldn't see much reason to have an abstract base class here,
         # as the "serve" logic is implementation-specific
         self.server_methods = server_methods
-        self.port = server_methods.port
-        self.name = server_methods.name
+        self.port = port
+        self.service_name = service_name
 
         assert not self.___init, \
             f"{self.__class__} has already been started!"
         self.___init = True
 
-    def handle_fn(self, cmd, args):
+    def handle_fn(self,
+                  cmd: bytes,
+                  args: bytes):
+
         fn = getattr(self.server_methods, cmd.decode('ascii'))
 
         # Use the serialiser to decode the arguments,

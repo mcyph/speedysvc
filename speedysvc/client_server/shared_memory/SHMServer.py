@@ -4,9 +4,9 @@ import traceback
 from os import getpid
 from _thread import start_new_thread
 
-from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
-from speedysvc.serialisation.RawSerialisation import RawSerialisation
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
+from speedysvc.serialisation.RawSerialisation import RawSerialisation
+from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
 from speedysvc.client_server.shared_memory.shared_params import INVALID, SERVER, CLIENT
 from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager
 from speedysvc.hybrid_lock import NoSuchSemaphoreException, SemaphoreDestroyedException, SemaphoreExistsException
@@ -14,6 +14,8 @@ from speedysvc.hybrid_lock import NoSuchSemaphoreException, SemaphoreDestroyedEx
 
 _monitor_pids_started = [False]
 _LSHMServers = []
+
+
 def _monitor_pids():
     """
     Monitor PIDs for all SHMServers in a
@@ -43,25 +45,33 @@ def debug(*s):
 
 
 class SHMServer(SHMBase, ServerProviderBase):
-    def __init__(self, server_methods, use_spinlock=True):
+    def __init__(self,
+                 server_methods: SpeedySVCService,
+                 port: int,
+                 service_name: str,
+                 use_spinlock: bool = True):
+
         # NOTE: init_resources should only be called if creating from scratch -
         # if connecting to an existing socket, init_resources should be False!
         ServerProviderBase.__init__(self, server_methods)
 
-        debug(f'{server_methods.name}:{server_methods.port}: Starting new SHMServer on port:',
-              server_methods.port)
+        debug(f'{service_name}:{port}: Starting new SHMServer on port:', port)
 
-        self.port = server_methods.port
+        self.port = port
+        self.service_name = service_name
+
         self.shut_me_down = False
         self.shutdown_ok = False
         self.use_spinlock = use_spinlock
 
+    def serve_forever_in_new_thread(self):
         """
         TODO: Create or connect to a shared shm/semaphore which stores the
-         current processes which are associated with this service.
+              current processes which are associated with this service.
         """
         self.SPIDThreads = set()
-        self.resource_manager = SHMResourceManager(server_methods.port, server_methods.name)
+        self.resource_manager = SHMResourceManager(port=self.port,
+                                                   name=self.service_name)
         self.resource_manager.check_for_missing_pids()
         self.resource_manager.add_server_pid(getpid())
 
@@ -69,6 +79,15 @@ class SHMServer(SHMBase, ServerProviderBase):
         if not _monitor_pids_started[0]:
             _monitor_pids_started[0] = True
             start_new_thread(_monitor_pids, ())
+
+    def serve_forever(self):
+        self.serve_forever_in_new_thread()
+        try:
+            while True:
+                time.sleep(10)
+        except:
+            self.shutdown()
+            raise
 
     def shutdown(self):
         self.shut_me_down = True
@@ -113,7 +132,7 @@ class SHMServer(SHMBase, ServerProviderBase):
             except KeyError:
                 pass
 
-    def worker_thread_fn(self, pid, qid):
+    def worker_thread_fn(self, pid: int, qid: int):
         """
         Connect to the shared mmap space/client+server semaphores.
         Continuously poll for commands, responding as needed.
@@ -162,10 +181,17 @@ class SHMServer(SHMBase, ServerProviderBase):
                 # AssertionError.
                 raise
 
-    def handle_command(self, mmap, lock, pid, qid, do_spin):
+    def handle_command(self,
+                       mmap,
+                       lock,
+                       pid: int,
+                       qid: int,
+                       do_spin: bool):
+
         #debug("SERVER LOCK:", pid, qid, do_spin)
         try:
-            lock.lock(timeout=4, spin=int(do_spin and self.use_spinlock))
+            lock.lock(timeout=4,
+                      spin=int(do_spin and self.use_spinlock))
             do_spin = True
         except TimeoutError:
             # Disable spinning for subsequent tries!
@@ -245,7 +271,11 @@ class SHMServer(SHMBase, ServerProviderBase):
             lock.unlock()
         return do_spin, mmap
 
-    def __resize_mmap(self, pid, qid, mmap, encoded):
+    def __resize_mmap(self,
+                      pid: int,
+                      qid: int,
+                      mmap,
+                      encoded: bytes):
         #debug(
         #    f"[pid {pid}:qid {qid}] "
         #    f"Server: Recreating memory map to be at "
@@ -269,7 +299,11 @@ class SHMServer(SHMBase, ServerProviderBase):
 
         return mmap
 
-    def __reconnect_to_mmap(self, pid, qid, mmap):
+    def __reconnect_to_mmap(self,
+                            pid: int,
+                            qid: int,
+                            mmap):
+
         #debug(f"Server: memory map has been marked as invalid")
         prev_len = len(mmap)
         mmap.close()

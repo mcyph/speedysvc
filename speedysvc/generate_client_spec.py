@@ -27,14 +27,36 @@ class SpeedySVCService:
     def __init__(self,
                  port_num: int,
                  service_name: str,
-                 listen_on_interface: str = 'localhost'):
+                 listen_on_interface: str = 'localhost',
+                 force_insecure_serialisation: bool = False):
 
         self.__port_num = port_num
         self.__service_name = service_name
         self.__listen_on_interface = listen_on_interface
+        self.__force_insecure_serialisation = force_insecure_serialisation
 
     def serve_forever(self):
-        FIXME
+        from speedysvc.client_server.network.NetworkServer import NetworkServer
+        from speedysvc.client_server.shared_memory.SHMServer import SHMServer
+
+        NetworkServer(server_methods=self,
+                      port=self.__port_num,
+                      service_name=self.__service_name,
+                      bind_interface=self.__listen_on_interface,
+                      force_insecure_serialisation=self.__force_insecure_serialisation).serve_forever_from_thread()
+        SHMServer(server_methods=self,
+                  port=self.__port_num,
+                  service_name=self.__service_name).serve_forever_from_thread()
+
+        while True:
+            try:
+                time.sleep(10)
+            except KeyboardInterrupt:
+                pass
+
+    def serve_forever_from_thread(self):
+        NetworkServer().serve_forever_from_thread()
+        SHMServer().serve_forever_from_thread()
 
     def save_client_boilerplate(self,
                                 class_name: str,

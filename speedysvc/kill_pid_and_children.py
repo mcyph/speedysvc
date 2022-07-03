@@ -4,6 +4,7 @@ import time
 import errno
 import psutil
 import signal
+from typing import Optional
 
 
 def debug(*s):
@@ -11,8 +12,11 @@ def debug(*s):
         print(*s)
 
 
-def wait_for_pid(pid, timeout=None):
+def wait_for_pid(pid: int,
+                 timeout: Optional[int] = None):
+
     elapsed = 0
+
     while True:
         if timeout and elapsed >= timeout:
             raise TimeoutError()
@@ -39,7 +43,10 @@ def wait_for_pid(pid, timeout=None):
         elapsed += 0.01
 
 
-def kill_pid_and_children(pid, sigint_timeout=5, sigterm_timeout=5):
+def kill_pid_and_children(pid: int,
+                          sigint_timeout: int = 5,
+                          sigterm_timeout: int = 5):
+
     # Send a SIGINT to the process, and all child processes
     current_process = psutil.Process(pid)
     LKillPIDs = (

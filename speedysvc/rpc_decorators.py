@@ -19,13 +19,9 @@ def __from_server_method(server_fn):
     # OPEN ISSUE: Should docstrings be copied??? =================================================================
 
     argspec = inspect.getfullargspec(server_fn)
-    base_args_no_self = [
-        i for i in argspec.args if i != 'self'
-    ]
-    default_args_offset = (
-        len(base_args_no_self) -
-        len(argspec.defaults or ())
-    )
+    base_args_no_self = [i for i in argspec.args if i != 'self']
+    default_args_offset = (len(base_args_no_self) -
+                           len(argspec.defaults or ()))
 
     assert not argspec.kwonlyargs, \
         "Server function cannot have any keyword only arguments"

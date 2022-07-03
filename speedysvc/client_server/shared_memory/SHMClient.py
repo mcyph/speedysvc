@@ -1,7 +1,5 @@
-import time
 import atexit
 import _thread
-from warnings import warn
 from os import getpid
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
@@ -48,7 +46,10 @@ class SHMClient(ClientProviderBase, SHMBase):
         # Connect to a shared shm/semaphore which stores the
         # current processes which are associated with this service,
         # and add this process' PID.
-        ClientProviderBase.__init__(self, port=None, service_name=service_name)
+        ClientProviderBase.__init__(self,
+                                    port=None,
+                                    service_name=service_name)
+
         assert not hasattr(self, 'qid')
         self.qid = new_qid(self.port)
         self.resource_manager = SHMResourceManager(self.port, service_name)
@@ -79,9 +80,7 @@ class SHMClient(ClientProviderBase, SHMBase):
                         return self._send(cmd, args, timeout)
                     except ResendError:
                         if num_times > 20:
-                            raise ResendError(
-                                f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!"
-                            )
+                            raise ResendError(f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!")
                         num_times += 1
                         continue
         else:
@@ -91,9 +90,7 @@ class SHMClient(ClientProviderBase, SHMBase):
                     return self._send(cmd, args, timeout)
                 except ResendError:
                     if num_times > 20:
-                        raise ResendError(
-                            f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!"
-                        )
+                        raise ResendError(f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!")
                     num_times += 1
                     continue
 
@@ -111,8 +108,8 @@ class SHMClient(ClientProviderBase, SHMBase):
         #  so as to potentially allow for more remote commands from
         #  different threads)
         args = serialiser.dumps(args)
-        encoded_request = \
-            self.request_serialiser.pack(len(cmd), len(args)) + cmd + args
+        encoded_request = self.request_serialiser.pack(len(cmd),
+                                                       len(args)) + cmd + args
 
         # Next line must be in critical area!
         mmap = self.mmap
@@ -194,14 +191,14 @@ class SHMClient(ClientProviderBase, SHMBase):
         assert self.pid == getpid()
 
         # Assign the new mmap
-        mmap = self.resource_manager.create_pid_mmap(
-            min_size=len(encoded_request) * 2, pid=getpid(), qid=self.qid
-        )
+        mmap = self.resource_manager.create_pid_mmap(min_size=len(encoded_request) * 2,
+                                                     pid=getpid(),
+                                                     qid=self.qid)
         assert len(mmap) > old_mmap_size, (old_mmap_size, len(mmap))
         mmap[0] = old_mmap_statuscode
         assert mmap[0] != INVALID
 
-        #debug(f"Client: New mmap size is {len(mmap)} bytes "
+        # debug(f"Client: New mmap size is {len(mmap)} bytes "
         #      f"for encoded_request length {len(encoded_request)}")
         return mmap
 
@@ -211,7 +208,7 @@ class SHMClient(ClientProviderBase, SHMBase):
         :param mmap:
         :return:
         """
-        #debug(f"Client: memory map has been marked as invalid")
+        # debug(f"Client: memory map has been marked as invalid")
         prev_len = len(mmap)
         mmap.close()
 

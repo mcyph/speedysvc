@@ -3,16 +3,17 @@ import json
 import time
 import psutil
 import _thread
+from typing import Set
 from psutil import pid_exists
 
+from speedysvc.ipc.JSONMMapBase import JSONMMapBase
+from speedysvc.is_pid_still_alive import is_pid_still_alive
+from speedysvc.kill_pid_and_children import kill_pid_and_children
 from speedysvc.hybrid_lock import HybridLock, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE, \
     NoSuchSemaphoreException, SemaphoreExistsException
-from speedysvc.kill_pid_and_children import kill_pid_and_children
-from speedysvc.is_pid_still_alive import is_pid_still_alive
-from speedysvc.ipc.JSONMMapBase import JSONMMapBase
 # TODO: Move get_mmap somewhere more appropriate!
-from speedysvc.client_server.shared_memory.shared_params import get_mmap, unlink_shared_memory
 from speedysvc.client_server.shared_memory.shared_params import INVALID, SERVER, CLIENT
+from speedysvc.client_server.shared_memory.shared_params import get_mmap, unlink_shared_memory
 
 
 def debug(*s):
@@ -168,7 +169,7 @@ class _SHMResourceManager(JSONMMapBase):
     #           Create/Open/Destroy Client Locks+MMaps              #
     #===============================================================#
 
-    def create_resources(self, pid, qid):
+    def create_resources(self, pid: int, qid: int):
         """
         Create new client resources for a given pid/qid
         and adds the PID/QID to the service info,
@@ -182,7 +183,7 @@ class _SHMResourceManager(JSONMMapBase):
         self.add_client_pid_qid(pid, qid)
         return mmap, lock
 
-    def open_existing_resources(self, pid, qid):
+    def open_existing_resources(self, pid: int, qid: int):
         """
         Create existing client resources for a given pid/qid
         :return: (the shared mmap, client HybridLock, server HybridLock)
@@ -191,7 +192,7 @@ class _SHMResourceManager(JSONMMapBase):
         lock = self.get_lock(pid, qid, CONNECT_TO_EXISTING)
         return mmap, lock
 
-    def get_lock(self, pid, qid, mode):
+    def get_lock(self, pid: int, qid: int, mode):
         """
         Get the locks for a client connection to the servers
         :return: HybridLock
@@ -200,7 +201,7 @@ class _SHMResourceManager(JSONMMapBase):
         client_lock = HybridLock(client_loc.encode('ascii'), mode=mode, initial_value=1)
         return client_lock
 
-    def unlink_resources(self, pid, qid):
+    def unlink_resources(self, pid: int, qid: int):
         """
         Remove the locks and memory map associated with the process ID/in-process ID
 
@@ -224,7 +225,7 @@ class _SHMResourceManager(JSONMMapBase):
     #             Create/Connect to Shared Memory Map               #
     #===============================================================#
 
-    def create_pid_mmap(self, min_size, pid, qid):
+    def create_pid_mmap(self, min_size, pid: int, qid: int):
         """
         Create/overwrite a memory map for a given client connection.
         Often is called more than once with a larger min_size, if the
@@ -250,7 +251,7 @@ class _SHMResourceManager(JSONMMapBase):
         mmap[0] = CLIENT
         return mmap
 
-    def connect_to_pid_mmap(self, pid, qid):
+    def connect_to_pid_mmap(self, pid: int, qid: int):
         """
         Connect to an existing shared mmap
         Same as above, but don't use in "create" mode as we're
@@ -270,7 +271,7 @@ class _SHMResourceManager(JSONMMapBase):
         return LServerPIDs
 
     @lock_fn
-    def add_server_pid(self, pid):
+    def add_server_pid(self, pid: int):
         """
         Add to a list of PIDs which are associated with this service
         to allow clients checking they still exist
@@ -281,7 +282,7 @@ class _SHMResourceManager(JSONMMapBase):
         self._encode([LServerPIDs, LClientPIDs])
 
     @lock_fn
-    def del_server_pid(self, pid):
+    def del_server_pid(self, pid: int):
         """
         Remove from the list of PIDs which provide this service.
         This can help clients to figure out when to give up
@@ -292,7 +293,7 @@ class _SHMResourceManager(JSONMMapBase):
         self._encode([LServerPIDs, LClientPIDs])
 
     @lock_fn
-    def server_pid_active(self, pid):
+    def server_pid_active(self, pid: int):
         """
         A means for servers to check whether they should
         shut down as a result of a new MultiProcessManager taking
@@ -303,7 +304,7 @@ class _SHMResourceManager(JSONMMapBase):
         return pid in LServerPIDs
 
     @lock_fn
-    def reset_all_server_pids(self, kill=True):
+    def reset_all_server_pids(self, kill: bool = True):
         """
         Remove all of the PIDs of the servers
 
@@ -338,7 +339,7 @@ class _SHMResourceManager(JSONMMapBase):
     #===============================================================#
 
     @lock_fn
-    def get_created_exited_client_pids(self, SPIDs):
+    def get_created_exited_client_pids(self, SPIDs: Set[int]):
         """
         :param SPIDs: a set of {(pid, qid), ...}
         :return: (created pids/qids, exited pids/qids) as two sets
@@ -353,7 +354,7 @@ class _SHMResourceManager(JSONMMapBase):
         return LClientPIDs
 
     @lock_fn
-    def add_client_pid_qid(self, pid, qid):
+    def add_client_pid_qid(self, pid: int, qid: int):
         """
         Add to a list of PIDs which are using a service. Servers
         can then respond and create new threads as needed
@@ -364,7 +365,7 @@ class _SHMResourceManager(JSONMMapBase):
         self._encode([LServerPIDs, LClientPIDs])
 
     @lock_fn
-    def del_client_pid_qid(self, pid, qid):
+    def del_client_pid_qid(self, pid: int, qid: int):
         """
         Remove one of the connections from a client to the servers
         """

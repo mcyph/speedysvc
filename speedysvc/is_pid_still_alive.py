@@ -2,7 +2,7 @@ import psutil
 from psutil import pid_exists
 
 
-def is_pid_still_alive(pid):
+def is_pid_still_alive(pid: int):
     if not pid_exists(pid):
         return False
 
