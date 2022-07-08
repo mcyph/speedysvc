@@ -18,9 +18,6 @@ def run_server(services=(), debug=False, host='127.0.0.1', port=5155):
     Should be called with a list of
     MultiProcessManager's and/or InProcessManager's
     """
-    for service in services:
-        web_service_manager.add_service(service)
-
     print(f"Web interface starting on http://{host}:{port}:", end=" ")
 
     config = {

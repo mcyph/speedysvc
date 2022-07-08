@@ -9,6 +9,7 @@ import importlib
 import subprocess
 from sys import argv
 from os import getpid
+from typing import Object
 from warnings import warn
 from multiprocessing import cpu_count
 
@@ -44,8 +45,11 @@ def debug(*s):
 
 class MultiProcessServer:
     def __init__(self,
-                 import_from, section, server_methods,
-                 tcp_bind=None,
+                 service_name: str,
+                 port: int,
+                 
+                 server_methods: SpeedySVCService,
+                 tcp_bind: str=None,
                  tcp_allow_insecure_serialisation=False,
 
                  min_proc_num=1,
@@ -69,8 +73,9 @@ class MultiProcessServer:
         Optionally also removed child processes if combined RAM usage
         exceeds a certain amount.
 
-        :param import_from: the module the import the server class from
-        :param section: the server class name
+        :param service_name:
+        :param port:
+
         :param server_methods: the server methods class. Should be a class
                                which has yet to be instantiated, so that
                                it can be created by child worker processes.
@@ -100,10 +105,8 @@ class MultiProcessServer:
                                      this one, but can increase service load
                                      times.
         """
-        self.port = server_methods.port
-        self.name = server_methods.name
-        self.import_from = import_from
-        self.section = section
+        self.service_name = service_name
+        self.port = port
 
         # This should probably always be callable directly,
         # so as to be able to create them in the child processes
@@ -132,8 +135,8 @@ class MultiProcessServer:
         # TODO: It would also be nice to remove self.LPIDs, and only rely on
         #   SHMResourceManager for storing server worker PIDs
         # OPEN ISSUE: Should check_for_missing_pids be called periodically?
-        debug(f"Creating resource manager for {self.name}:{self.port}")
-        self.resource_manager = SHMResourceManager(self.port, self.name)
+        debug(f"Creating resource manager for {self.service_name}:{self.port}")
+        self.resource_manager = SHMResourceManager(self.port, self.service_name)
         self.resource_manager.check_for_missing_pids()
         self.resource_manager.reset_all_server_pids(kill=True)
 
@@ -181,11 +184,9 @@ class MultiProcessServer:
                     # Wait till the SHMServer can be connected to
                     time.sleep(0.1)
 
-                self.network_server = NetworkServer(
-                    server_methods=self.server_methods,
-                    bind_interface=self.tcp_bind,
-                    force_insecure_serialisation=self.tcp_allow_insecure_serialisation
-                )
+                self.network_server = NetworkServer(server_methods=self.server_methods,
+                                                    bind_interface=self.tcp_bind,
+                                                    force_insecure_serialisation=self.tcp_allow_insecure_serialisation)
 
             _thread.start_new_thread(start_network_server, ())
 
@@ -257,10 +258,10 @@ class MultiProcessServer:
                 self.logger_client.start_collecting()
 
         if self.wait_until_completed:
-            debug(f"{self.server_methods.name} parent: Waiting for child to initialise...")
+            debug(f"{self.service_name} parent: Waiting for child to initialise...")
             while not self.logger_client.get_service_status() == 'started':
                 time.sleep(0.1)
-            debug(f"{self.server_methods.name} parent: child signaled it has initialised OK")
+            debug(f"{self.service_name} parent: child signaled it has initialised OK")
 
             start_collecting_data()
         else:
@@ -298,7 +299,7 @@ class MultiProcessServer:
     #========================================================#
 
     def __monitor_process_loop(self):
-        debug(f"{self.server_methods.name}: Process monitor started")
+        debug(f"{self.service_name}: Process monitor started")
 
         while (
             (not self.shutting_down) and
@@ -329,14 +330,14 @@ class MultiProcessServer:
             try:
                 if not psutil.pid_exists(pid):
                     # Stop monitoring child processes that no longer exist.
-                    warn(f"MultiProcessManager PID {pid} for service {self.name} "
+                    warn(f"MultiProcessManager PID {pid} for service {self.service_name} "
                          f"doesn't exist any more - it may have crashed!")
                     self.remove_child_process(pid)
                 else:
                     proc = psutil.Process(pid)
                     if proc.status() == psutil.STATUS_ZOMBIE:
                         # Process no longer exists except on process table.
-                        warn(f"MultiProcessManager PID {pid} for service {self.name} is a zombie - it may have crashed!")
+                        warn(f"MultiProcessManager PID {pid} for service {self.service_name} is a zombie - it may have crashed!")
                         os.waitpid(pid, 0)
                         self.remove_child_process(pid)
             except:
@@ -345,20 +346,18 @@ class MultiProcessServer:
 
         if len(self.LPIDs) < self.min_proc_num:
             # Start a new worker process if there aren't enough
-            #debug(f"{self.server_methods.name}: Adding worker process due to minimum processes not satisfied")
+            #debug(f"{self.service_name}: Adding worker process due to minimum processes not satisfied")
             self.new_child_process()
             time.sleep(MONITOR_PROCESS_EVERY_SECS)
             return
 
-        DNewProcAvg = self.logger_client.get_average_over(
-            time.time() - self.new_proc_avg_over_secs, time.time()
-        )
-        DRemoveProcAvg = self.logger_client.get_average_over(
-            time.time() - self.kill_proc_avg_over_secs, time.time()
-        )
+        DNewProcAvg = self.logger_client.get_average_over(time.time() - self.new_proc_avg_over_secs,
+                                                          time.time())
+        DRemoveProcAvg = self.logger_client.get_average_over(time.time() - self.kill_proc_avg_over_secs,
+                                                             time.time())
         DLastRecord = self.logger_client.get_last_record()
         time_since_last_op = time.time()-self.last_proc_op_time
-        #debug(f"{self.server_methods.name} DNEWPROCAVG:", DNewProcAvg)
+        #debug(f"{self.service_name} DNEWPROCAVG:", DNewProcAvg)
 
         if not DNewProcAvg or not DRemoveProcAvg:
             #debug("NOT DNewProcAvg/DRemoveProcAvg!!!!")
@@ -371,7 +370,7 @@ class MultiProcessServer:
         ):
             # Reap processes until we don't exceed
             # the maximum amount of memory
-            #debug(f"{self.server_methods.name}: Removing process due to memory exceeded")
+            #debug(f"{self.service_name}: Removing process due to memory exceeded")
             self.remove_child_process()
 
         elif (
@@ -383,7 +382,7 @@ class MultiProcessServer:
             # Start a new worker process if the CPU usage is higher
             # than a certain amount over the provided period
             # new_proc_avg_over_secs
-            #debug(f"{self.server_methods.name}: Adding worker process due to CPU higher than "
+            #debug(f"{self.service_name}: Adding worker process due to CPU higher than "
             #      f"{int(self.new_proc_cpu_pc*100)}% over {self.new_proc_avg_over_secs} seconds")
             self.new_child_process()
 
@@ -394,7 +393,7 @@ class MultiProcessServer:
         ):
             # Reduce the number of workers if they aren't being
             # used over an extended period
-            #debug(f"{self.server_methods.name}: Removing process due to CPU lower than "
+            #debug(f"{self.service_name}: Removing process due to CPU lower than "
             #      f"{int(self.new_proc_cpu_pc*100)}% over {self.kill_proc_avg_over_secs} seconds")
             self.remove_child_process()
 
@@ -403,10 +402,6 @@ class MultiProcessServer:
     #========================================================#
 
     def __get_L_locks(self):
-        """
-
-        :return:
-        """
         L = []
         for pid, qid in self.resource_manager.get_client_pids():
             try:
@@ -418,11 +413,6 @@ class MultiProcessServer:
         return L
 
     def __lock_locks(self, LLocks):
-        """
-
-        :param LLocks:
-        :return:
-        """
         for lock in LLocks:
             try:
                 # Unlock locks which are held by dead PIDs!
@@ -454,11 +444,6 @@ class MultiProcessServer:
                 #traceback.print_exc()
 
     def __unlock_locks(self, LLocks):
-        """
-
-        :param LLocks:
-        :return:
-        """
         for lock in LLocks:
             try:
                 lock.unlock()
@@ -470,15 +455,14 @@ class MultiProcessServer:
                 #traceback.print_exc()
 
 
-if __name__ == '__main__':
-    DArgs = json.loads(argv[-1])
-    DArgs['server_methods'] = getattr(
-        importlib.import_module(DArgs['import_from']),
-        DArgs['section']
-    )
-    mps = MultiProcessServer(**DArgs)
+def main(args_dict):
+    module_name, class_name = args_dict.pop('module').split(':')
+    module = importlib.import_module(module_name)
+    args_dict['server_methods'] = getattr(module, class_name)
+    mps = MultiProcessServer(**args_dict)
 
     _handling_sigint = [False]
+
     def signal_handler(sig, frame):
         if _handling_sigint[0]: return
         _handling_sigint[0] = True
@@ -497,3 +481,7 @@ if __name__ == '__main__':
             signal.pause()
         else:
             time.sleep(60)
+
+
+if __name__ == '__main__':
+    main(json.loads(argv[-1]))

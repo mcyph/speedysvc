@@ -1,8 +1,8 @@
 from .serialisation.serialisation_types import get_by_name
 
 
-def service_method(params='json',
-                   returns='json'):
+def service_method(params: str='json',
+                   returns: str='json'):
     """
     Define a method which will be serialised using JSON types with
     a suitable encoder (e.g. the json module, msgpack, bson etc).
@@ -15,13 +15,12 @@ def service_method(params='json',
 def __network_method(fn,
                      params_serialiser,
                      return_serialiser):
-    assert not hasattr(fn, 'serialiser'), \
-        f"Serialiser has already been set for {fn}"
+
+    assert not hasattr(fn, 'serialiser'), f"Serialiser has already been set for {fn}"
+
     fn.params_serialiser = params_serialiser
     fn.return_serialiser = return_serialiser
-    fn.metadata = {
-        'num_calls': 0,
-        'total_time': 0
-    }
+    fn.metadata = {'num_calls': 0,
+                   'total_time': 0}
     return fn
 

@@ -7,8 +7,8 @@ from sys import argv
 from os import getpid
 
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
-from speedysvc.client_server.network.NetworkServer import NetworkServer
 from speedysvc.client_server.shared_memory.SHMServer import SHMServer
+from speedysvc.client_server.network.NetworkServer import NetworkServer
 
 
 def debug(*s):
@@ -66,8 +66,6 @@ def _service_worker(server_methods):
 if __name__ == '__main__':
     DArgs = json.loads(argv[-1])
     #print("**CHILD WORKER DARGS:", DArgs)
-    DArgs['server_methods'] = getattr(
-        importlib.import_module(DArgs.pop('import_from')),
-        DArgs.pop('section')
-    )
+    module = importlib.import_module(DArgs.pop('import_from'))
+    DArgs['server_methods'] = getattr(module, DArgs.pop('section'))
     _service_worker(**DArgs)
