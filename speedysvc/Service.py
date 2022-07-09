@@ -1,11 +1,12 @@
+from typing import Optional
+
 class Service:
     def __init__(self,
                  service_name: str,
-                 module: str,
                  port: int,
-
-                 log_dir: str = '/tmp',
-                 tcp_bind: Optional[str] = None,   # TODO: Check the name of this arg!!
+                 server_module: str,
+                 client_module: Optional[str] = None,
+                 host: Optional[str] = None,   # TODO: Check the name of this arg!!
                  tcp_allow_insecure_serialisation: bool = False,
 
                  max_proc_num: int = 1,
@@ -17,14 +18,15 @@ class Service:
                  new_proc_avg_over_secs: float = 20,
                  kill_proc_avg_over_secs: float = 240,
 
+                 log_dir: str = '/tmp',
                  fifo_json_log_parent = None):
 
         self.__args = {
             'service_name': service_name,
-            'module': module,
             'port': port,
-            'log_dir': log_dir,
-            'tcp_bind': tcp_bind,
+            'server_module': server_module,
+            'client_module': client_module,
+            'host': host,
             'tcp_allow_insecure_serialisation': tcp_allow_insecure_serialisation,
             'max_proc_num': max_proc_num,
             'min_proc_num': min_proc_num,
@@ -33,6 +35,7 @@ class Service:
             'new_proc_cpu_pc': new_proc_cpu_pc,
             'new_proc_avg_over_secs': new_proc_avg_over_secs,
             'kill_proc_avg_over_secs': kill_proc_avg_over_secs,
+            'log_dir': log_dir,
             'fifo_json_log_parent': fifo_json_log_parent,
         }
 
@@ -41,7 +44,7 @@ class Service:
         self.started = False
 
     def get_tcp_bind(self):
-        return self.__args['tcp_bind']
+        return self.__args['host']
 
     def get_service_name(self):
         return self.__args['service_name']
@@ -109,7 +112,7 @@ class Service:
         ], env=environ)
 
         logger_server.proc = proc  # HACK!
-        logger_server.tcp_bind = self.tcp_bind  # HACK!
+        logger_server.host = self.host  # HACK!
 
         if wait_until_completed:
             while logger_server.get_service_status() != 'started':

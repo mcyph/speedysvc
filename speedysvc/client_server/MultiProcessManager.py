@@ -18,6 +18,7 @@ from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.client_server.network.NetworkServer import NetworkServer
 from speedysvc.client_server.shared_memory.SHMResourceManager import \
     SHMResourceManager, CONNECT_TO_EXISTING
+from speedysvc.client_server.SpeedySVCClientFormatter import SpeedySVCClientFormatter
 from speedysvc.hybrid_lock import SemaphoreDestroyedException, NoSuchSemaphoreException
 
 
@@ -47,9 +48,10 @@ class MultiProcessServer:
     def __init__(self,
                  service_name: str,
                  port: int,
-                 
+
+                 client_module: str,
                  server_methods: SpeedySVCService,
-                 tcp_bind: str=None,
+                 host: str=None,
                  tcp_allow_insecure_serialisation=False,
 
                  min_proc_num=1,
@@ -80,7 +82,7 @@ class MultiProcessServer:
                                which has yet to be instantiated, so that
                                it can be created by child worker processes.
 
-        :param tcp_bind:
+        :param host:
         :param tcp_allow_insecure_serialisation:
 
         :param min_proc_num: the minimum number of worker processes.
@@ -107,12 +109,13 @@ class MultiProcessServer:
         """
         self.service_name = service_name
         self.port = port
+        self.client_module = client_module
 
         # This should probably always be callable directly,
         # so as to be able to create them in the child processes
         self.server_methods = server_methods
 
-        self.tcp_bind = tcp_bind
+        self.host = host
         self.tcp_allow_insecure_serialisation = tcp_allow_insecure_serialisation
 
         self.min_proc_num = min_proc_num
@@ -148,7 +151,26 @@ class MultiProcessServer:
         debug("Creating logger client...")
         self.logger_client = LoggerClient(server_methods)
 
+        if self.client_module:
+            self.__generate_client_module()
+
         self.start_service()
+
+    def __generate_client_module(self):
+        relative_path, class_name = self.client_module.split(':')
+        possible_chars_class_name = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_')
+        possible_chars_relative_path = set(possible_chars_class_name) + set('.')
+
+        assert all(i in possible_chars_class_name for i in class_name), \
+            'Client class name must contain only characters A-Z a-z 0-9 or an underscore (_)'
+        assert all(i in possible_chars_relative_path for i in relative_path), \
+            'Client relative path must contain only characters A-Z a-z 0-9, an underscore (_) or period (.)'
+
+        relative_path = Path(relative_path.replace('.', '/'))
+        SpeedySVCClientFormatter(self.client_module).save_client_boilerplate(class_name=class_name,
+                                                                             path=relative_path,
+                                                                             check=True)
+        debug(f"Client module output to relative path {relative_path} class name {class_name}")
 
     #========================================================#
     #                  Start/Stop Processes                  #
@@ -178,14 +200,14 @@ class MultiProcessServer:
             debug("NEW CHILD PROCESS!")
             self.new_child_process()
 
-        if self.tcp_bind:
+        if self.host:
             def start_network_server():
                 while not self.logger_client.get_service_status() == 'started':
                     # Wait till the SHMServer can be connected to
                     time.sleep(0.1)
 
                 self.network_server = NetworkServer(server_methods=self.server_methods,
-                                                    bind_interface=self.tcp_bind,
+                                                    bind_interface=self.host,
                                                     force_insecure_serialisation=self.tcp_allow_insecure_serialisation)
 
             _thread.start_new_thread(start_network_server, ())
@@ -456,7 +478,7 @@ class MultiProcessServer:
 
 
 def main(args_dict):
-    module_name, class_name = args_dict.pop('module').split(':')
+    module_name, class_name = args_dict.pop('server_module').split(':')
     module = importlib.import_module(module_name)
     args_dict['server_methods'] = getattr(module, class_name)
     mps = MultiProcessServer(**args_dict)
