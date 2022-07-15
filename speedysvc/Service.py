@@ -6,7 +6,7 @@ class Service:
                  port: int,
                  server_module: str,
                  client_module: Optional[str] = None,
-                 host: Optional[str] = None,   # TODO: Check the name of this arg!!
+                 host: Optional[str] = None,
                  tcp_allow_insecure_serialisation: bool = False,
 
                  max_proc_num: int = 1,
@@ -61,10 +61,9 @@ class Service:
         assert not self.started, \
             f"Service {self.__args['service_name']}:{self.__args['port']} has already been started!"
 
-        self.__run_multi_proc_server(
-            server_methods, **self.__args,
-            fifo_json_log_parent=self.fifo_json_log_parent
-        )
+        self.__run_multi_proc_server(server_methods,
+                                     **self.__args,
+                                     fifo_json_log_parent=self.fifo_json_log_parent)
 
     @lock_fn
     def stop(self):

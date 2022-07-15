@@ -133,7 +133,7 @@ class Services:
         return self.services[service_name]
 
     def iter_services_by_name(self):
-        for service in sorted(self.services, key=lambda service: service.lower()):
+        for service in sorted(self.services, key=lambda i: i.lower()):
             yield service, self.services[service]
 
     #====================================================================#
