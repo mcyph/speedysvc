@@ -50,7 +50,7 @@ class CUnescape:
                     return DChars[c]
                 else: return c
         
-        LRtn = []
+        return_list = []
         L = self.S.split('&')
         xx = 0
         yy = 0
@@ -60,26 +60,26 @@ class CUnescape:
                 if LSplit[0].lower() in name2codepoint:
                     # A character reference, e.g. '&amp;'
                     a = w_unichr(name2codepoint[LSplit[0].lower()])
-                    LRtn.append(getChar(a)) # TOKEN CHECK?
-                    LRtn.append(';'.join(LSplit[1:]))
+                    return_list.append(getChar(a)) # TOKEN CHECK?
+                    return_list.append(';'.join(LSplit[1:]))
                     
                 elif LSplit[0] and LSplit[0][0] == '#' and LSplit[0][1:].isdigit():
                     # A character number e.g. '&#52;'
                     a = w_unichr(int(LSplit[0][1:]))
-                    LRtn.append(getChar(a))
-                    LRtn.append(';'.join(LSplit[1:]))
+                    return_list.append(getChar(a))
+                    return_list.append(';'.join(LSplit[1:]))
                     
                 elif LSplit[0] and LSplit[0][0] == '#' and LSplit[0][1:2].lower() == 'x' and IsHex(LSplit[0][2:]):
                     # A hexadecimal encoded character
                     a = w_unichr(int(LSplit[0][2:].lower(), 16)) # Hex -> base 16
-                    LRtn.append(getChar(a))
-                    LRtn.append(';'.join(LSplit[1:]))
+                    return_list.append(getChar(a))
+                    return_list.append(';'.join(LSplit[1:]))
                     
-                else: LRtn.append('&%s' % ';'.join(LSplit))
-            else: LRtn.append(iS)
+                else: return_list.append('&%s' % ';'.join(LSplit))
+            else: return_list.append(iS)
             xx += 1
-            yy += len(LRtn[-1])
-        return LRtn
+            yy += len(return_list[-1])
+        return return_list
         
     def map(self, charFn, intFn=None):
         # Go through each region in self.L, applying `charFn` to the 

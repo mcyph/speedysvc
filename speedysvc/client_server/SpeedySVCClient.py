@@ -11,6 +11,8 @@ class _RemoteIterator:
         self.destroyed = False
 
     def __del__(self):
+        if self.destroyed:
+            return
         self.client_inst.send(cmd='$iter_destroy$',
                               args=str(self.iterator_id).encode('ascii'),
                               timeout=-1)
@@ -34,8 +36,8 @@ class _RemoteIterator:
 class SpeedySVCClient:
     def __init__(self,
                  address: Union[List, Tuple, str],
-                 use_spinlock=True,
-                 use_in_process_lock=True,
+                 use_spinlock: bool = True,
+                 use_in_process_lock: bool = True,
                  compression_inst=snappy_compression):
 
         self.__address = address

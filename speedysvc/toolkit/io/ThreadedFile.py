@@ -252,11 +252,11 @@ class f:
         return self.f.read(amount)
     
     def read_multiple(self, L):
-        LRtn = []
+        return_list = []
         for amount, seek in L:
             self.f.seek(*seek)
-            LRtn.append(self.f.read(amount))
-        return LRtn
+            return_list.append(self.f.read(amount))
+        return return_list
     
     def write(self, data, seek=None):
         if seek: 
