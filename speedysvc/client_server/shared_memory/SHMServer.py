@@ -13,7 +13,7 @@ from speedysvc.hybrid_lock import NoSuchSemaphoreException, SemaphoreDestroyedEx
 
 
 _monitor_pids_started = [False]
-_LSHMServers = []
+_shm_servers_list = []
 
 
 def _monitor_pids():
@@ -22,14 +22,14 @@ def _monitor_pids():
     single thread to minimize resources
     """
     while True:
-        if not _LSHMServers:
+        if not _shm_servers_list:
             _monitor_pids_started[0] = False
             return
 
-        for shm_server in _LSHMServers[:]:
+        for shm_server in _shm_servers_list[:]:
             try:
                 if shm_server.shut_me_down:
-                    _LSHMServers.remove(shm_server)
+                    _shm_servers_list.remove(shm_server)
                 else:
                     shm_server.monitor_pids()
             except:
@@ -55,8 +55,6 @@ class SHMServer(SHMBase, ServerProviderBase):
         # if connecting to an existing socket, init_resources should be False!
         ServerProviderBase.__init__(self, server_methods)
 
-        debug(f'{service_name}:{port}: Starting new SHMServer on port:', port)
-
         self.port = port
         self.service_name = service_name
 
@@ -64,21 +62,9 @@ class SHMServer(SHMBase, ServerProviderBase):
         self.shutdown_ok = False
         self.use_spinlock = use_spinlock
 
-    def serve_forever_in_new_thread(self):
-        """
-        TODO: Create or connect to a shared shm/semaphore which stores the
-              current processes which are associated with this service.
-        """
-        self.SPIDThreads = set()
+        self.pid_threads_set = set()
         self.resource_manager = SHMResourceManager(port=self.port,
                                                    name=self.service_name)
-        self.resource_manager.check_for_missing_pids()
-        self.resource_manager.add_server_pid(getpid())
-
-        _LSHMServers.append(self)
-        if not _monitor_pids_started[0]:
-            _monitor_pids_started[0] = True
-            start_new_thread(_monitor_pids, ())
 
     def serve_forever(self):
         self.serve_forever_in_new_thread()
@@ -88,6 +74,21 @@ class SHMServer(SHMBase, ServerProviderBase):
         except:
             self.shutdown()
             raise
+
+    def serve_forever_in_new_thread(self):
+        """
+        TODO: Create or connect to a shared shm/semaphore which stores the
+              current processes which are associated with this service.
+        """
+        debug(f'{self.service_name}:{self.port}: Starting new SHMServer on port:', self.port)
+
+        self.resource_manager.check_for_missing_pids()
+        self.resource_manager.add_server_pid(getpid())
+
+        _shm_servers_list.append(self)
+        if not _monitor_pids_started[0]:
+            _monitor_pids_started[0] = True
+            start_new_thread(_monitor_pids, ())
 
     def shutdown(self):
         self.shut_me_down = True
@@ -114,21 +115,21 @@ class SHMServer(SHMBase, ServerProviderBase):
         If the client PID no longer exists, also clean up its resources,
         as needed.
         """
-        SCreated, SExited = self.resource_manager.get_created_exited_client_pids(self.SPIDThreads)
-        if SCreated or SExited:
-            debug(f"{self.name}:{self.port}[{self.SPIDThreads}] SCREATED: {SCreated} SEXITED: {SExited}")
+        created_set, exited_set = self.resource_manager.get_created_exited_client_pids(self.pid_threads_set)
+        if created_set or exited_set:
+            debug(f"{self.name}:{self.port}[{self.pid_threads_set}] SCREATED: {created_set} SEXITED: {exited_set}")
         else:
-            debug(self.SPIDThreads, self.resource_manager.get_client_pids())
+            debug(self.pid_threads_set, self.resource_manager.get_client_pids())
 
-        for pid, qid in SCreated:
+        for pid, qid in created_set:
             # Add newly created client connections
-            self.SPIDThreads.add((pid, qid))
+            self.pid_threads_set.add((pid, qid))
             start_new_thread(self.worker_thread_fn, (pid, qid))
 
-        for pid, qid in SExited:
+        for pid, qid in exited_set:
             # Remove connections to clients that no longer exist
             try:
-                self.SPIDThreads.remove((pid, qid))
+                self.pid_threads_set.remove((pid, qid))
             except KeyError:
                 pass
 
@@ -149,30 +150,39 @@ class SHMServer(SHMBase, ServerProviderBase):
               f"thread for pid {pid} subid {qid}")
         do_spin = True
 
+        iterators = {}
+        current_iterator_id = 0
+
         while True:
-            if not (pid, qid) in self.SPIDThreads:
+            if not (pid, qid) in self.pid_threads_set:
                 # PID no longer exists, so don't continue to loop
                 return
             elif self.shut_me_down:
                 try:
-                    self.SPIDThreads.remove((pid, qid))
+                    self.pid_threads_set.remove((pid, qid))
                 except KeyError:
                     pass
 
-                self.shutdown_ok = not len(self.SPIDThreads)
+                self.shutdown_ok = not len(self.pid_threads_set)
                 debug(f"Signal to shutdown SHMServer {self.name} "
                       f"in worker thread for pid {pid} subid {qid} caught: "
-                      f"returning ({len(self.SPIDThreads)} remaining)")
+                      f"returning ({len(self.pid_threads_set)} remaining)")
                 return
 
             try:
-                do_spin, mmap = self.handle_command(mmap, lock, pid, qid, do_spin)
+                do_spin, mmap, current_iterator_id = self.handle_command(mmap,
+                                                                         lock,
+                                                                         iterators,
+                                                                         current_iterator_id,
+                                                                         pid,
+                                                                         qid,
+                                                                         do_spin)
             except SemaphoreDestroyedException:
                 # In this case, the lock was likely destroyed by the client
                 # and should propagate the error, rather than forever logging
                 debug(f"Lock for service {self.name} "
                       f"in worker thread for pid {pid} subid {qid} was destroyed: "
-                      f"returning ({len(self.SPIDThreads)} remaining)")
+                      f"returning ({len(self.pid_threads_set)} remaining)")
                 return
             except:
                 import traceback
@@ -184,6 +194,8 @@ class SHMServer(SHMBase, ServerProviderBase):
     def handle_command(self,
                        mmap,
                        lock,
+                       iterators: dict,
+                       current_iterator_id: int,
                        pid: int,
                        qid: int,
                        do_spin: bool):
@@ -217,9 +229,8 @@ class SHMServer(SHMBase, ServerProviderBase):
                     num_times += 1
                 else:
                     # Connection destroyed? (Windows)
-                    raise SemaphoreDestroyedException(
-                        f"Service {self.name} pid/qid {pid}:{qid} unknown state: %s" % mmap[0]
-                    )
+                    raise SemaphoreDestroyedException(f"Service {self.name} pid/qid {pid}:"
+                                                      f"{qid} unknown state: %s" % mmap[0])
 
             # Measure for complete time it takes from
             # getting/putting back to the shm block
@@ -232,15 +243,55 @@ class SHMServer(SHMBase, ServerProviderBase):
             cmd_len, args_len = self.request_serialiser.unpack(mmap[1:1 + self.request_serialiser.size])
             cmd = mmap[1+size : 1+size+cmd_len].decode('ascii')
             args = mmap[1+size+cmd_len : 1+size+cmd_len+args_len]
+            metadata: FunctionMetaData = None
 
             try:
-                # Handle the command
-                fn = getattr(self.server_methods, cmd)
-                serialiser = fn.serialiser
-                if serialiser == RawSerialisation:
-                    result = serialiser.dumps(fn(args))
+                if cmd == '$iter_next$':
+                    # Continue on from where the iterator left off
+                    metadata, iter_ = iterators[int(args)]
+
+                    out = []
+                    for x in range(metadata.iterator_page_size):
+                        try:
+                            out.append(next(iter_))
+                        except StopIteration:
+                            del iterators[int(args)]
+                            break
+
+                    result = metadata.returns_serialiser.dumps(out)
+                    metadata = None  # don't add to stats below
+
+                elif cmd == '$iter_destroy$':
+                    del iterators[int(args)]
+                    result = b''
+
                 else:
-                    result = serialiser.dumps(fn(*serialiser.loads(args)))
+                    # Handle the command
+                    fn = getattr(self.server_methods, cmd)
+                    metadata = fn.metadata
+
+                    # Deserialise the arguments according to the metadata
+                    if metadata.params_serialiser == RawSerialisation:
+                        # TODO: Separate into positional, spread, keywords
+                        var_positional = (args,)
+                        var_keyword = {}
+                    else:
+                        var_positional, var_keyword = metadata.params_serialiser.loads(args)
+
+                    # "Unbox" any parameters as needed
+                    if metadata.decode_params:
+                        for k, v in metadata.decode_params.items():
+                            args[k] = v(args[k])
+
+                    # Serialise the return value according to the metadata and
+                    # encode "+" with length to say the call succeeded
+                    if metadata.returns_iterator:
+                        # TODO: Return an id, then stash the iterator for later referring to it
+                        iterators[current_iterator_id] = FIXME
+                        result = str(current_iterator_id).encode('ascii')
+                        current_iterator_id += 1
+                    else:
+                        result = metadata.returns_serialiser.dumps(fn(*var_positional, **var_keyword))
 
                 encoded = self.response_serialiser.pack(b'+', len(result)) + result
 
@@ -263,9 +314,9 @@ class SHMServer(SHMBase, ServerProviderBase):
             mmap[0] = CLIENT
 
             # Add to some variables for basic benchmarking
-            if hasattr(fn, 'metadata'):
-                fn.metadata['num_calls'] += 1
-                fn.metadata['total_time'] += time.time() - t_from
+            if metadata is not None:
+                metadata.num_calls += 1
+                metadata.total_time += time.time() - t_from
 
         finally:
             lock.unlock()

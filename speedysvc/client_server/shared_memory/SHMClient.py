@@ -131,7 +131,8 @@ class SHMClient(ClientProviderBase, SHMBase):
         while True:
             if not num_times:
                 #debug("LOCKING CLIENT LOCK <- SERVER!", mmap[0] == SERVER, mmap[0] == CLIENT, cmd)
-                self.lock.lock(timeout=-1, spin=int(self.use_spinlock))
+                self.lock.lock(timeout=-1,
+                               spin=int(self.use_spinlock))
                 #debug("LOCKED!")
 
             if mmap[0] == CLIENT:

@@ -16,10 +16,9 @@ from multiprocessing import cpu_count
 from speedysvc.kill_pid_and_children import kill_pid_and_children
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.client_server.network.NetworkServer import NetworkServer
-from speedysvc.client_server.shared_memory.SHMResourceManager import \
-    SHMResourceManager, CONNECT_TO_EXISTING
 from speedysvc.client_server.SpeedySVCClientFormatter import SpeedySVCClientFormatter
 from speedysvc.hybrid_lock import SemaphoreDestroyedException, NoSuchSemaphoreException
+from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager, CONNECT_TO_EXISTING
 
 
 MONITOR_PROCESS_EVERY_SECS = 5
