@@ -3,12 +3,19 @@ import sys
 import time
 import json
 import subprocess
+from threading import Lock
 from typing import Optional
 
 from speedysvc.toolkit.io.make_dirs import make_dirs
 from speedysvc.logger.std_logging.LoggerServer import LoggerServer
 from speedysvc.toolkit.kill_pid_and_children import kill_pid_and_children
-from speedysvc.client_server.shared_memory.SHMResourceManager import lock_fn
+
+
+def lock_fn(fn):
+    def new_fn(self, *args, **kw):
+        with self.lock:
+            return fn(self, *args, **kw)
+    return new_fn
 
 
 class Service:
@@ -16,6 +23,7 @@ class Service:
                  service_name: str,
                  port: int,
                  server_module: str,
+                 service_class_name: str,
                  client_module: Optional[str] = None,
                  host: Optional[str] = None,
                  tcp_allow_insecure_serialisation: bool = False,
@@ -32,10 +40,12 @@ class Service:
                  log_dir: str = '/tmp',
                  fifo_json_log_parent = None):
 
+        self.lock = Lock()
         self.__args = {
             'service_name': service_name,
             'port': port,
             'server_module': server_module,
+            'service_class_name': service_class_name,
             'client_module': client_module,
             'host': host,
             'tcp_allow_insecure_serialisation': tcp_allow_insecure_serialisation,
@@ -74,8 +84,7 @@ class Service:
         # print("SECTION:", section)
         assert not self.started, \
             f"Service {self.__args['service_name']}:{self.__args['port']} has already been started!"
-
-        self.run()
+        self.__run()
 
     @lock_fn
     def stop(self):
@@ -91,8 +100,7 @@ class Service:
         kill_pid_and_children(self.proc.pid)
         self.proc = None
 
-    @lock_fn
-    def run(self):
+    def __run(self):
         print(f"Starting service {self.__args['service_name']}:", end=" ")
 
         # Create the logger server, which allows
@@ -116,7 +124,7 @@ class Service:
         environ["PATH"] = "/usr/sbin:/sbin:" + environ["PATH"]
         proc = self.proc = subprocess.Popen([
             sys.executable, '-m',
-            'speedysvc.client_server.shared_memory.MultiProcessManager',
+            'speedysvc.client_server.MultiProcessManager',
             json.dumps(self.__args)
         ], env=environ)
 

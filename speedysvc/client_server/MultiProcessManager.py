@@ -1,4 +1,5 @@
-import sys, os
+import os
+import sys
 import time
 import json
 import signal
@@ -9,13 +10,14 @@ import importlib
 import subprocess
 from sys import argv
 from os import getpid
-from typing import Object
+from pathlib import Path
 from warnings import warn
+from typing import Optional
 from multiprocessing import cpu_count
 
-from speedysvc.kill_pid_and_children import kill_pid_and_children
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.client_server.network.NetworkServer import NetworkServer
+from speedysvc.toolkit.kill_pid_and_children import kill_pid_and_children
 from speedysvc.client_server.SpeedySVCClientFormatter import SpeedySVCClientFormatter
 from speedysvc.hybrid_lock import SemaphoreDestroyedException, NoSuchSemaphoreException
 from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager, CONNECT_TO_EXISTING
@@ -49,19 +51,25 @@ class MultiProcessServer:
                  port: int,
 
                  client_module: str,
-                 server_methods: SpeedySVCService,
-                 host: str=None,
-                 tcp_allow_insecure_serialisation=False,
+                 server_methods,
 
-                 min_proc_num=1,
-                 max_proc_num=cpu_count(),
-                 max_proc_mem_bytes=None,
+                 log_dir: str,
+                 fifo_json_log_parent: str,
 
-                 new_proc_cpu_pc=0.3,
-                 new_proc_avg_over_secs=20,
-                 kill_proc_avg_over_secs=240,
+                 host: str = None,
+                 tcp_allow_insecure_serialisation: bool = False,
 
-                 wait_until_completed=True
+                 min_proc_num: int = 1,
+                 max_proc_num: int = cpu_count(),
+                 max_proc_mem_bytes: Optional[int] = None,
+
+                 new_proc_cpu_pc: Optional[float] = 0.3,
+                 new_proc_avg_over_secs: int = 20,
+                 kill_proc_avg_over_secs: int = 240,
+
+                 wait_until_completed: bool = True,
+
+
                  ):
         """
         Create a manager for a given service, which has child worker processes.
@@ -148,7 +156,9 @@ class MultiProcessServer:
         self.shutting_down = False
         self.started_collecting_data = False
         debug("Creating logger client...")
-        self.logger_client = LoggerClient(server_methods)
+        self.logger_client = LoggerClient(service_server_methods=server_methods,
+                                          port=port,
+                                          service_name=service_name)
 
         if self.client_module:
             self.__generate_client_module()
@@ -240,7 +250,7 @@ class MultiProcessServer:
         }
 
         if sys.platform != 'win32':
-            from speedysvc.client_server.shared_memory._service_worker import _service_worker
+            from speedysvc.client_server._service_worker import _service_worker
             from os import fork
 
             pid = fork()
@@ -477,7 +487,13 @@ class MultiProcessServer:
 
 
 def main(args_dict):
-    module_name, class_name = args_dict.pop('server_module').split(':')
+    # [TestService]
+    # service_name=test_server_methods
+    # port=5535
+    # server_module=TestService
+
+    module_name = args_dict.pop('server_module')
+    class_name = args_dict.pop('service_class_name')
     module = importlib.import_module(module_name)
     args_dict['server_methods'] = getattr(module, class_name)
     mps = MultiProcessServer(**args_dict)

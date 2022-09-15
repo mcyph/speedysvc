@@ -12,16 +12,18 @@ from speedysvc.client_server.network.NetworkServer import NetworkServer
 
 
 def debug(*s):
-    if False:
+    if True:
         print(*s)
 
 
-def _service_worker(server_methods):
+def _service_worker(server_methods, port):
     """
     In child processes of MultiProcessManager
     """
     debug(f"{server_methods.name} child: Creating logger client")
-    logger_client = LoggerClient(server_methods)
+    logger_client = LoggerClient(service_server_methods=server_methods,
+                                 port=port,
+                                 service_name=service_name)
     debug(f"{server_methods.name} child: Creating server methods")
     smi = server_methods(logger_client)
     debug(f"{server_methods.name} child: "
@@ -65,7 +67,7 @@ def _service_worker(server_methods):
 
 if __name__ == '__main__':
     DArgs = json.loads(argv[-1])
-    #print("**CHILD WORKER DARGS:", DArgs)
+    print("**CHILD WORKER DARGS:", DArgs)
     module = importlib.import_module(DArgs.pop('import_from'))
     DArgs['server_methods'] = getattr(module, DArgs.pop('section'))
     _service_worker(**DArgs)

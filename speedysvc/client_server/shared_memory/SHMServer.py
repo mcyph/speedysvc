@@ -10,7 +10,7 @@ from speedysvc.client_server.base_classes.ServerProviderBase import ServerProvid
 from speedysvc.client_server.shared_memory.shared_params import INVALID, SERVER, CLIENT
 from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager
 from speedysvc.hybrid_lock import NoSuchSemaphoreException, SemaphoreDestroyedException, SemaphoreExistsException
-
+from speedysvc.service_method import FunctionMetaData
 
 _monitor_pids_started = [False]
 _shm_servers_list = []
@@ -53,7 +53,10 @@ class SHMServer(SHMBase, ServerProviderBase):
 
         # NOTE: init_resources should only be called if creating from scratch -
         # if connecting to an existing socket, init_resources should be False!
-        ServerProviderBase.__init__(self, server_methods)
+        ServerProviderBase.__init__(self,
+                                    server_methods=server_methods,
+                                    service_name=service_name,
+                                    port=port)
 
         self.port = port
         self.service_name = service_name

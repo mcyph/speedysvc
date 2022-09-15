@@ -1,5 +1,6 @@
 import sys
 import time
+from json import loads as _loads, dumps as _dumps
 from os import getpid
 from queue import Queue, Empty
 import traceback
@@ -7,7 +8,6 @@ from _thread import allocate_lock, start_new_thread
 
 from speedysvc.logger.std_logging.LoggerServer import LoggerServer
 from speedysvc.client_server.shared_memory.SHMClient import SHMClient
-from speedysvc.client_server.base_classes.ClientMethodsBase import ClientMethodsBase
 from speedysvc.logger.std_logging.log_entry_types import \
     NOTSET, DEBUG, INFO, ERROR, WARNING, CRITICAL, STDOUT, STDERR
 
@@ -22,8 +22,16 @@ _old_stdout = sys.stdout
 _old_stderr = sys.stderr
 
 
-class LoggerClient(ClientMethodsBase):
-    def __init__(self, service_server_methods):
+def dumps(o):
+    return _dumps(o, ensure_ascii=False).encode('utf-8')
+
+
+def loads(s):
+    return _loads(s.decode('utf-8'))
+
+
+class LoggerClient:
+    def __init__(self, service_server_methods, port, service_name):
         """
         A basic logger which sends stderr/stdout
         output to a logging server
@@ -35,9 +43,11 @@ class LoggerClient(ClientMethodsBase):
         # associated with the service itself.
         self.service_server_methods = service_server_methods
 
-        self.client = SHMClient(LoggerServer, port=f'{service_server_methods.port}_log',
-                                use_spinlock=False, use_in_process_lock=True)
-        ClientMethodsBase.__init__(self, client_provider=self.client)
+        self.client = SHMClient(port=f'{port}_log',
+                                service_name=f'{service_name}_log',
+                                use_spinlock=False,
+                                use_in_process_lock=True)
+
         self.stderr_logger = self._StdErrLogger(self)
         self.stdout_logger = self._StdOutLogger(self)
         self.__shut_me_down = False
@@ -123,7 +133,7 @@ class LoggerClient(ClientMethodsBase):
         :param log_params:
         :return:
         """
-        self.send(LoggerServer._write_to_log_, log_params)
+        self.client.send(b'_write_to_log_', log_params)
 
     def _update_method_stats_(self):
         """
@@ -138,39 +148,39 @@ class LoggerClient(ClientMethodsBase):
                 # DMetadata = {'num_calls': ..., 'total_time': ...}
                 DStats[name] = attr.metadata
 
-        self.send(LoggerServer._update_method_stats_, [self.pid, DStats])
+        self.client.send(b'_update_method_stats_', dumps([self.pid, DStats]))
 
     #=========================================================#
     #                     Service Status                      #
     #=========================================================#
 
     def get_service_status(self):
-        return self.send(LoggerServer.get_service_status, [])
+        return self.client.send(b'get_service_status', dumps([]))
 
     def set_service_status(self, status):
-        return self.send(LoggerServer.set_service_status, [status])
+        return self.client.send(b'set_service_status', dumps([status]))
 
     #=========================================================#
     #                Service Time Series Data                 #
     #=========================================================#
 
     def get_last_record(self):
-        return self.send(LoggerServer.get_last_record, [])
+        return loads(self.client.send(b'get_last_record', dumps([])))
 
     def get_average_over(self, from_time, to_time):
-        return self.send(LoggerServer.get_average_over, [from_time, to_time])
+        return loads(self.client.send(b'get_average_over', dumps([from_time, to_time])))
 
     def add_pid(self, pid):
-        return self.send(LoggerServer.add_pid, [pid])
+        return loads(self.client.send(b'add_pid', dumps([pid])))
 
     def remove_pid(self, pid):
-        return self.send(LoggerServer.remove_pid, [pid])
+        return loads(self.client.send(b'remove_pid', dumps([pid])))
 
     def start_collecting(self):
-        return self.send(LoggerServer.start_collecting, [])
+        return loads(self.client.send(b'start_collecting', dumps([])))
 
     def stop_collecting(self):
-        return self.send(LoggerServer.stop_collecting, [])
+        return loads(self.client.send(b'stop_collecting', dumps([])))
 
     #=================================================================#
     #                      User-Callable Methods                      #

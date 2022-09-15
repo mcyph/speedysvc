@@ -13,7 +13,10 @@ env = Environment(loader=FileSystemLoader(os.path.join(
 web_service_manager = WebServiceManager(env)
 
 
-def run_server(services=(), debug=False, host='127.0.0.1', port=5155):
+def run_server(services=(),
+               debug: bool = False,
+               host: str = '127.0.0.1',
+               port: int = 5155):
     """
     Should be called with a list of
     MultiProcessManager's and/or InProcessManager's

@@ -87,6 +87,8 @@ def _convert_values(values):
         'service_name': lambda x: x,
         'log_dir': lambda x: x,
         'host': lambda x: x,
+        'server_module': lambda x: x,
+        'import_from': lambda x: x,
         'tcp_allow_insecure_serialisation': convert_bool,
         'max_proc_num': greater_than_0_int,
         'min_proc_num': greater_than_0_int,
@@ -144,20 +146,22 @@ class Services:
     #====================================================================#
 
     def start_all_services(self):
-        for service_class_name in self.services.keys():
+        for service_class_name in self.values_dict.keys():
             # Note that values_dict is an OrderedDict, which means services
             # are created in the order they're defined in the .ini file.
-            self.start_service_by_name(service_class_name)
+            self.start_service_by_class_name(service_class_name)
 
-    def start_service_by_name(self, service_class_name):
+    def start_service_by_class_name(self, service_class_name):
         section_dict = self.values_dict[service_class_name].copy()
         args_dict = self.defaults_dict.copy()
         args_dict.update(_convert_values(section_dict))
+        args_dict['service_class_name'] = service_class_name
 
-        import_from = section_dict.pop('import_from')
-        server_methods = getattr(importlib.import_module(import_from), service_class_name)
-        s = Service(server_methods, **args_dict)
-        self.services[service_class_name] = s
-        self.services_by_port[args_dict['port']] = s
-        return s
+        if args_dict['service_name'] not in self.services:
+            s = Service(**args_dict)
+            self.services[args_dict['service_name']] = s
+            self.services_by_port[args_dict['port']] = s
+
+        self.services[args_dict['service_name']].start()
+        return self.services[args_dict['service_name']]
 

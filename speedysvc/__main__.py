@@ -9,6 +9,8 @@ from speedysvc.web_monitor.app import web_service_manager, run_server
 if __name__ == '__main__':
     services = Services()
     web_service_manager.set_services(services)
+    services.start_all_services()
+
     print("Services started - starting web monitoring interface")
 
     # OPEN ISSUE: Allow binding to a specific address here? ====================================
