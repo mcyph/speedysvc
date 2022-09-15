@@ -1,43 +1,45 @@
-from speedysvc.client_server.base_classes.ServerMethodsBase import \
-    ServerMethodsBase
-from speedysvc.rpc_decorators import \
-    json_method, raw_method, pickle_method, \
-    msgpack_method, marshal_method#, arrow_method
+from typing import Any
+
+from speedysvc.service_method import service_method
+from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
 
 
-class TestServerMethods(ServerMethodsBase):
-    port = 5555
-    name = 'echo_serv'
+class TestServerMethods(ServerProviderBase):
+    def __init__(self,
+                 server_methods: Any,
+                 port: int = 5555,
+                 service_name: str = 'echo_serv'):
+        ServerProviderBase.__init__(self, server_methods, port, service_name)
 
-    def __init__(self, logger_client):
-        ServerMethodsBase.__init__(self, logger_client)
-
-    @json_method
+    @service_method()
     def test_defaults(self, data, default='test'):
-        return (data, default)
+        return data, default
 
-    @json_method
+    @service_method()
     def test_json_echo(self, data):
         return data
 
-    @raw_method
+    @service_method()
     def test_raw_echo(self, data):
         #print("RAW DATA LEN:", len(data))
         return data
 
-    @raw_method
+    @service_method()
     def test_raw_return_len(self, data):
         return b'Z'*int(data)
 
-    @pickle_method
+    @service_method(params='pickle',
+                    returns='pickle')
     def test_pickle_echo(self, data):
         return data
 
-    @marshal_method
+    @service_method(params='marshal',
+                    returns='marshal')
     def test_marshal_echo(self, data):
         return data
 
-    @msgpack_method
+    @service_method(params='msgpack',
+                    returns='msgpack')
     def test_msgpack_method(self, data):
         return data
 

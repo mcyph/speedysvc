@@ -13,7 +13,6 @@ from speedysvc.toolkit.io.make_dirs import make_dirs
 from speedysvc.web_monitor.app import web_service_manager
 from speedysvc.toolkit.py_ini.read.ReadIni import ReadIni
 from speedysvc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
-from speedysvc.toolkit.kill_pid_and_children import kill_pid_and_children
 from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
 
 
@@ -32,17 +31,17 @@ def signal_handler(sig, frame):
 
     waiting_num = [0]
 
-    def wait_to_exit(proc):
+    def wait_to_exit(service):
         try:
-            print("Main service waiting for PID to exit:", proc.pid)
-            kill_pid_and_children(proc.pid)
+            print("Main service waiting for PID to exit:", service.get_pid())
+            service.stop()
         finally:
             waiting_num[0] -= 1
 
     for services in _ALL_INSTS:
-        for _proc in FIXME:
+        for service_name, service in services.iter_services_by_name():
             waiting_num[0] += 1
-            _thread.start_new_thread(wait_to_exit, (_proc,))
+            _thread.start_new_thread(wait_to_exit, (service,))
 
     while waiting_num[0]:
         time.sleep(0.01)
@@ -117,7 +116,7 @@ class Services:
         else:
             self.defaults_dict = defaults_dict = {}
 
-        if not 'log_dir' in defaults_dict:
+        if 'log_dir' not in defaults_dict:
             # Note this - the logger parent always uses the "default" dir currently
             defaults_dict['log_dir'] = '/tmp/shmrpc_logs'
 

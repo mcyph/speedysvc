@@ -1,16 +1,16 @@
 import timeit
 import multiprocessing
 
-from speedysvc.client_server.base_classes.ClientMethodsBase import ClientMethodsBase
+from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
 from speedysvc.test.test_server import TestServerMethods as srv
 from speedysvc.client_server.network.NetworkClient import NetworkClient
 from speedysvc.client_server.shared_memory.SHMClient import SHMClient
 from speedysvc.client_server.connect import connect
 
 
-class TestClientMethods(ClientMethodsBase):
+class TestClientMethods(ClientProviderBase):
     def __init__(self, client_provider):
-        ClientMethodsBase.__init__(self, client_provider)
+        ClientProviderBase.__init__(self, client_provider)
 
     test_defaults = srv.test_defaults.as_rpc()
     test_json_echo = srv.test_json_echo.as_rpc()

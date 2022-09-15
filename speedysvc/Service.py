@@ -66,6 +66,9 @@ class Service:
     def get_logger_server(self):
         return self.logger_server
 
+    def get_pid(self):
+        return self.proc.pid
+
     @lock_fn
     def start(self):
         # print("SECTION:", section)
