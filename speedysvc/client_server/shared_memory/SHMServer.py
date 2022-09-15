@@ -3,6 +3,7 @@ import time
 import traceback
 from os import getpid
 from _thread import start_new_thread
+from typing import Optional
 
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
@@ -246,7 +247,7 @@ class SHMServer(SHMBase, ServerProviderBase):
             cmd_len, args_len = self.request_serialiser.unpack(mmap[1:1 + self.request_serialiser.size])
             cmd = mmap[1+size : 1+size+cmd_len].decode('ascii')
             args = mmap[1+size+cmd_len : 1+size+cmd_len+args_len]
-            metadata: FunctionMetaData = None
+            metadata: Optional[FunctionMetaData] = None
 
             try:
                 if cmd == '$iter_next$':
@@ -261,7 +262,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                             del iterators[int(args)]
                             break
 
-                    result = metadata.returns_serialiser.dumps(out)
+                    result = metadata.return_serialiser.dumps(out)
                     metadata = None  # don't add to stats below
 
                 elif cmd == '$iter_destroy$':
@@ -290,11 +291,11 @@ class SHMServer(SHMBase, ServerProviderBase):
                     # encode "+" with length to say the call succeeded
                     if metadata.returns_iterator:
                         # TODO: Return an id, then stash the iterator for later referring to it
-                        iterators[current_iterator_id] = FIXME
+                        iterators[current_iterator_id] = metadata, iter(fn(*var_positional, **var_keyword))  # CHECK THIS!
                         result = str(current_iterator_id).encode('ascii')
                         current_iterator_id += 1
                     else:
-                        result = metadata.returns_serialiser.dumps(fn(*var_positional, **var_keyword))
+                        result = metadata.return_serialiser.dumps(fn(*var_positional, **var_keyword))
 
                 encoded = self.response_serialiser.pack(b'+', len(result)) + result
 

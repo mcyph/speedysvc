@@ -146,7 +146,8 @@ class LoggerClient:
             attr = getattr(self.service_server_methods, name)
             if hasattr(attr, 'metadata'):
                 # DMetadata = {'num_calls': ..., 'total_time': ...}
-                DStats[name] = attr.metadata
+                DStats[name] = {'num_calls': attr.metadata.num_calls,
+                                'total_time': attr.metadata.total_time}
 
         self.client.send(b'_update_method_stats_', dumps([self.pid, DStats]))
 
