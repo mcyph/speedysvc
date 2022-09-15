@@ -5,10 +5,10 @@ import json
 import subprocess
 from typing import Optional
 
-from speedysvc.client_server.shared_memory.SHMResourceManager import lock_fn
-from speedysvc.logger.std_logging.LoggerServer import LoggerServer
 from speedysvc.toolkit.io.make_dirs import make_dirs
+from speedysvc.logger.std_logging.LoggerServer import LoggerServer
 from speedysvc.toolkit.kill_pid_and_children import kill_pid_and_children
+from speedysvc.client_server.shared_memory.SHMResourceManager import lock_fn
 
 
 class Service:
