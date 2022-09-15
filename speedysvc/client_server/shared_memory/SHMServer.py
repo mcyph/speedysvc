@@ -117,7 +117,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         """
         created_set, exited_set = self.resource_manager.get_created_exited_client_pids(self.pid_threads_set)
         if created_set or exited_set:
-            debug(f"{self.name}:{self.port}[{self.pid_threads_set}] SCREATED: {created_set} SEXITED: {exited_set}")
+            debug(f"{self.service_name}:{self.port}[{self.pid_threads_set}] SCREATED: {created_set} SEXITED: {exited_set}")
         else:
             debug(self.pid_threads_set, self.resource_manager.get_client_pids())
 
@@ -146,7 +146,7 @@ class SHMServer(SHMBase, ServerProviderBase):
             debug("EXISTENTIAL ERROR:", pid, qid)
             return
 
-        debug(f"SHMServer {self.name} started new worker "
+        debug(f"SHMServer {self.service_name} started new worker "
               f"thread for pid {pid} subid {qid}")
         do_spin = True
 
@@ -164,7 +164,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                     pass
 
                 self.shutdown_ok = not len(self.pid_threads_set)
-                debug(f"Signal to shutdown SHMServer {self.name} "
+                debug(f"Signal to shutdown SHMServer {self.service_name} "
                       f"in worker thread for pid {pid} subid {qid} caught: "
                       f"returning ({len(self.pid_threads_set)} remaining)")
                 return
@@ -180,7 +180,7 @@ class SHMServer(SHMBase, ServerProviderBase):
             except SemaphoreDestroyedException:
                 # In this case, the lock was likely destroyed by the client
                 # and should propagate the error, rather than forever logging
-                debug(f"Lock for service {self.name} "
+                debug(f"Lock for service {self.service_name} "
                       f"in worker thread for pid {pid} subid {qid} was destroyed: "
                       f"returning ({len(self.pid_threads_set)} remaining)")
                 return
@@ -229,7 +229,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                     num_times += 1
                 else:
                     # Connection destroyed? (Windows)
-                    raise SemaphoreDestroyedException(f"Service {self.name} pid/qid {pid}:"
+                    raise SemaphoreDestroyedException(f"Service {self.service_name} pid/qid {pid}:"
                                                       f"{qid} unknown state: %s" % mmap[0])
 
             # Measure for complete time it takes from
@@ -297,7 +297,7 @@ class SHMServer(SHMBase, ServerProviderBase):
 
             except Exception as exc:
                 # Output to stderr log for the service
-                sys.stderr.write(f"Service {self.name} error handling method: {fn}\n")
+                sys.stderr.write(f"Service {self.service_name} error handling method: {fn}\n")
                 traceback.print_exc()
 
                 # Just send a basic Exception instance for now, but would be nice

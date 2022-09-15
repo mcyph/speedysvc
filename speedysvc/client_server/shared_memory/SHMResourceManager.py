@@ -4,7 +4,6 @@ import time
 import psutil
 import _thread
 from typing import Set
-from psutil import pid_exists
 
 from speedysvc.ipc.JSONMMapBase import JSONMMapBase
 from speedysvc.is_pid_still_alive import is_pid_still_alive

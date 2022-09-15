@@ -75,15 +75,14 @@ class SHMClient(ClientProviderBase, SHMBase):
 
     def send(self,
              cmd: bytes,
-             data: bytes,
-             timeout: int = -1) -> bytes:
+             data: bytes) -> bytes:
 
         if self.use_in_process_lock:
             with self._in_process_lock:
                 num_times = 0
                 while True:
                     try:
-                        return self._send(cmd, data, timeout)
+                        return self._send(cmd, data)
                     except ResendError:
                         if num_times > 20:
                             raise ResendError(f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!")
@@ -93,7 +92,7 @@ class SHMClient(ClientProviderBase, SHMBase):
             num_times = 0
             while True:
                 try:
-                    return self._send(cmd, data, timeout)
+                    return self._send(cmd, data)
                 except ResendError:
                     if num_times > 20:
                         raise ResendError(f"Client [pid {getpid()}:qid {self.qid}]: Resent too many times!")
@@ -102,8 +101,7 @@ class SHMClient(ClientProviderBase, SHMBase):
 
     def _send(self,
               cmd: bytes,
-              data: bytes,
-              timeout: int = -1) -> bytes:
+              data: bytes) -> bytes:
 
         encoded_request = self.request_serialiser.pack(len(cmd), len(data)) + cmd + data
         mmap = self.mmap

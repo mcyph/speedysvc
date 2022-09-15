@@ -15,6 +15,7 @@ class NetworkClient(ClientProviderBase):
                  port: int,
                  host: str = '127.0.0.1',
                  compression_inst=zlib_compression):
+
         self.host = host
         self.port = port
         self.lock = allocate_lock()
@@ -41,8 +42,7 @@ class NetworkClient(ClientProviderBase):
             return self._send(fn, data)
 
     def _send(self, fn, data: bytes):
-        actually_compressed, data = \
-            self.compression_inst.compress(data)
+        actually_compressed, data = self.compression_inst.compress(data)
         cmd = fn.__name__.encode('ascii')
         prefix = len_packer.pack(int(actually_compressed), len(data), len(cmd))
 
@@ -73,12 +73,10 @@ class NetworkClient(ClientProviderBase):
             except (socket.error, ConnectionResetError):
                 if not displayed_reconnect_msg:
                     displayed_reconnect_msg = True
-                    warnings.warn(
-                        f"Client [pid {getpid()}]: "
-                        f"TCP connection to service "
-                        f"{self.service_name} reset - "
-                        f"the service may need to be checked/restarted!"
-                    )
+                    warnings.warn(f"Client [pid {getpid()}]: "
+                                  f"TCP connection to service "
+                                  f"{self.service_name} reset - "
+                                  f"the service may need to be checked/restarted!")
 
                 while True:
                     try:

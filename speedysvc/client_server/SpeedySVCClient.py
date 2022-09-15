@@ -1,6 +1,7 @@
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, Union, List
 
 from speedysvc.client_server.connect import connect
+from speedysvc.compression.compression_types import snappy_compression
 
 
 class _RemoteIterator:
@@ -42,7 +43,6 @@ class SpeedySVCClient:
 
         self.__address = address
         self.__use_spinlock = use_spinlock
-        self.__bind_ip = bind_ip
         self.__client_inst = connect(address=address,
                                      use_spinlock=use_spinlock,
                                      use_in_process_lock=use_in_process_lock,
@@ -53,8 +53,7 @@ class SpeedySVCClient:
                          method_name: str,
                          data: bytes):
         r = self.__client_inst.send(cmd=method_name,
-                                    args=from_method.params_serialiser.dumps(data),
-                                    timeout=-1)
+                                    data=from_method.params_serialiser.dumps(data))
         return from_method.return_serialiser.deserialise(r)
 
     def _iter_remote_raw(self,
@@ -62,8 +61,7 @@ class SpeedySVCClient:
                          method_name: str,
                          data: bytes):
         iterator_id = self.__client_inst.send(cmd=method_name,
-                                              args=from_method.params_serialiser.dumps(data),
-                                              timeout=-1)
+                                              data=from_method.params_serialiser.dumps(data))
         iterator_id = int(iterator_id)
         return _RemoteIterator(self.__client_inst, from_method, iterator_id)
 
@@ -74,11 +72,10 @@ class SpeedySVCClient:
                      var_positional: Optional[Tuple],
                      var_keyword: Optional[Dict]):
         r = self.__client_inst.send(cmd=method_name,
-                                    args=from_method.params_serialiser.dumps([
+                                    data=from_method.params_serialiser.dumps([
                                         positional+var_positional if var_positional else positional,
                                         var_keyword
-                                    ]),
-                                    timeout=-1)
+                                    ]))
         return from_method.return_serialiser.deserialise(r)
 
     def _iter_remote(self,
@@ -88,10 +85,9 @@ class SpeedySVCClient:
                      var_positional: Optional[Tuple],
                      var_keyword: Optional[Dict]):
         iterator_id = self.__client_inst.send(cmd=method_name,
-                                              args=from_method.params_serialiser.dumps([
+                                              data=from_method.params_serialiser.dumps([
                                                   positional + var_positional if var_positional else positional,
                                                   var_keyword
-                                              ]),
-                                              timeout=-1)
+                                              ]))
         iterator_id = int(iterator_id)
         return _RemoteIterator(self.__client_inst, from_method, iterator_id)

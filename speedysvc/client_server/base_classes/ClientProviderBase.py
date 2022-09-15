@@ -17,11 +17,6 @@ class ClientProviderBase(ABC):
     MAX_CONNECTIONS = 500
 
     def _acquire_lock(self):
-        """
-        TODO: Make me generic between implementations!! ==================================================
-
-        :return:
-        """
         #print('Acquire shm lock:', end=' ')
 
         x = 0
@@ -67,11 +62,6 @@ class ClientProviderBase(ABC):
         pass
 
     def _handle_exception(self, response_data):
-        """
-
-        :param response_data:
-        :return:
-        """
         response_data = response_data[1:].decode('utf-8', errors='replace')
         if '(' in response_data:
             exc_type, _, remainder = response_data[:-1].partition('(')
