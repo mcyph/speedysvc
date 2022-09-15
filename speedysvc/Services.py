@@ -3,6 +3,8 @@ import sys
 import json
 import time
 import signal
+from typing import Iterator, Tuple
+
 import psutil
 import _thread
 import importlib
@@ -11,11 +13,13 @@ from sys import argv
 from os import getpid
 from multiprocessing import cpu_count
 
+from speedysvc.Service import Service
+from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
 from speedysvc.toolkit.io.make_dirs import make_dirs
 from speedysvc.toolkit.py_ini.read.ReadIni import ReadIni
 from speedysvc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
-from speedysvc.kill_pid_and_children import kill_pid_and_children
 from speedysvc.logger.std_logging.LoggerServer import LoggerServer
+from speedysvc.toolkit.kill_pid_and_children import kill_pid_and_children
 from speedysvc.web_monitor.app import web_service_manager, run_server  # TODO: Decouple from this?
 
 
@@ -41,9 +45,10 @@ def signal_handler(sig, frame):
         finally:
             waiting_num[0] -= 1
 
-    for _proc in services.DProcByName.values():
-        waiting_num[0] += 1
-        _thread.start_new_thread(wait_to_exit, (_proc,))
+    for services in _ALL_INSTS:
+        for _proc in FIXME:
+            waiting_num[0] += 1
+            _thread.start_new_thread(wait_to_exit, (_proc,))
 
     while waiting_num[0]:
         time.sleep(0.01)
@@ -63,7 +68,7 @@ def signal_handler(sig, frame):
 signal.signal(signal.SIGINT, signal_handler)
 
 
-def __convert_values(values):
+def _convert_values(values):
     def convert_bool(i):
         return {
             'true': True,
@@ -98,8 +103,13 @@ def __convert_values(values):
     return {k: arg_keys[k](v) for k, v in values.items()}
 
 
+_ALL_INSTS = []
+
+
 class Services:
     def __init__(self):
+        _ALL_INSTS.append(self)
+
         self.services = {}
         self.services_by_port = {}
         self.DValues = ReadIni().read_D(argv[-1])
@@ -109,7 +119,7 @@ class Services:
 
         if 'defaults' in self.DValues:
             defaults_dict = self.DValues.pop('defaults')
-            self.defaults_dict = defaults_dict = __convert_values(defaults_dict)
+            self.defaults_dict = defaults_dict = _convert_values(defaults_dict)
         else:
             self.defaults_dict = defaults_dict = {}
 
@@ -132,7 +142,7 @@ class Services:
     def get_service_by_name(self, service_name: str) -> Service:
         return self.services[service_name]
 
-    def iter_services_by_name(self):
+    def iter_services_by_name(self) -> Iterator[Tuple[str, ServerProviderBase]]:
         for service in sorted(self.services, key=lambda i: i.lower()):
             yield service, self.services[service]
 
@@ -144,17 +154,17 @@ class Services:
         for service_class_name in self.services.keys():
             # Note that DValues is an OrderedDict, which means services
             # are created in the order they're defined in the .ini file.
-            self.start_service(service_class_name)
+            self.start_service_by_name(service_class_name)
 
     def start_service_by_name(self, service_class_name):
         section_dict = self.DValues[service_class_name].copy()
         args_dict = self.defaults_dict.copy()
-        args_dict.update({k: self.DArgKeys[k](v) for k, v in section_dict.items()})
+        args_dict.update(_convert_values(section_dict))
 
         import_from = section_dict.pop('import_from')
         server_methods = getattr(importlib.import_module(import_from), service_class_name)
         s = Service(server_methods, **args_dict)
-        self.services[service_name] = s
-        self.services_by_port[port] = s
+        self.services[service_class_name] = s
+        self.services_by_port[args_dict['port']] = s
         return s
 

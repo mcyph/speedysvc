@@ -68,9 +68,9 @@ class App:
             console_offset=console_offset,
             LOverallServiceMethods=web_service_manager.get_overall_service_methods(),
             services_json=([
-                (service.name, service.port)
-                for service
-                in web_service_manager.iter_services_by_name()
+                (service_inst.get_service_name(), service_inst.get_port())
+                for _, service_inst
+                in web_service_manager.services.iter_services_by_name()
             ])
         )
 

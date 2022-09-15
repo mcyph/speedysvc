@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from typing import Any, Optional, Dict, Callable
+
 from speedysvc.serialisation.serialisation_types import get_by_name
 
 

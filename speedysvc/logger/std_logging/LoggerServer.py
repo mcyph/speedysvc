@@ -9,12 +9,12 @@ from speedysvc.logger.std_logging.log_entry_types import \
 from speedysvc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
 from speedysvc.logger.time_series_data.ServiceTimeSeriesData import ServiceTimeSeriesData
 
-
 FLUSH_EVERY_SECONDS = 3.0
-
 
 _flush_loop_started = [False]
 _LLoggerServers = []
+
+
 def _check_flush_needed_loop():
     """
     Monitor whether a flush to disk of the logs is
@@ -39,22 +39,20 @@ def _check_flush_needed_loop():
 
 
 class LoggerServer:
-    def __init__(self, log_dir, server_methods,
+    def __init__(self,
+                 log_dir: str,
+                 server_name: str,
+                 server_port: int,
                  fifo_json_log_parent=None):
-        """
 
-        :param log_dir:
-        :param server_methods:
-        """
-        self.original_server_methods = server_methods
         self.status = 'stopped'
         self.LPIDs = []
 
-        # NOTE ME: I'm overriding the port so as to not have a
+        # NOTE ME: I'm overriding the port to not have a
         #          collision with the existing (integer) port,
         #          used by the original server.
-        self.port = port = f'{server_methods.port}_log'
-        self.name = f'{server_methods.name}_log'
+        self.port = port = f'{server_port}_log'
+        self.name = f'{server_name}_log'
 
         # Store the single value stats
         # (e.g. how long each individual call takes,
@@ -67,11 +65,11 @@ class LoggerServer:
         self.f_stdout = open(
             f'{log_dir}/{self.name}.stdout', 'ab+',
             buffering=8192
-        ) # binary??
+        )  # binary??
         self.stderr_lock = allocate_lock()
         self.f_stderr = open(
             f'{log_dir}/{self.name}.stderr', 'ab+',
-            buffering=8192 # LINE BUFFERED!
+            buffering=8192  # LINE BUFFERED!
         )
 
         # Create the memory cached log
@@ -99,8 +97,8 @@ class LoggerServer:
 
     def flush(self):
         """
-        Only flush the files periodically, so as to
-        reduce the amount IO affects performance
+        Only flush the files periodically to reduce
+        the amount IO affects performance
         """
         if self.flush_needed:
             with self.stderr_lock:
@@ -112,9 +110,9 @@ class LoggerServer:
                     self.fifo_json_log.flush()
             self.flush_needed = False
 
-    #=========================================================#
+    # =========================================================#
     #                Update Method Statistics                 #
-    #=========================================================#
+    # =========================================================#
 
     @json_method
     def _update_method_stats_(self, pid, DMethodStats):
@@ -131,17 +129,12 @@ class LoggerServer:
         # effectively a communications system from worker
         # servers->worker manager - perhaps this class should be
         # renamed to reflect its broader scope?
-        #SHMServerprint("LOGGER SERVER UPDATE STATS:", pid)
+        # SHMServerprint("LOGGER SERVER UPDATE STATS:", pid)
 
         self.DMethodStats[pid] = DMethodStats
 
     def get_D_method_stats(self):
-        """
-
-
-        :return:
-        """
-        #print("LOGGER SERVER GET METHOD STATS:")
+        # print("LOGGER SERVER GET METHOD STATS:")
         D = {}
 
         for pid, DMethodStats in self.DMethodStats.items():
@@ -161,9 +154,9 @@ class LoggerServer:
 
         return D
 
-    #=========================================================#
+    # =========================================================#
     #                 Write to stdout/stderr                  #
-    #=========================================================#
+    # =========================================================#
 
     @json_method
     def _write_to_log_(self, t, pid, port, service_name, msg, level):
@@ -206,27 +199,18 @@ class LoggerServer:
             import warnings
             warnings.warn("Warning: message overflow in fifo_json_log")
 
-    #=========================================================#
+    # =========================================================#
     #                     Service Status                      #
-    #=========================================================#
+    # =========================================================#
 
     @json_method
     def get_service_status(self):
-        """
-
-        :return:
-        """
-        #print("LOGGER SERVER GET STATUS:")
+        # print("LOGGER SERVER GET STATUS:")
         return self.status
 
     @json_method
     def set_service_status(self, status):
-        """
-
-        :param status:
-        :return:
-        """
-        #print("LOGGER SERVER STATUS:", status)
+        # print("LOGGER SERVER STATUS:", status)
         if status == 'started':
             self.loaded_ok = True
         elif status == 'stopped':
@@ -242,49 +226,29 @@ class LoggerServer:
 
         self.status = status
 
-    #=========================================================#
+    # =========================================================#
     #                Service Time Series Data                 #
-    #=========================================================#
+    # =========================================================#
 
     @json_method
     def get_last_record(self):
-        """
-
-        :return:
-        """
         return self.service_time_series_data.get_last_record()
 
     @json_method
     def get_average_over(self, from_time, to_time):
-        """
-
-        :param from_time:
-        :param to_time:
-        :return:
-        """
         return self.service_time_series_data.get_average_over(
             from_time, to_time
         )
 
     @json_method
     def add_pid(self, pid):
-        """
-
-        :param pid:
-        :return:
-        """
-        #print("LOGGER SERVER ADD PID", pid)
+        # print("LOGGER SERVER ADD PID", pid)
         self.LPIDs.append(pid)
         self.service_time_series_data.add_pid(pid)
 
     @json_method
     def remove_pid(self, pid):
-        """
-
-        :param pid:
-        :return:
-        """
-        #print("LOGGER SERVER REMOVE PID", pid)
+        # print("LOGGER SERVER REMOVE PID", pid)
         try:
             self.LPIDs.pop(pid)
         except IndexError:
@@ -300,17 +264,9 @@ class LoggerServer:
 
     @json_method
     def start_collecting(self):
-        """
-
-        :return:
-        """
-        #print("LOGGER SERVER START COLLECTING:")
+        # print("LOGGER SERVER START COLLECTING:")
         self.service_time_series_data.start_collecting()
 
     @json_method
     def stop_collecting(self):
-        """
-
-        :return:
-        """
         self.service_time_series_data.stop_collecting()

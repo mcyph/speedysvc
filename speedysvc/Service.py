@@ -1,4 +1,15 @@
+import os
+import sys
+import time
+import json
+import subprocess
 from typing import Optional
+
+from speedysvc.client_server.shared_memory.SHMResourceManager import lock_fn
+from speedysvc.logger.std_logging.LoggerServer import LoggerServer
+from speedysvc.toolkit.io.make_dirs import make_dirs
+from speedysvc.toolkit.kill_pid_and_children import kill_pid_and_children
+
 
 class Service:
     def __init__(self,
@@ -61,9 +72,7 @@ class Service:
         assert not self.started, \
             f"Service {self.__args['service_name']}:{self.__args['port']} has already been started!"
 
-        self.__run_multi_proc_server(server_methods,
-                                     **self.__args,
-                                     fifo_json_log_parent=self.fifo_json_log_parent)
+        self.run()
 
     @lock_fn
     def stop(self):
@@ -71,12 +80,11 @@ class Service:
             f"Service {self.__args['service_name']}:{self.__args['port']} can't be stopped if it hasn't been started!"
 
         self.logger_server.set_service_status('stopping')
-        proc = self.DProcByPort[port]
         self.logger_server.stop_collecting()
-        self.__kill_proc(proc)
+        self.__kill_proc()
         self.logger_server.set_service_status('stopped')
 
-    def __kill_proc(self, proc):
+    def __kill_proc(self,):
         kill_pid_and_children(self.proc.pid)
         self.proc = None
 
@@ -86,20 +94,19 @@ class Service:
 
         # Create the logger server, which allows
         # the services to communicate back with us
-        make_dirs(f"{self.log_dir}/{self.__args['service_name']}")
+        make_dirs(f"{self.__args['log_dir']}/{self.__args['service_name']}")
 
         if not self.logger_server:
             # Create a logger server for each service, persistent to this process
-            # This makes it so we can restart services
+            # This makes it, so we can restart services
             # While it would be nice to restart the logger too,
             # currently that'd require a fair amount of refactoring
-            logger_server = LoggerServer(log_dir=f"{self.__args['log_dir']}/{self.__args['service_name']}/",
-                                         server_methods=self.server_methods,
-                                         fifo_json_log_parent=self.fifo_json_log_parent)
-            self.logger_server = logger_server
+            self.logger_server = LoggerServer(log_dir=f"{self.__args['log_dir']}/{self.__args['service_name']}/",
+                                              server_name=self.__args['service_name'],
+                                              server_port=self.__args['port'],
+                                              fifo_json_log_parent=self.__args['fifo_json_log_parent'])
 
-        logger_server = self.DLoggerServersByPort[self.__args['port']]
-        logger_server.set_service_status('forking')
+        self.logger_server.set_service_status('forking')
 
         # Assemble relevant parameters
         environ = os.environ.copy()
@@ -110,11 +117,11 @@ class Service:
             json.dumps(self.__args)
         ], env=environ)
 
-        logger_server.proc = proc  # HACK!
-        logger_server.host = self.host  # HACK!
+        self.logger_server.proc = proc  # HACK!
+        self.logger_server.host = self.__args['host']  # HACK!
 
-        if wait_until_completed:
-            while logger_server.get_service_status() != 'started':
+        if self.__args['wait_until_completed']:
+            while self.logger_server.get_service_status() != 'started':
                 time.sleep(0.1)
 
         print('[OK]')

@@ -13,7 +13,12 @@ from posix.time cimport clock_gettime, timespec, CLOCK_REALTIME
 from posix.mman cimport PROT_READ, PROT_WRITE, MAP_SHARED, MAP_FAILED
 from posix.mman cimport mmap, shm_open, shm_unlink
 
+
+# NOTE: This line is needed to make this compile in some cases.
+#       Not sure what the reason is, but also not sure it's
+#       worth investigating further if it works
 STUFF = "hi"
+
 
 class SemaphoreExistsException(Exception):
     pass

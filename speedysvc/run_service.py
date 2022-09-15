@@ -1,4 +1,8 @@
-from speedysvc.services import Services
+import time
+import signal
+import _thread
+
+from speedysvc.Services import Services, signal_handler
 from speedysvc.web_monitor.app import web_service_manager, run_server
 
 
