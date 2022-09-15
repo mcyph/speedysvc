@@ -14,7 +14,7 @@ web_service_manager = WebServiceManager(env)
 
 
 def run_server(services=(),
-               debug: bool = False,
+               debug: bool = True,
                host: str = '127.0.0.1',
                port: int = 5155):
     """
@@ -64,7 +64,9 @@ class App:
 
     @cherrypy.expose
     def index(self):
+        print("GETTING OVERALL LOG")
         console_offset, console_text = web_service_manager.get_overall_log()
+        print("RENDERING:", console_offset, console_text)
         return env.get_template("index.html").render(
             LServices=web_service_manager.get_overall_service_table(),
             console_text=console_text,

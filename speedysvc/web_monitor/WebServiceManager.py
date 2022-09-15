@@ -77,7 +77,7 @@ class WebServiceManager:
         """
         L = []
         for service_name, service in self.services.iter_services_by_name():
-            DMethodStats = service.get_D_method_stats()
+            DMethodStats = service.get_logger_server().get_D_method_stats()
             L.extend([
                 (
                     service.get_port(),
@@ -113,7 +113,7 @@ class WebServiceManager:
         service = self.services.get_service_by_port(port)
         stsd = service.get_logger_server().service_time_series_data
         recent_values = stsd.get_recent_values()
-        offset, LHTML = service.fifo_json_log.get_html_log(offset=console_offset)
+        offset, LHTML = service.logger_server.fifo_json_log.get_html_log(offset=console_offset)
         method_stats_html = self.get_method_stats_html(port)
 
         D = {
@@ -147,7 +147,7 @@ class WebServiceManager:
             "name": service.get_service_name(),
             "bound_to_tcp": service.get_tcp_bind(),
             "status": service.get_logger_server().get_service_status(),
-            'workers': len(service.LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
+            'workers': len(service.get_logger_server().LPIDs),  # TODO: MAKE BASED ON INTERFACE, NOT IMPLEMENTATION!
             'physical_mem': recent_values[-1]['physical_mem'] // 1024 // 1024,
             # We'll average over 3 iterations, as this can spike pretty quickly.
             # Note that recent_values is actually reversed for displaying on the graph rtl
