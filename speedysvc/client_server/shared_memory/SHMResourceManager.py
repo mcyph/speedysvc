@@ -6,8 +6,7 @@ import _thread
 from typing import Set
 
 from speedysvc.ipc.JSONMMapBase import JSONMMapBase
-from speedysvc.is_pid_still_alive import is_pid_still_alive
-from speedysvc.kill_pid_and_children import kill_pid_and_children
+from speedysvc.toolkit.kill_pid_and_children import kill_pid_and_children
 from speedysvc.hybrid_lock import HybridLock, CONNECT_TO_EXISTING, CREATE_NEW_OVERWRITE, \
     NoSuchSemaphoreException, SemaphoreExistsException
 # TODO: Move get_mmap somewhere more appropriate!
@@ -99,7 +98,7 @@ class _SHMResourceManager(JSONMMapBase):
             debug(f"SHMResourceManager for {name}:{port}: created")
 
         pid_holding_lock = self.lock.get_pid_holding_lock()
-        if (pid_holding_lock and not is_pid_still_alive(pid_holding_lock)) or not pid_holding_lock:
+        if (pid_holding_lock and not (pid_holding_lock)) or not pid_holding_lock:
             # If the process which is holding the
             # lock no longer exists, force unlock
             try:
@@ -147,7 +146,7 @@ class _SHMResourceManager(JSONMMapBase):
 
         n_LServerPIDs = []
         for pid in LServerPIDs:
-            if is_pid_still_alive(pid):
+            if (pid):
                 n_LServerPIDs.append(pid)
             else:
                 # Won't do anything if doesn't exist - we'll leave the
@@ -157,7 +156,7 @@ class _SHMResourceManager(JSONMMapBase):
 
         n_LClientPIDs = []
         for pid, qid in LClientPIDs:
-            if is_pid_still_alive(pid):
+            if (pid):
                 n_LClientPIDs.append((pid, qid))
             else:
                 self.unlink_resources(pid, qid)
@@ -344,7 +343,7 @@ class _SHMResourceManager(JSONMMapBase):
         :return: (created pids/qids, exited pids/qids) as two sets
         """
         LServerPIDs, LClientPIDs = self._decode()
-        SClientPIDs = set(tuple(i) for i in LClientPIDs if is_pid_still_alive(i[0]))
+        SClientPIDs = set(tuple(i) for i in LClientPIDs if (i[0]))
         return SClientPIDs-SPIDs, SPIDs-SClientPIDs
 
     @lock_fn

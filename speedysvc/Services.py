@@ -105,13 +105,13 @@ class Services:
 
         self.services = {}
         self.services_by_port = {}
-        self.DValues = ReadIni().read_D(argv[-1])
+        self.values_dict = ReadIni().read_D(argv[-1])
 
-        self.DWebMonitor = self.DValues.pop('web monitor') \
-            if 'web monitor' in self.DValues else {}
+        self.web_monitor_dict = self.values_dict.pop('web monitor') \
+            if 'web monitor' in self.values_dict else {}
 
-        if 'defaults' in self.DValues:
-            defaults_dict = self.DValues.pop('defaults')
+        if 'defaults' in self.values_dict:
+            defaults_dict = self.values_dict.pop('defaults')
             self.defaults_dict = defaults_dict = _convert_values(defaults_dict)
         else:
             self.defaults_dict = defaults_dict = {}
@@ -145,12 +145,12 @@ class Services:
 
     def start_all_services(self):
         for service_class_name in self.services.keys():
-            # Note that DValues is an OrderedDict, which means services
+            # Note that values_dict is an OrderedDict, which means services
             # are created in the order they're defined in the .ini file.
             self.start_service_by_name(service_class_name)
 
     def start_service_by_name(self, service_class_name):
-        section_dict = self.DValues[service_class_name].copy()
+        section_dict = self.values_dict[service_class_name].copy()
         args_dict = self.defaults_dict.copy()
         args_dict.update(_convert_values(section_dict))
 

@@ -1,7 +1,7 @@
 import sys
 from datetime import datetime
 
-from speedysvc.Services import Services
+#from speedysvc.Services import Services
 
 
 LColours = [
@@ -18,7 +18,7 @@ class WebServiceManager:
         self.services = None
         self.logger_parent = None
 
-    def set_services(self, services: Services):
+    def set_services(self, services: 'Services'):
         self.services = services
 
     def set_logger_parent(self, logger_parent):

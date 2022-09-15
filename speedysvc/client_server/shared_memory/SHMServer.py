@@ -46,7 +46,7 @@ def debug(*s):
 
 class SHMServer(SHMBase, ServerProviderBase):
     def __init__(self,
-                 server_methods: SpeedySVCService,
+                 server_methods,
                  port: int,
                  service_name: str,
                  use_spinlock: bool = True):

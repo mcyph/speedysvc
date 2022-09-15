@@ -3,7 +3,7 @@ import psutil
 from _thread import allocate_lock, start_new_thread
 
 from speedysvc.client_server.shared_memory.SHMServer import SHMServer
-from speedysvc.rpc_decorators import raw_method, json_method
+from speedysvc.service_method import service_method
 from speedysvc.logger.std_logging.log_entry_types import \
     dict_to_log_entry, STDERR, STDOUT
 from speedysvc.logger.std_logging.FIFOJSONLog import FIFOJSONLog
@@ -114,7 +114,7 @@ class LoggerServer:
     #                Update Method Statistics                 #
     # =========================================================#
 
-    @json_method
+    @service_method()
     def _update_method_stats_(self, pid, DMethodStats):
         """
         Send method statistics to the central management interface
@@ -158,7 +158,7 @@ class LoggerServer:
     #                 Write to stdout/stderr                  #
     # =========================================================#
 
-    @json_method
+    @service_method()
     def _write_to_log_(self, t, pid, port, service_name, msg, level):
         """
 
@@ -203,12 +203,12 @@ class LoggerServer:
     #                     Service Status                      #
     # =========================================================#
 
-    @json_method
+    @service_method()
     def get_service_status(self):
         # print("LOGGER SERVER GET STATUS:")
         return self.status
 
-    @json_method
+    @service_method()
     def set_service_status(self, status):
         # print("LOGGER SERVER STATUS:", status)
         if status == 'started':
@@ -230,23 +230,23 @@ class LoggerServer:
     #                Service Time Series Data                 #
     # =========================================================#
 
-    @json_method
+    @service_method()
     def get_last_record(self):
         return self.service_time_series_data.get_last_record()
 
-    @json_method
+    @service_method()
     def get_average_over(self, from_time, to_time):
         return self.service_time_series_data.get_average_over(
             from_time, to_time
         )
 
-    @json_method
+    @service_method()
     def add_pid(self, pid):
         # print("LOGGER SERVER ADD PID", pid)
         self.LPIDs.append(pid)
         self.service_time_series_data.add_pid(pid)
 
-    @json_method
+    @service_method()
     def remove_pid(self, pid):
         # print("LOGGER SERVER REMOVE PID", pid)
         try:
@@ -262,11 +262,11 @@ class LoggerServer:
         except KeyError:
             pass
 
-    @json_method
+    @service_method()
     def start_collecting(self):
         # print("LOGGER SERVER START COLLECTING:")
         self.service_time_series_data.start_collecting()
 
-    @json_method
+    @service_method()
     def stop_collecting(self):
         self.service_time_series_data.stop_collecting()
