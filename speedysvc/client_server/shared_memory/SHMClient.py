@@ -28,7 +28,7 @@ class ResendError(Exception):
 
 
 def debug(*s):
-    if False:
+    if True:
         print(*s)
 
 
@@ -82,6 +82,7 @@ class SHMClient(ClientProviderBase, SHMBase):
                 num_times = 0
                 while True:
                     try:
+                        #print("Sending:", cmd, data)
                         return self._send(cmd, data)
                     except ResendError:
                         if num_times > 20:
@@ -131,10 +132,11 @@ class SHMClient(ClientProviderBase, SHMBase):
                 #debug("LOCKING CLIENT LOCK <- SERVER!", mmap[0] == SERVER, mmap[0] == CLIENT, cmd)
                 self.lock.lock(timeout=-1,
                                spin=int(self.use_spinlock))
-                #debug("LOCKED!")
+                #debug("LOCKED! " + str(mmap[0]))
 
             if mmap[0] == CLIENT:
                 # OK
+                #print("CLIENT FOUND!")
                 break
             elif mmap[0] == INVALID:
                 # Need to reconnect
@@ -143,6 +145,7 @@ class SHMClient(ClientProviderBase, SHMBase):
                 num_times += 1
             elif mmap[0] == SERVER:
                 # Server hasn't caught the request yet!
+                #print("SERVER CAN'T FIND!")
                 self.lock.unlock()
                 continue
             else:
@@ -188,12 +191,12 @@ class SHMClient(ClientProviderBase, SHMBase):
         mmap[0] = old_mmap_statuscode
         assert mmap[0] != INVALID
 
-        # debug(f"Client: New mmap size is {len(mmap)} bytes "
+        #debug(f"Client: New mmap size is {len(mmap)} bytes "
         #      f"for encoded_request length {len(encoded_request)}")
         return mmap
 
     def __reconnect_to_mmap(self, mmap):
-        # debug(f"Client: memory map has been marked as invalid")
+        #debug(f"Client: memory map has been marked as invalid")
         prev_len = len(mmap)
         mmap.close()
 

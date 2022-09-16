@@ -41,7 +41,7 @@ _DStatusStrings = {
 
 
 def debug(*s):
-    if False:
+    if True:
         print(*s)
 
 
@@ -52,6 +52,9 @@ class MultiProcessServer:
 
                  client_module: str,
                  server_methods,
+
+                 server_module: str,
+                 service_class_name: str,
 
                  log_dir: str,
                  fifo_json_log_parent: str,
@@ -117,6 +120,8 @@ class MultiProcessServer:
         self.service_name = service_name
         self.port = port
         self.client_module = client_module
+        self.server_module = server_module
+        self.service_class_name = service_class_name
 
         # This should probably always be callable directly,
         # so as to be able to create them in the child processes
@@ -216,6 +221,8 @@ class MultiProcessServer:
                     time.sleep(0.1)
 
                 self.network_server = NetworkServer(server_methods=self.server_methods,
+                                                    port=self.port,
+                                                    service_name=self.service_name,
                                                     bind_interface=self.host,
                                                     force_insecure_serialisation=self.tcp_allow_insecure_serialisation)
 
@@ -245,8 +252,10 @@ class MultiProcessServer:
         DEnv = os.environ.copy()
         DEnv["PATH"] = "/usr/sbin:/sbin:" + DEnv["PATH"]
         DArgs = {
-            'import_from': self.import_from,
-            'section': self.section,
+            'server_module': self.server_module,
+            'service_class_name': self.service_class_name,
+            'service_name': self.service_name,
+            'port': self.port,
         }
 
         if sys.platform != 'win32':
@@ -260,12 +269,8 @@ class MultiProcessServer:
                 # in order to make sure any module-level SHMClients report
                 # correct values with getpid(), and so we won't waste
                 # memory in this management process!
-
-                DArgs['server_methods'] = getattr(
-                    importlib.import_module(DArgs.pop('import_from')),
-                    DArgs.pop('section')
-                )
                 _service_worker(**DArgs)
+                raise Exception("Shouldn't get here!")
         else:
             proc = subprocess.Popen([
                 sys.executable, '-m',
@@ -285,8 +290,8 @@ class MultiProcessServer:
             if not self.started_collecting_data:
                 # The service time series data should only start
                 # once the process has started up
-                self.started_collecting_data = True
                 self.logger_client.start_collecting()
+                self.started_collecting_data = True
 
         if self.wait_until_completed:
             debug(f"{self.service_name} parent: Waiting for child to initialise...")
@@ -492,11 +497,13 @@ def main(args_dict):
     # port=5535
     # server_module=TestService
 
-    module_name = args_dict.pop('server_module')
-    class_name = args_dict.pop('service_class_name')
+    #print("STARTING MPM")
+    module_name = args_dict['server_module']
+    class_name = args_dict['service_class_name']
     module = importlib.import_module(module_name)
     args_dict['server_methods'] = getattr(module, class_name)
     mps = MultiProcessServer(**args_dict)
+    #print("MPS CREATED")
 
     _handling_sigint = [False]
 

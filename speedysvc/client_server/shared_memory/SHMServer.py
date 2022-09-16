@@ -212,7 +212,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         except TimeoutError:
             # Disable spinning for subsequent tries!
             do_spin = False
-            return do_spin, mmap
+            return do_spin, mmap, current_iterator_id
         #debug("SERVER LOCK OBTAINED:", pid, qid, do_spin, mmap[0] == SERVER, mmap[0] == CLIENT)
 
         try:
@@ -222,7 +222,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                 # Prepare for handling command
                 if mmap[0] == CLIENT:
                     # No command to process!
-                    return do_spin, mmap
+                    return do_spin, mmap, current_iterator_id
                 elif mmap[0] == SERVER:
                     # Command to process sent from client!
                     break
@@ -324,7 +324,7 @@ class SHMServer(SHMBase, ServerProviderBase):
 
         finally:
             lock.unlock()
-        return do_spin, mmap
+        return do_spin, mmap, current_iterator_id
 
     def __resize_mmap(self,
                       pid: int,

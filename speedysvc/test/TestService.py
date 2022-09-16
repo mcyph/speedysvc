@@ -4,7 +4,10 @@ from speedysvc.service_method import service_method
 from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
 
 
-class TestService(ServerProviderBase):
+class TestService:
+    def __init__(self, logger_client):
+        self.logger_client = logger_client
+
     @service_method()
     def test_defaults(self, data, default='test'):
         return data, default

@@ -133,7 +133,7 @@ class LoggerClient:
         :param log_params:
         :return:
         """
-        self.client.send(b'_write_to_log_', log_params)
+        self.client.send(b'_write_to_log_', dumps([log_params, {}]))
 
     def _update_method_stats_(self):
         """
@@ -149,39 +149,39 @@ class LoggerClient:
                 DStats[name] = {'num_calls': attr.metadata.num_calls,
                                 'total_time': attr.metadata.total_time}
 
-        self.client.send(b'_update_method_stats_', dumps([self.pid, DStats]))
+        self.client.send(b'_update_method_stats_', dumps([[self.pid, DStats], {}]))
 
     #=========================================================#
     #                     Service Status                      #
     #=========================================================#
 
     def get_service_status(self):
-        return self.client.send(b'get_service_status', dumps([]))
+        return loads(self.client.send(b'get_service_status', dumps([[], {}])))
 
     def set_service_status(self, status):
-        return self.client.send(b'set_service_status', dumps([status]))
+        return loads(self.client.send(b'set_service_status', dumps([[status], {}])))
 
     #=========================================================#
     #                Service Time Series Data                 #
     #=========================================================#
 
     def get_last_record(self):
-        return loads(self.client.send(b'get_last_record', dumps([])))
+        return loads(self.client.send(b'get_last_record', dumps([[], {}])))
 
     def get_average_over(self, from_time, to_time):
-        return loads(self.client.send(b'get_average_over', dumps([from_time, to_time])))
+        return loads(self.client.send(b'get_average_over', dumps([[from_time, to_time], {}])))
 
     def add_pid(self, pid):
-        return loads(self.client.send(b'add_pid', dumps([pid])))
+        return loads(self.client.send(b'add_pid', dumps([[pid], {}])))
 
     def remove_pid(self, pid):
-        return loads(self.client.send(b'remove_pid', dumps([pid])))
+        return loads(self.client.send(b'remove_pid', dumps([[pid], {}])))
 
     def start_collecting(self):
-        return loads(self.client.send(b'start_collecting', dumps([])))
+        return loads(self.client.send(b'start_collecting', dumps([[], {}])))
 
     def stop_collecting(self):
-        return loads(self.client.send(b'stop_collecting', dumps([])))
+        return loads(self.client.send(b'stop_collecting', dumps([[], {}])))
 
     #=================================================================#
     #                      User-Callable Methods                      #

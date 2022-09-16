@@ -79,7 +79,7 @@ class LoggerServer:
         )
         # Create the time series statistics data instance
         # (e.g. to record how much RAM etc each process is using)
-        self.service_time_series_data = ServiceTimeSeriesData()
+        self.service_time_series_data = ServiceTimeSeriesData(start_collecting_immediately=False)
 
         # Start the server
         assert port == self.port, (port, self.port)
@@ -90,6 +90,7 @@ class LoggerServer:
             service_name=self.name,
             # NOTE ME: This is normally called in the background, and performance shouldn't be a priority here
         )
+        self.shm_server.serve_forever_in_new_thread()
 
         self.flush_needed = False
         _LLoggerServers.append(self)
@@ -266,7 +267,7 @@ class LoggerServer:
 
     @service_method()
     def start_collecting(self):
-        # print("LOGGER SERVER START COLLECTING:")
+        print("LOGGER SERVER START COLLECTING:")
         self.service_time_series_data.start_collecting()
 
     @service_method()
