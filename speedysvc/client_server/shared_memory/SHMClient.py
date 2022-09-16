@@ -28,7 +28,7 @@ class ResendError(Exception):
 
 
 def debug(*s):
-    if True:
+    if False:
         print(*s)
 
 

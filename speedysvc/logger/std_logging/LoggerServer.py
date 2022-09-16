@@ -267,7 +267,6 @@ class LoggerServer:
 
     @service_method()
     def start_collecting(self):
-        print("LOGGER SERVER START COLLECTING:")
         self.service_time_series_data.start_collecting()
 
     @service_method()

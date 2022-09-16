@@ -84,7 +84,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         TODO: Create or connect to a shared shm/semaphore which stores the
               current processes which are associated with this service.
         """
-        debug(f'{self.service_name}:{self.port}: Starting new SHMServer on port:', self.port)
+        #debug(f'{self.service_name}:{self.port}: Starting new SHMServer on port:', self.port)
 
         self.resource_manager.check_for_missing_pids()
         self.resource_manager.add_server_pid(getpid())
@@ -120,10 +120,10 @@ class SHMServer(SHMBase, ServerProviderBase):
         as needed.
         """
         created_set, exited_set = self.resource_manager.get_created_exited_client_pids(self.pid_threads_set)
-        if created_set or exited_set:
-            debug(f"{self.service_name}:{self.port}[{self.pid_threads_set}] SCREATED: {created_set} SEXITED: {exited_set}")
-        else:
-            debug(self.pid_threads_set, self.resource_manager.get_client_pids())
+        #if created_set or exited_set:
+        #    debug(f"{self.service_name}:{self.port}[{self.pid_threads_set}] SCREATED: {created_set} SEXITED: {exited_set}")
+        #else:
+        #    debug(self.pid_threads_set, self.resource_manager.get_client_pids())
 
         for pid, qid in created_set:
             # Add newly created client connections
@@ -147,11 +147,11 @@ class SHMServer(SHMBase, ServerProviderBase):
         except (NoSuchSemaphoreException, FileNotFoundError):
             # Resources might've been destroyed
             # in the meantime by the client?
-            debug("EXISTENTIAL ERROR:", pid, qid)
+            #debug("EXISTENTIAL ERROR:", pid, qid)
             return
 
-        debug(f"SHMServer {self.service_name} started new worker "
-              f"thread for pid {pid} subid {qid}")
+        #debug(f"SHMServer {self.service_name} started new worker "
+        #      f"thread for pid {pid} subid {qid}")
         do_spin = True
 
         iterators = {}
@@ -168,9 +168,9 @@ class SHMServer(SHMBase, ServerProviderBase):
                     pass
 
                 self.shutdown_ok = not len(self.pid_threads_set)
-                debug(f"Signal to shutdown SHMServer {self.service_name} "
-                      f"in worker thread for pid {pid} subid {qid} caught: "
-                      f"returning ({len(self.pid_threads_set)} remaining)")
+                #debug(f"Signal to shutdown SHMServer {self.service_name} "
+                #      f"in worker thread for pid {pid} subid {qid} caught: "
+                #      f"returning ({len(self.pid_threads_set)} remaining)")
                 return
 
             try:
@@ -184,9 +184,9 @@ class SHMServer(SHMBase, ServerProviderBase):
             except SemaphoreDestroyedException:
                 # In this case, the lock was likely destroyed by the client
                 # and should propagate the error, rather than forever logging
-                debug(f"Lock for service {self.service_name} "
-                      f"in worker thread for pid {pid} subid {qid} was destroyed: "
-                      f"returning ({len(self.pid_threads_set)} remaining)")
+                #debug(f"Lock for service {self.service_name} "
+                #      f"in worker thread for pid {pid} subid {qid} was destroyed: "
+                #      f"returning ({len(self.pid_threads_set)} remaining)")
                 return
             except:
                 import traceback

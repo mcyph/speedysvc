@@ -117,6 +117,9 @@ class Service:
                                               server_port=self.__args['port'],
                                               fifo_json_log_parent=self.__args['fifo_json_log_parent'])
 
+        status = self.logger_server.get_service_status()
+        assert status == 'stopped', f"Can't start service as currently in {status} state"
+
         self.logger_server.set_service_status('forking')
 
         # Assemble relevant parameters

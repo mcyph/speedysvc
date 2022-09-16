@@ -18,7 +18,7 @@ from multiprocessing import cpu_count
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
 from speedysvc.client_server.network.NetworkServer import NetworkServer
 from speedysvc.toolkit.kill_pid_and_children import kill_pid_and_children
-from speedysvc.client_server.SpeedySVCClientFormatter import SpeedySVCClientFormatter
+from speedysvc.SpeedySVCClientFormatter import SpeedySVCClientFormatter
 from speedysvc.hybrid_lock import SemaphoreDestroyedException, NoSuchSemaphoreException
 from speedysvc.client_server.shared_memory.SHMResourceManager import SHMResourceManager, CONNECT_TO_EXISTING
 
@@ -41,7 +41,7 @@ _DStatusStrings = {
 
 
 def debug(*s):
-    if True:
+    if False:
         print(*s)
 
 
@@ -150,7 +150,7 @@ class MultiProcessServer:
         # TODO: It would also be nice to remove self.LPIDs, and only rely on
         #   SHMResourceManager for storing server worker PIDs
         # OPEN ISSUE: Should check_for_missing_pids be called periodically?
-        debug(f"Creating resource manager for {self.service_name}:{self.port}")
+        #debug(f"Creating resource manager for {self.service_name}:{self.port}")
         self.resource_manager = SHMResourceManager(self.port, self.service_name)
         self.resource_manager.check_for_missing_pids()
         self.resource_manager.reset_all_server_pids(kill=True)
@@ -160,7 +160,7 @@ class MultiProcessServer:
         self.last_proc_op_time = 0
         self.shutting_down = False
         self.started_collecting_data = False
-        debug("Creating logger client...")
+        #debug("Creating logger client...")
         self.logger_client = LoggerClient(service_server_methods=server_methods,
                                           port=port,
                                           service_name=service_name)
@@ -184,7 +184,7 @@ class MultiProcessServer:
         SpeedySVCClientFormatter(self.client_module).save_client_boilerplate(class_name=class_name,
                                                                              path=relative_path,
                                                                              check=True)
-        debug(f"Client module output to relative path {relative_path} class name {class_name}")
+        #debug(f"Client module output to relative path {relative_path} class name {class_name}")
 
     #========================================================#
     #                  Start/Stop Processes                  #
@@ -201,17 +201,17 @@ class MultiProcessServer:
         """
         Start a stopped service.
         """
-        debug("Starting service...")
+        #debug("Starting service...")
         assert self.logger_client.get_service_status() in ('stopped', 'forking'), \
             f"Can't start a service that isn't stopped (current status: {self.logger_client.get_service_status()})!"
-        debug("SET SERVICE STATUS!")
+        #debug("SET SERVICE STATUS!")
         self.logger_client.set_service_status('starting')
 
         for x in range(self.min_proc_num):
             # Make sure the initial processes have booted up
             # from the main thread, so it can block as necessary
             # (assuming wait_until_completed is set)
-            debug("NEW CHILD PROCESS!")
+            #debug("NEW CHILD PROCESS!")
             self.new_child_process()
 
         if self.host:
@@ -228,7 +228,7 @@ class MultiProcessServer:
 
             _thread.start_new_thread(start_network_server, ())
 
-        debug("Starting monitor process loop!")
+        #debug("Starting monitor process loop!")
         _thread.start_new_thread(self.__monitor_process_loop, ())
 
     def stop_service(self):
@@ -294,10 +294,10 @@ class MultiProcessServer:
                 self.started_collecting_data = True
 
         if self.wait_until_completed:
-            debug(f"{self.service_name} parent: Waiting for child to initialise...")
+            #debug(f"{self.service_name} parent: Waiting for child to initialise...")
             while not self.logger_client.get_service_status() == 'started':
                 time.sleep(0.1)
-            debug(f"{self.service_name} parent: child signaled it has initialised OK")
+            #debug(f"{self.service_name} parent: child signaled it has initialised OK")
 
             start_collecting_data()
         else:
