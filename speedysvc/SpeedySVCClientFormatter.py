@@ -52,7 +52,7 @@ class SpeedySVCClientFormatter:
         ]
         imports = []
         for method_name in dir(self.server_class):
-            print("METHOD:", method_name, hasattr(getattr(self.server_class, method_name), 'metadata'))
+            #print("METHOD:", method_name, hasattr(getattr(self.server_class, method_name), 'metadata'))
             if hasattr(getattr(self.server_class, method_name), 'metadata'):
                 imports, i = self.__get_client_boilerplate(method_name, imports)
                 out.append(i)

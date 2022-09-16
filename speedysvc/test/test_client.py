@@ -1,24 +1,5 @@
 import timeit
-import multiprocessing
-
-from speedysvc.client_server.base_classes.ClientProviderBase import ClientProviderBase
-from speedysvc.test.test_server import TestServerMethods as srv
-from speedysvc.client_server.network.NetworkClient import NetworkClient
-from speedysvc.client_server.shared_memory.SHMClient import SHMClient
-from speedysvc.client_server.connect import connect
-
-
-class TestClientMethods(ClientProviderBase):
-    def __init__(self, client_provider):
-        ClientProviderBase.__init__(self, client_provider)
-
-    test_defaults = srv.test_defaults.as_rpc()
-    test_json_echo = srv.test_json_echo.as_rpc()
-    test_raw_echo = srv.test_raw_echo.as_rpc()
-    test_raw_return_len = srv.test_raw_return_len.as_rpc()
-    test_pickle_echo = srv.test_pickle_echo.as_rpc()
-    test_marshal_echo = srv.test_marshal_echo.as_rpc()
-    test_msgpack_method = srv.test_msgpack_method.as_rpc()
+from TestServiceClient import TestServiceClient
 
 
 NUM_ITERATIONS = 100000
@@ -27,20 +8,13 @@ SERIALISE_ME = {
     'dsadsadasdas': 'gfhsdjkfdshjkf'
 }
 #SERIALISE_ME = (1, 2, 3)
-import numpy
 
 
 MSG_SIZE = 5000 # HACK!
 
 
 def run_test():
-    client = TestClientMethods(
-        connect(srv, address=(
-           #'tcp://192.168.0.44', # Shouldn't work
-           #'tcp://127.0.0.1',
-           'shm://',
-        )
-    ))
+    client = TestServiceClient()
 
     LClients = []
     #for x in range(10):
