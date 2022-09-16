@@ -16,12 +16,14 @@ class TestService:
     def test_json_echo(self, data):
         return data
 
-    @service_method()
+    @service_method(params='raw',
+                    returns='raw')
     def test_raw_echo(self, data):
         #print("RAW DATA LEN:", len(data))
         return data
 
-    @service_method()
+    @service_method(params='raw',
+                    returns='raw')
     def test_raw_return_len(self, data):
         return b'Z'*int(data)
 

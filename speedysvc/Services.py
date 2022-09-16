@@ -89,6 +89,7 @@ def _convert_values(values):
         'host': lambda x: x,
         'server_module': lambda x: x,
         'import_from': lambda x: x,
+        'client_module': lambda x: x,
         'tcp_allow_insecure_serialisation': convert_bool,
         'max_proc_num': greater_than_0_int,
         'min_proc_num': greater_than_0_int,

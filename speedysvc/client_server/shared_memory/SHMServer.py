@@ -278,7 +278,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                     if metadata.params_serialiser == RawSerialisation:
                         # TODO: Separate into positional, spread, keywords
                         var_positional = (args,)
-                        var_keyword = {}
+                        var_keyword = None
                     else:
                         var_positional, var_keyword = metadata.params_serialiser.loads(args)
 
@@ -291,11 +291,13 @@ class SHMServer(SHMBase, ServerProviderBase):
                     # encode "+" with length to say the call succeeded
                     if metadata.returns_iterator:
                         # TODO: Return an id, then stash the iterator for later referring to it
-                        iterators[current_iterator_id] = metadata, iter(fn(*var_positional, **var_keyword))  # CHECK THIS!
+                        iterators[current_iterator_id] = metadata, iter(fn(*(var_positional or ()),
+                                                                           **(var_keyword or {})))  # CHECK THIS!
                         result = str(current_iterator_id).encode('ascii')
                         current_iterator_id += 1
                     else:
-                        result = metadata.return_serialiser.dumps(fn(*var_positional, **var_keyword))
+                        result = metadata.return_serialiser.dumps(fn(*(var_positional or ()),
+                                                                     **(var_keyword or {})))
 
                 encoded = self.response_serialiser.pack(b'+', len(result)) + result
 

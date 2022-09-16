@@ -173,17 +173,23 @@ class MultiProcessServer:
     def __generate_client_module(self):
         relative_path, class_name = self.client_module.split(':')
         possible_chars_class_name = set('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_')
-        possible_chars_relative_path = set(possible_chars_class_name) + set('.')
+        possible_chars_relative_path = set(possible_chars_class_name).union(set('.'))
 
         assert all(i in possible_chars_class_name for i in class_name), \
             'Client class name must contain only characters A-Z a-z 0-9 or an underscore (_)'
         assert all(i in possible_chars_relative_path for i in relative_path), \
             'Client relative path must contain only characters A-Z a-z 0-9, an underscore (_) or period (.)'
 
-        relative_path = Path(relative_path.replace('.', '/'))
-        SpeedySVCClientFormatter(self.client_module).save_client_boilerplate(class_name=class_name,
-                                                                             path=relative_path,
-                                                                             check=True)
+        relative_path = Path(relative_path.replace('.', '/')+'.py')
+        SpeedySVCClientFormatter(
+            server_class=self.server_methods,
+            port=self.port,
+            service_name=self.service_name
+        ).save_client_boilerplate(
+            class_name=class_name,
+            path=relative_path,
+            check=True
+        )
         #debug(f"Client module output to relative path {relative_path} class name {class_name}")
 
     #========================================================#
