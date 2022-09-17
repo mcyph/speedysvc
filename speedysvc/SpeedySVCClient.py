@@ -5,7 +5,12 @@ from speedysvc.compression.compression_types import snappy_compression
 
 
 class _RemoteIterator:
-    def __init__(self, client_inst, return_serialiser, decode_returns, iterator_id):
+    def __init__(self,
+                 client_inst,
+                 return_serialiser,
+                 decode_returns,
+                 iterator_id):
+
         self.client_inst = client_inst
         self.return_serialiser = return_serialiser
         self.decode_returns = decode_returns
@@ -16,14 +21,14 @@ class _RemoteIterator:
         if self.destroyed:
             return
         self.client_inst.send(cmd=b'$iter_destroy$',
-                              data=str(self.iterator_id).encode('ascii'))
+                              data=self.iterator_id)
 
     def __iter__(self):
         decode_returns = self.decode_returns
 
         while True:
             data = self.client_inst.send(cmd=b'$iter_next$',
-                                         data=str(self.iterator_id).encode('ascii'))
+                                         data=self.iterator_id)
             data = self.return_serialiser.loads(data)
             if not data:
                 # Reached the end of the iterator
@@ -68,7 +73,6 @@ class SpeedySVCClient:
                          data: bytes):
         iterator_id = self.__client_inst.send(cmd=method_name,
                                               data=metadata.params_serialiser.dumps(data))
-        iterator_id = int(iterator_id)
         return _RemoteIterator(client_inst=self.__client_inst,
                                return_serialiser=metadata.return_serialiser,
                                decode_returns=metadata.decode_returns,
@@ -101,7 +105,6 @@ class SpeedySVCClient:
                                                   positional + var_positional if var_positional else positional,
                                                   var_keyword
                                               ]))
-        iterator_id = int(iterator_id)
         return _RemoteIterator(client_inst=self.__client_inst,
                                return_serialiser=metadata.return_serialiser,
                                decode_returns=metadata.decode_returns,

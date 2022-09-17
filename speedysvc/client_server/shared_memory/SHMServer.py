@@ -217,8 +217,7 @@ class SHMServer(SHMBase, ServerProviderBase):
 
         try:
             num_times = 0
-            while True: # WARNING
-
+            while True:  # WARNING
                 # Prepare for handling command
                 if mmap[0] == CLIENT:
                     # No command to process!
@@ -249,10 +248,16 @@ class SHMServer(SHMBase, ServerProviderBase):
             args = mmap[1+size+cmd_len : 1+size+cmd_len+args_len]
             metadata: Optional[FunctionMetaData] = None
 
+            if cmd in ('$iter_next$', '$iter_destroy$'):
+                iter_pid, iter_id = args.split(b'_')
+                if int(iter_pid) != getpid():
+                    # Unlock for the process which does have this iterator ID to process
+                    return do_spin, mmap, current_iterator_id
+
             try:
                 if cmd == '$iter_next$':
                     # Continue on from where the iterator left off
-                    metadata, iter_ = iterators[int(args)]
+                    metadata, iter_ = iterators[args]
 
                     out = []
                     for x in range(metadata.iterator_page_size):
@@ -262,14 +267,14 @@ class SHMServer(SHMBase, ServerProviderBase):
                                 item = metadata.encode_returns(item)
                             out.append(item)
                         except StopIteration:
-                            del iterators[int(args)]
+                            del iterators[args]
                             break
 
                     result = metadata.return_serialiser.dumps(out)
                     metadata = None  # don't add to stats below
 
                 elif cmd == '$iter_destroy$':
-                    del iterators[int(args)]
+                    del iterators[args]
                     result = b''
 
                 else:
@@ -295,9 +300,10 @@ class SHMServer(SHMBase, ServerProviderBase):
                     # encode "+" with length to say the call succeeded
                     if metadata.returns_iterator:
                         # TODO: Return an id, then stash the iterator for later referring to it
-                        iterators[current_iterator_id] = metadata, iter(fn(*(var_positional or ()),
-                                                                           **(var_keyword or {})))  # CHECK THIS!
-                        result = str(current_iterator_id).encode('ascii')
+                        iter_id = f'{getpid()}_{current_iterator_id}'.encode('ascii')
+                        iterators[iter_id] = metadata, iter(fn(*(var_positional or ()),
+                                                               **(var_keyword or {})))  # CHECK THIS!
+                        result = iter_id
                         current_iterator_id += 1
                     else:
                         result = fn(*(var_positional or ()), **(var_keyword or {}))
