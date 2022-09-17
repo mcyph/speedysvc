@@ -118,12 +118,20 @@ class SpeedySVCClientFormatter:
         decorator = self.get_decorator_for_function(method_name)
         decorator = '\n'.join('    '+i for i in decorator.split('\n')).rstrip()+'\n'
 
+        encode_params = ''
+        if metadata.encode_params:
+            encode_params = []
+            for k in metadata.encode_params:
+                encode_params.append(f'''        {k} = self.{method_name}.metadata.encode_params[{json.dumps(method_name)}](k)\n''')
+            encode_params = ''.join(encode_params)
+
         if metadata.params_serialiser == RawSerialisation:
             # TODO: Add support for return type annotation etc
             return imports, (
                     decorator +
                     f'''    def {method_name}(self, data: bytes):\n''' +
                     doc +
+                    encode_params +
                     f'''        return self._{ct}_remote_raw(self.{method_name}.metadata,\n'''
                     f'''                                     b{json.dumps(method_name)},\n'''
                     f'''                                     data)\n'''
@@ -139,6 +147,7 @@ class SpeedySVCClientFormatter:
                     decorator +
                     f'''   def {method_name}{str(sig)}:\n''' +
                     doc +
+                    encode_params +
                     ''.join(i) +
                     f'''       return self._{ct}_remote(self.{method_name}.metadata,\n'''
                     f'''                                b{json.dumps(method_name)},\n'''
@@ -153,6 +162,7 @@ class SpeedySVCClientFormatter:
                 decorator +
                 f'''    def {method_name}{str(sig)}:\n''' +
                 doc +
+                encode_params +
                 f'''        return self._{ct}_remote(self.{method_name}.metadata,\n'''
                 f'''                                 b{json.dumps(method_name)}, \n'''
                 f'''                                 ({', '.join(positional)},),\n'''
@@ -166,6 +176,7 @@ class SpeedySVCClientFormatter:
                 decorator +
                 f'''    def {method_name}{str(sig)}:\n''' +
                 doc +
+                encode_params +
                 f'''        return self._{ct}_remote(self.{method_name}.metadata,\n'''
                 f'''                                 b{json.dumps(method_name)}, \n'''
                 f'''                                 ({', '.join(positional)},),\n'''

@@ -5,9 +5,10 @@ from speedysvc.compression.compression_types import snappy_compression
 
 
 class _RemoteIterator:
-    def __init__(self, client_inst, return_serialiser, iterator_id):
+    def __init__(self, client_inst, return_serialiser, decode_returns, iterator_id):
         self.client_inst = client_inst
         self.return_serialiser = return_serialiser
+        self.decode_returns = decode_returns
         self.iterator_id = iterator_id
         self.destroyed = False
 
@@ -18,6 +19,8 @@ class _RemoteIterator:
                               data=str(self.iterator_id).encode('ascii'))
 
     def __iter__(self):
+        decode_returns = self.decode_returns
+
         while True:
             data = self.client_inst.send(cmd=b'$iter_next$',
                                          data=str(self.iterator_id).encode('ascii'))
@@ -29,6 +32,8 @@ class _RemoteIterator:
                 break
 
             for i in data:
+                if decode_returns:
+                    i = decode_returns(i)
                 yield i
 
 
@@ -52,7 +57,10 @@ class SpeedySVCClient:
                          data: bytes):
         r = self.__client_inst.send(cmd=method_name,
                                     data=metadata.params_serialiser.dumps(data))
-        return metadata.return_serialiser.loads(r)
+        r = metadata.return_serialiser.loads(r)
+        if metadata.decode_returns:
+            r = metadata.decode_returns(r)
+        return r
 
     def _iter_remote_raw(self,
                          metadata,
@@ -61,7 +69,10 @@ class SpeedySVCClient:
         iterator_id = self.__client_inst.send(cmd=method_name,
                                               data=metadata.params_serialiser.dumps(data))
         iterator_id = int(iterator_id)
-        return _RemoteIterator(self.__client_inst, metadata.return_serialiser, iterator_id)
+        return _RemoteIterator(client_inst=self.__client_inst,
+                               return_serialiser=metadata.return_serialiser,
+                               decode_returns=metadata.decode_returns,
+                               iterator_id=iterator_id)  # FIXME: Apply return decoder!!
 
     def _call_remote(self,
                      metadata,
@@ -74,7 +85,10 @@ class SpeedySVCClient:
                                         positional+var_positional if var_positional else positional,
                                         var_keyword
                                     ]))
-        return metadata.return_serialiser.loads(r)
+        r = metadata.return_serialiser.loads(r)
+        if metadata.decode_returns:
+            r = metadata.decode_returns(r)
+        return r
 
     def _iter_remote(self,
                      metadata,
@@ -88,4 +102,7 @@ class SpeedySVCClient:
                                                   var_keyword
                                               ]))
         iterator_id = int(iterator_id)
-        return _RemoteIterator(self.__client_inst, metadata.return_serialiser, iterator_id)
+        return _RemoteIterator(client_inst=self.__client_inst,
+                               return_serialiser=metadata.return_serialiser,
+                               decode_returns=metadata.decode_returns,
+                               iterator_id=iterator_id)

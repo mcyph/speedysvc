@@ -257,7 +257,10 @@ class SHMServer(SHMBase, ServerProviderBase):
                     out = []
                     for x in range(metadata.iterator_page_size):
                         try:
-                            out.append(next(iter_))
+                            item = next(iter_)
+                            if metadata.encode_returns:
+                                item = metadata.encode_returns(item)
+                            out.append(item)
                         except StopIteration:
                             del iterators[int(args)]
                             break
@@ -283,6 +286,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                         var_positional, var_keyword = metadata.params_serialiser.loads(args)
 
                     # "Unbox" any parameters as needed
+                    # FIXME: BOX ANY RETURN VALUES AS NEEDED!!!! =====================================================
                     if metadata.decode_params:
                         for k, v in metadata.decode_params.items():
                             args[k] = v(args[k])
@@ -296,8 +300,10 @@ class SHMServer(SHMBase, ServerProviderBase):
                         result = str(current_iterator_id).encode('ascii')
                         current_iterator_id += 1
                     else:
-                        result = metadata.return_serialiser.dumps(fn(*(var_positional or ()),
-                                                                     **(var_keyword or {})))
+                        result = fn(*(var_positional or ()), **(var_keyword or {}))
+                        if metadata.encode_returns:
+                            result = metadata.encode_returns(result)
+                        result = metadata.return_serialiser.dumps(result)
 
                 encoded = self.response_serialiser.pack(b'+', len(result)) + result
 
@@ -347,9 +353,9 @@ class SHMServer(SHMBase, ServerProviderBase):
         mmap.close()
 
         # Assign the new mmap
-        mmap = self.resource_manager.create_pid_mmap(
-            min_size=len(encoded) * 2, pid=pid, qid=qid
-        )
+        mmap = self.resource_manager.create_pid_mmap(min_size=len(encoded) * 2,
+                                                     pid=pid,
+                                                     qid=qid)
         assert len(mmap) > old_mmap_len, (old_mmap_len, len(mmap))
         mmap[0] = old_mmap_statuscode
         assert mmap[0] != INVALID
