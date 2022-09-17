@@ -14,15 +14,13 @@ class _RemoteIterator:
     def __del__(self):
         if self.destroyed:
             return
-        self.client_inst.send(cmd='$iter_destroy$',
-                              args=str(self.iterator_id).encode('ascii'),
-                              timeout=-1)
+        self.client_inst.send(cmd=b'$iter_destroy$',
+                              data=str(self.iterator_id).encode('ascii'))
 
     def __iter__(self):
         while True:
-            data = self.client_inst.send(cmd='$iter_next$',
-                                         args=str(self.iterator_id).encode('ascii'),
-                                         timeout=-1)
+            data = self.client_inst.send(cmd=b'$iter_next$',
+                                         data=str(self.iterator_id).encode('ascii'))
             data = self.return_serialiser.loads(data)
             if not data:
                 # Reached the end of the iterator

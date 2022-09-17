@@ -8,6 +8,11 @@ class TestService:
     def __init__(self, logger_client):
         self.logger_client = logger_client
 
+    @service_method(params='raw',
+                    returns='raw')
+    def test_raw_return_len(self, data):
+        return b'Z' * int(data)
+
     @service_method()
     def test_defaults(self, data, default='test'):
         return data, default
@@ -15,6 +20,12 @@ class TestService:
     @service_method()
     def test_json_echo(self, data):
         return data
+
+    @service_method(returns_iterator=True,
+                    iterator_page_size=10000)
+    def test_json_echo_iterator(self, data):
+        for x in range(1000000):
+            yield data
 
     @service_method(params='raw',
                     returns='raw')
