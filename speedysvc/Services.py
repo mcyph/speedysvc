@@ -156,7 +156,7 @@ class Services:
         section_dict = self.values_dict[service_class_name].copy()
         args_dict = self.defaults_dict.copy()
         args_dict.update(_convert_values(section_dict))
-        args_dict['service_class_name'] = service_class_name
+        args_dict['service_class_name'], args_dict['server_module'] = service_class_name.split(':')
 
         if args_dict['service_name'] not in self.services:
             s = Service(**args_dict)
