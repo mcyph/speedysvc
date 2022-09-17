@@ -76,7 +76,7 @@ class SpeedySVCClient:
         return _RemoteIterator(client_inst=self.__client_inst,
                                return_serialiser=metadata.return_serialiser,
                                decode_returns=metadata.decode_returns,
-                               iterator_id=iterator_id)  # FIXME: Apply return decoder!!
+                               iterator_id=iterator_id)
 
     def _call_remote(self,
                      metadata,

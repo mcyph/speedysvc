@@ -1,13 +1,6 @@
 import timeit
 from TestServiceClient import TestServiceClient
 
-import inspect
-my_lambdas = {
-    'blah': lambda x: \
-        x
-}
-print(inspect.getsource(my_lambdas['blah']))
-
 
 NUM_ITERATIONS = 100000
 SERIALISE_ME = {
