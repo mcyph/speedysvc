@@ -32,18 +32,18 @@
 {% macro service_status_row(DService, add_links=False) %}
     <tr>
         {% if add_links %}
-            <td><a href="/service_info?port={{ DService['port'] }}">{{ DService['name']|e }}</a></td>
+            <td><a href="/service_info?port={{ DService['service_port'] }}">{{ DService['name']|e }}</a></td>
         {% else %}
             <td>{{ DService['name']|e }}</td>
         {% endif %}
-        <td>{{ DService['port']|e }}</td>
+        <td>{{ DService['service_port']|e }}</td>
         <td>{{ DService['bound_to_tcp'] or 'n/a'|e }}</td>
         <td>
             {{ DService['status']|e }}
             {% if DService['status'] == 'started' %}
-                [<a href="/stop_service?port={{ DService['port'] }}" onclick="this.style.visibility = 'hidden'">stop</a>]
+                [<a href="/stop_service?port={{ DService['service_port'] }}" onclick="this.style.visibility = 'hidden'">stop</a>]
             {% elif DService['status'] == 'stopped' %}
-                [<a href="/start_service?port={{ DService['port'] }}" onclick="this.style.visibility = 'hidden'">start</a>]
+                [<a href="/start_service?port={{ DService['service_port'] }}" onclick="this.style.visibility = 'hidden'">start</a>]
             {% endif %}
         </td>
         <td>{{ DService['physical_mem']|e }}</td>
@@ -78,7 +78,7 @@
 {#######################################}
 
 {% macro service(DService) %}
-    <div class="service_cont_div" id="service_cont_div_{{ DService['port'] }}">
+    <div class="service_cont_div" id="service_cont_div_{{ DService['service_port'] }}">
         {{ service_status_table([DService]) }}
 
         <h2>Time Series Data</h2>

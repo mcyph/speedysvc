@@ -8,9 +8,9 @@ from speedysvc.toolkit.io.file_locks import lock, unlock, LockException, LOCK_NB
 
 class ClientProviderBase(ABC):
     def __init__(self,
-                 port: Optional[int] = None,
+                 service_port: Optional[int] = None,
                  service_name: Optional[str] = None):
-        self.port = port
+        self.service_port = service_port
         self.service_name = service_name
 
     PATH = '/tmp/shmsrv-%s-%s'
@@ -21,7 +21,7 @@ class ClientProviderBase(ABC):
 
         x = 0
         while True:
-            self.lock_file_path = self.PATH % (self.port, f'{x}.clientlock')
+            self.lock_file_path = self.PATH % (self.service_port, f'{x}.clientlock')
             lock_file = open(self.lock_file_path, "a+")
 
             try:

@@ -14,7 +14,7 @@ from speedysvc.client_server.base_classes.ServerProviderBase import ServerProvid
 class NetworkServer(ServerProviderBase):
     def __init__(self,
                  server_methods,
-                 port: int,
+                 service_port: int,
                  service_name: str,
                  bind_interface: str = '127.0.0.1',
                  force_insecure_serialisation: bool = False):
@@ -32,12 +32,12 @@ class NetworkServer(ServerProviderBase):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 65536)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, 65536)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        sock.bind((bind_interface, port))
+        sock.bind((bind_interface, service_port))
         sock.listen(0)
 
         ServerProviderBase.__init__(self,
                                     server_methods=server_methods,
-                                    port=port,
+                                    service_port=service_port,
                                     service_name=service_name)
 
     def __check_security(self):
@@ -63,7 +63,7 @@ class NetworkServer(ServerProviderBase):
 
         while True:
             server.listen(4)
-            conn, (ip, port) = server.accept()
+            conn, (ip, service_port) = server.accept()
             # If we're using tcp sockets, spinlocks can
             # actually be counterproductive and harm performance
             # as we'd be waiting too long too often
@@ -147,7 +147,7 @@ class NetworkServer(ServerProviderBase):
 if __name__ == '__main__':
     inst = NetworkServer({
         'echo': lambda data: data
-    }, port=5555)
+    }, service_port=5555)
 
     while True:
         time.sleep(1)

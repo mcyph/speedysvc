@@ -21,7 +21,7 @@ def lock_fn(fn):
 class Service:
     def __init__(self,
                  service_name: str,
-                 port: int,
+                 service_port: int,
                  server_module: str,
                  service_class_name: str,
                  client_module: Optional[str] = None,
@@ -43,7 +43,7 @@ class Service:
         self.lock = Lock()
         self.__args = {
             'service_name': service_name,
-            'port': port,
+            'service_port': service_port,
             'server_module': server_module,
             'service_class_name': service_class_name,
             'client_module': client_module,
@@ -71,7 +71,7 @@ class Service:
         return self.__args['service_name']
 
     def get_port(self):
-        return self.__args['port']
+        return self.__args['service_port']
 
     def get_logger_server(self):
         return self.logger_server
@@ -83,15 +83,15 @@ class Service:
     def start(self):
         # print("SECTION:", section)
         assert not self.started, \
-            f"Service {self.__args['service_name']}:{self.__args['port']} has already been started!"
+            f"Service {self.__args['service_name']}:{self.__args['service_port']} has already been started!"
         self.__run()
 
     @lock_fn
     def stop(self):
         assert self.started, \
-            f"Service {self.__args['service_name']}:{self.__args['port']} can't be stopped if it hasn't been started"
+            f"Service {self.__args['service_name']}:{self.__args['service_port']} can't be stopped if it hasn't been started"
         #assert self.logger_server.get_service_status() == 'started', \
-        #    f"Service {self.__args['service_name']}:{self.__args['port']} can't be stopped if it is in state {self.logger_server.get_service_status()}"
+        #    f"Service {self.__args['service_name']}:{self.__args['service_port']} can't be stopped if it is in state {self.logger_server.get_service_status()}"
 
         self.logger_server.set_service_status('stopping')
         self.logger_server.stop_collecting()
@@ -118,7 +118,7 @@ class Service:
             # currently that'd require a fair amount of refactoring
             self.logger_server = LoggerServer(log_dir=f"{self.__args['log_dir']}/{self.__args['service_name']}/",
                                               server_name=self.__args['service_name'],
-                                              server_port=self.__args['port'],
+                                              server_port=self.__args['service_port'],
                                               fifo_json_log_parent=self.__args['fifo_json_log_parent'])
 
         status = self.logger_server.get_service_status()

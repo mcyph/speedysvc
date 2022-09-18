@@ -86,7 +86,7 @@ class LoggerServer:
         self.shm_server = SHMServer(
             server_methods=self,
             use_spinlock=False,
-            port=self.port,
+            service_port=self.port,
             service_name=self.name,
             # NOTE ME: This is normally called in the background, and performance shouldn't be a priority here
         )

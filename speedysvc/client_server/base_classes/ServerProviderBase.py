@@ -6,13 +6,13 @@ class ServerProviderBase:
 
     def __init__(self,
                  server_methods,
-                 port: int,
+                 service_port: int,
                  service_name: str):
 
         # Couldn't see much reason to have an abstract base class here,
         # as the "serve" logic is implementation-specific
         self.server_methods = server_methods
-        self.port = port
+        self.service_port = service_port
         self.service_name = service_name
 
         assert not self.___init, \

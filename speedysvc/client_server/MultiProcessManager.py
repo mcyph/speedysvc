@@ -12,7 +12,7 @@ from sys import argv
 from os import getpid
 from pathlib import Path
 from warnings import warn
-from typing import Optional
+from typing import Optional, List
 from multiprocessing import cpu_count
 
 from speedysvc.logger.std_logging.LoggerClient import LoggerClient
@@ -48,17 +48,17 @@ def debug(*s):
 class MultiProcessServer:
     def __init__(self,
                  service_name: str,
-                 port: int,
+                 service_port: int,
 
                  client_module: str,
                  server_methods,
-
                  server_module: str,
                  service_class_name: str,
 
                  log_dir: str,
                  fifo_json_log_parent: str,
 
+                 client_imports: Optional[List[str]] = None,
                  host: str = None,
                  tcp_allow_insecure_serialisation: bool = False,
 
@@ -71,8 +71,6 @@ class MultiProcessServer:
                  kill_proc_avg_over_secs: int = 240,
 
                  wait_until_completed: bool = True,
-
-
                  ):
         """
         Create a manager for a given service, which has child worker processes.
@@ -86,7 +84,7 @@ class MultiProcessServer:
         exceeds a certain amount.
 
         :param service_name:
-        :param port:
+        :param service_port:
 
         :param server_methods: the server methods class. Should be a class
                                which has yet to be instantiated, so that
@@ -118,8 +116,9 @@ class MultiProcessServer:
                                      times.
         """
         self.service_name = service_name
-        self.port = port
+        self.service_port = service_port
         self.client_module = client_module
+        self.client_imports = client_imports
         self.server_module = server_module
         self.service_class_name = service_class_name
 
@@ -150,8 +149,8 @@ class MultiProcessServer:
         # TODO: It would also be nice to remove self.LPIDs, and only rely on
         #   SHMResourceManager for storing server worker PIDs
         # OPEN ISSUE: Should check_for_missing_pids be called periodically?
-        #debug(f"Creating resource manager for {self.service_name}:{self.port}")
-        self.resource_manager = SHMResourceManager(self.port, self.service_name)
+        #debug(f"Creating resource manager for {self.service_name}:{self.service_port}")
+        self.resource_manager = SHMResourceManager(self.service_port, self.service_name)
         self.resource_manager.check_for_missing_pids()
         self.resource_manager.reset_all_server_pids(kill=True)
 
@@ -162,7 +161,7 @@ class MultiProcessServer:
         self.started_collecting_data = False
         #debug("Creating logger client...")
         self.logger_client = LoggerClient(service_server_methods=server_methods,
-                                          port=port,
+                                          service_port=service_port,
                                           service_name=service_name)
 
         if self.client_module:
@@ -183,8 +182,9 @@ class MultiProcessServer:
         relative_path = Path(relative_path.replace('.', '/')+'.py')
         SpeedySVCClientFormatter(
             server_class=self.server_methods,
-            port=self.port,
-            service_name=self.service_name
+            service_port=self.service_port,
+            service_name=self.service_name,
+            client_imports=self.client_imports
         ).save_client_boilerplate(
             class_name=class_name,
             path=relative_path,
@@ -227,7 +227,7 @@ class MultiProcessServer:
                     time.sleep(0.1)
 
                 self.network_server = NetworkServer(server_methods=self.server_methods,
-                                                    port=self.port,
+                                                    service_port=self.service_port,
                                                     service_name=self.service_name,
                                                     bind_interface=self.host,
                                                     force_insecure_serialisation=self.tcp_allow_insecure_serialisation)
@@ -261,7 +261,7 @@ class MultiProcessServer:
             'server_module': self.server_module,
             'service_class_name': self.service_class_name,
             'service_name': self.service_name,
-            'port': self.port,
+            'service_port': self.service_port,
         }
 
         if sys.platform != 'win32':
@@ -500,7 +500,7 @@ class MultiProcessServer:
 def main(args_dict):
     # [TestService]
     # service_name=test_server_methods
-    # port=5535
+    # service_port=5535
     # server_module=TestService
 
     #print("STARTING MPM")

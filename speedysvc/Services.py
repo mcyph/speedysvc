@@ -83,7 +83,7 @@ def _convert_values(values):
         return i
 
     arg_keys = {
-        'port': greater_than_0_int,
+        'service_port': greater_than_0_int,
         'service_name': lambda x: x,
         'log_dir': lambda x: x,
         'host': lambda x: x,
@@ -161,7 +161,7 @@ class Services:
         if args_dict['service_name'] not in self.services:
             s = Service(**args_dict)
             self.services[args_dict['service_name']] = s
-            self.services_by_port[args_dict['port']] = s
+            self.services_by_port[args_dict['service_port']] = s
 
         self.services[args_dict['service_name']].start()
         return self.services[args_dict['service_name']]

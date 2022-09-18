@@ -1,0 +1,26 @@
+{
+  "defaults": {
+    "log_dir": "/tmp/test_server_logs/",
+    "host": "127.0.0.1"
+  },
+  "services": [
+    {
+      // Specify what module/class the server module is in
+      "service_module": "TestService:TestService",
+      // Unique service name and port for accessing the service remotely
+      "service_name": "test_server_methods",
+      "service_port": 5535,
+      // Autogenerate the client module with any custom imports based on the service module/class
+      "client_module": "TestServiceClient:TestServiceClient",
+      "client_imports": [
+        "from os import system"
+      ],
+      // Set to true to make sure the service is completed before moving onto the next service
+      // This is important if other services depend on this one
+      "wait_until_completed": true,
+      // Maximum/minimum worker processes for this service
+      "min_proc_num": 8,
+      "max_prox_num": 8
+    }
+  ]
+}

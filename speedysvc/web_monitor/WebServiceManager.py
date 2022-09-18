@@ -143,7 +143,7 @@ class WebServiceManager:
     def __get_D_table_info(self, port, recent_values):
         service = self.services.get_service_by_port(port)
         return {
-            "port": service.get_port(),
+            "service_port": service.get_port(),
             "name": service.get_service_name(),
             "bound_to_tcp": service.get_tcp_bind(),
             "status": service.get_logger_server().get_service_status(),

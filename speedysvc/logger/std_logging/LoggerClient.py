@@ -31,7 +31,7 @@ def loads(s):
 
 
 class LoggerClient:
-    def __init__(self, service_server_methods, port, service_name):
+    def __init__(self, service_server_methods, service_port, service_name):
         """
         A basic logger which sends stderr/stdout
         output to a logging server
@@ -42,10 +42,10 @@ class LoggerClient:
         # associated with the log service. These are the server methods
         # associated with the service itself.
         self.service_server_methods = service_server_methods
-        self.port = port
+        self.service_port = service_port
         self.service_name = service_name
 
-        self.client = SHMClient(port=f'{port}_log',
+        self.client = SHMClient(service_port=f'{service_port}_log',
                                 service_name=f'{service_name}_log',
                                 use_spinlock=False,
                                 use_in_process_lock=True)
@@ -204,7 +204,7 @@ class LoggerClient:
         pid = self.pid
         log_queue.put((int(time.time()),
                        pid,
-                       self.port,
+                       self.service_port,
                        self.service_name,
                        msg,
                        level))

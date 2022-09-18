@@ -26,7 +26,7 @@ if __name__ == '__main__':
     _thread.start_new_thread(run_server, (), {
         'debug': True,
         'host': services.web_monitor_dict.get('host', '127.0.0.1'),
-        'port': int(services.web_monitor_dict.get('port', '5155')),
+        'port': int(services.web_monitor_dict.get('service_port', '5155')),
     })
 
     while True:

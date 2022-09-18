@@ -19,7 +19,7 @@ def debug(*s):
 def _service_worker(server_module: str,
                     service_class_name: str,
                     service_name: str,
-                    port: int):
+                    service_port: int):
     """
     In child processes of MultiProcessManager
     """
@@ -28,7 +28,7 @@ def _service_worker(server_module: str,
 
     debug(f"{service_name} child: Creating logger client")
     logger_client = LoggerClient(service_server_methods=server_methods,
-                                 port=port,
+                                 service_port=service_port,
                                  service_name=service_name)
     debug(f"{service_name} child: Creating server methods")
     smi = server_methods(logger_client)
@@ -37,7 +37,7 @@ def _service_worker(server_module: str,
 
     L = []
     L.append(SHMServer(server_methods=smi,
-                       port=port,
+                       service_port=service_port,
                        service_name=service_name))
     L[-1].serve_forever_in_new_thread()
 

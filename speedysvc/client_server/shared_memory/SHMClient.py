@@ -13,14 +13,14 @@ _qid_lock = _thread.allocate_lock()
 _DQIds = {}
 
 
-def new_qid(port):
+def new_qid(service_port):
     # The "q" in qid doesn't stand for anything
     # it just means it's a "sub"-id within a p(rocess)id
     with _qid_lock:
-        if not port in _DQIds:
-            _DQIds[port] = 0
-        _DQIds[port] += 1
-        return _DQIds[port]
+        if not service_port in _DQIds:
+            _DQIds[service_port] = 0
+        _DQIds[service_port] += 1
+        return _DQIds[service_port]
 
 
 class ResendError(Exception):
@@ -34,7 +34,7 @@ def debug(*s):
 
 class SHMClient(ClientProviderBase, SHMBase):
     def __init__(self,
-                 port: int,
+                 service_port: int,
                  service_name: str,
                  use_spinlock=True,
                  use_in_process_lock=True):
@@ -49,12 +49,12 @@ class SHMClient(ClientProviderBase, SHMBase):
         # current processes which are associated with this service,
         # and add this process' PID.
         ClientProviderBase.__init__(self,
-                                    port=port,
+                                    service_port=service_port,
                                     service_name=service_name)
 
         assert not hasattr(self, 'qid')
-        self.qid = new_qid(self.port)
-        self.resource_manager = SHMResourceManager(self.port, service_name)
+        self.qid = new_qid(self.service_port)
+        self.resource_manager = SHMResourceManager(self.service_port, service_name)
 
         # (Note the pid/qid of this connection is registered here)
         self.mmap, self.lock = self.resource_manager.create_resources(getpid(), self.qid)

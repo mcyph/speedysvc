@@ -5,6 +5,8 @@ from os import getpid
 from _thread import start_new_thread
 from typing import Optional
 
+import psutil
+
 from speedysvc.client_server.shared_memory.SHMBase import SHMBase
 from speedysvc.serialisation.RawSerialisation import RawSerialisation
 from speedysvc.client_server.base_classes.ServerProviderBase import ServerProviderBase
@@ -48,7 +50,7 @@ def debug(*s):
 class SHMServer(SHMBase, ServerProviderBase):
     def __init__(self,
                  server_methods,
-                 port: int,
+                 service_port: int,
                  service_name: str,
                  use_spinlock: bool = True):
 
@@ -57,9 +59,9 @@ class SHMServer(SHMBase, ServerProviderBase):
         ServerProviderBase.__init__(self,
                                     server_methods=server_methods,
                                     service_name=service_name,
-                                    port=port)
+                                    service_port=service_port)
 
-        self.port = port
+        self.service_port = service_port
         self.service_name = service_name
 
         self.shut_me_down = False
@@ -67,7 +69,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         self.use_spinlock = use_spinlock
 
         self.pid_threads_set = set()
-        self.resource_manager = SHMResourceManager(port=self.port,
+        self.resource_manager = SHMResourceManager(port=self.service_port,
                                                    name=self.service_name)
 
     def serve_forever(self):
@@ -84,7 +86,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         TODO: Create or connect to a shared shm/semaphore which stores the
               current processes which are associated with this service.
         """
-        #debug(f'{self.service_name}:{self.port}: Starting new SHMServer on port:', self.port)
+        #debug(f'{self.service_name}:{self.service_port}: Starting new SHMServer on service_port:', self.service_port)
 
         self.resource_manager.check_for_missing_pids()
         self.resource_manager.add_server_pid(getpid())
@@ -121,7 +123,7 @@ class SHMServer(SHMBase, ServerProviderBase):
         """
         created_set, exited_set = self.resource_manager.get_created_exited_client_pids(self.pid_threads_set)
         #if created_set or exited_set:
-        #    debug(f"{self.service_name}:{self.port}[{self.pid_threads_set}] SCREATED: {created_set} SEXITED: {exited_set}")
+        #    debug(f"{self.service_name}:{self.service_port}[{self.pid_threads_set}] SCREATED: {created_set} SEXITED: {exited_set}")
         #else:
         #    debug(self.pid_threads_set, self.resource_manager.get_client_pids())
 
@@ -252,6 +254,11 @@ class SHMServer(SHMBase, ServerProviderBase):
                 iter_pid, iter_id = args.split(b'_')
                 if int(iter_pid) != getpid():
                     # Unlock for the process which does have this iterator ID to process
+
+                    # FIXME: Find a more resource-efficient means of doing the below! =========================================================
+                    #if not psutil.pid_exists(int(iter_pid)):
+                        # If the pid no longer exists for this iterator, reset the lock state!
+                    #    mmap[0] = CLIENT
                     return do_spin, mmap, current_iterator_id
 
             try:

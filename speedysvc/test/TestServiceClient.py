@@ -80,9 +80,3 @@ class TestServiceClient(SpeedySVCClient):
                                      b"test_raw_return_len",
                                      data)
         
-
-from speedysvc.serialisation.JSONSerialisation import JSONSerialisation
-from speedysvc.serialisation.MarshalSerialisation import MarshalSerialisation
-from speedysvc.serialisation.MsgPackSerialisation import MsgPackSerialisation
-from speedysvc.serialisation.PickleSerialisation import PickleSerialisation
-from speedysvc.serialisation.RawSerialisation import RawSerialisation
