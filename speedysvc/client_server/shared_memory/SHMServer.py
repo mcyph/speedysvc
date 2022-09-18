@@ -291,7 +291,6 @@ class SHMServer(SHMBase, ServerProviderBase):
                         var_positional, var_keyword = metadata.params_serialiser.loads(args)
 
                     # "Unbox" any parameters as needed
-                    # FIXME: BOX ANY RETURN VALUES AS NEEDED!!!! =====================================================
                     if metadata.decode_params:
                         for k, v in metadata.decode_params.items():
                             args[k] = v(args[k])
@@ -299,7 +298,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                     # Serialise the return value according to the metadata and
                     # encode "+" with length to say the call succeeded
                     if metadata.returns_iterator:
-                        # TODO: Return an id, then stash the iterator for later referring to it
+                        # Return an id, then stash the iterator for later referring to it
                         iter_id = f'{getpid()}_{current_iterator_id}'.encode('ascii')
                         iterators[iter_id] = metadata, iter(fn(*(var_positional or ()),
                                                                **(var_keyword or {})))  # CHECK THIS!
@@ -308,6 +307,7 @@ class SHMServer(SHMBase, ServerProviderBase):
                     else:
                         result = fn(*(var_positional or ()), **(var_keyword or {}))
                         if metadata.encode_returns:
+                            # Box any return values as needed
                             result = metadata.encode_returns(result)
                         result = metadata.return_serialiser.dumps(result)
 

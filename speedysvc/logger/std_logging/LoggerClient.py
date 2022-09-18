@@ -42,6 +42,8 @@ class LoggerClient:
         # associated with the log service. These are the server methods
         # associated with the service itself.
         self.service_server_methods = service_server_methods
+        self.port = port
+        self.service_name = service_name
 
         self.client = SHMClient(port=f'{port}_log',
                                 service_name=f'{service_name}_log',
@@ -200,22 +202,12 @@ class LoggerClient:
         :param level: the log level, e.g. DEBUG or INFO
         """
         pid = self.pid
-
-        #print(hasattr(self, 'server_methods'))
-
-        if hasattr(self.service_server_methods, 'port'):
-            port = self.service_server_methods.port
-        else:
-            port = -1
-
-        if hasattr(self.service_server_methods, 'name'):
-            service_name = self.service_server_methods.name
-        else:
-            service_name = '(unknown service)'
-
-        log_queue.put(
-            (int(time.time()), pid, port, service_name, msg, level)
-        )
+        log_queue.put((int(time.time()),
+                       pid,
+                       self.port,
+                       self.service_name,
+                       msg,
+                       level))
 
     def notset(self, msg):
         """
