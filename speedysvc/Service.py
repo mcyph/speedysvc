@@ -89,14 +89,18 @@ class Service:
     @lock_fn
     def stop(self):
         assert self.started, \
-            f"Service {self.__args['service_name']}:{self.__args['port']} can't be stopped if it hasn't been started!"
+            f"Service {self.__args['service_name']}:{self.__args['port']} can't be stopped if it hasn't been started"
+        #assert self.logger_server.get_service_status() == 'started', \
+        #    f"Service {self.__args['service_name']}:{self.__args['port']} can't be stopped if it is in state {self.logger_server.get_service_status()}"
 
         self.logger_server.set_service_status('stopping')
         self.logger_server.stop_collecting()
         self.__kill_proc()
         self.logger_server.set_service_status('stopped')
+        self.started = False
 
-    def __kill_proc(self,):
+    def __kill_proc(self):
+        #print("[SERVICE] Killing proc:", self.proc.pid)
         kill_pid_and_children(self.proc.pid)
         self.proc = None
 
@@ -138,4 +142,5 @@ class Service:
             while self.logger_server.get_service_status() != 'started':
                 time.sleep(0.1)
 
+        self.started = True
         print('[OK]')
