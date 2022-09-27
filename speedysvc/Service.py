@@ -64,19 +64,19 @@ class Service:
         self.proc = None
         self.started = False
 
-    def get_tcp_bind(self):
+    def get_tcp_bind(self) -> str:
         return self.__args['host']
 
-    def get_service_name(self):
+    def get_service_name(self) -> str:
         return self.__args['service_name']
 
-    def get_port(self):
+    def get_port(self) -> int:
         return self.__args['service_port']
 
     def get_logger_server(self):
         return self.logger_server
 
-    def get_pid(self):
+    def get_pid(self) -> int:
         return self.proc.pid
 
     @lock_fn
