@@ -28,7 +28,7 @@ def service_method(params: str = 'json',
                    decode_returns: Optional[Callable] = None,
                    encode_returns: Optional[Callable] = None,
                    returns_iterator: bool = False,
-                   iterator_page_size: int = 1000) -> object:
+                   iterator_page_size: int = 1000):
     """
     Define a method which will be serialised using JSON types with
     a suitable encoder (e.g. the json module, msgpack, bson etc).
