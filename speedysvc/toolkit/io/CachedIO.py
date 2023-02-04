@@ -136,12 +136,12 @@ class CachedIO:
         dir_ = normpath(dir_).rstrip('/\\')
 
         with self.lock:
-            LDel = []
+            delete_list = []
             for path in self.DStat:
                 if path.startswith(dir_+sep):
-                    LDel.append(path)
+                    delete_list.append(path)
 
-            for i in LDel:
+            for i in delete_list:
                 self.LDeleteLog.append(
                     ('DStat', i)
                 )
