@@ -64,10 +64,10 @@ class TimeSeriesData(ABC):
 
         # Start off with a timestamp, down to the second
         # (4 bytes as in Unix seconds since epoch)
-        LOut = ['!I']
+        out_list = ['!I']
         for typecode, name in LFormat:
-            LOut.append(typecode)
-        self.struct = Struct(''.join(LOut))
+            out_list.append(typecode)
+        self.struct = Struct(''.join(out_list))
 
         # Get the number of items in the file (if it was previously written to)
         self.deque = deque(maxlen=fifo_cache_len)
@@ -214,7 +214,7 @@ class TimeSeriesData(ABC):
                         as in unix timestamps
         :return: an integer
         """
-        DVals = Counter()
+        values_dict = Counter()
         num_vals = 0
 
         with self.lock:
@@ -223,13 +223,13 @@ class TimeSeriesData(ABC):
                     for property in DRecord:
                         if property == 'timestamp':
                             continue
-                        DVals[property] += DRecord[property]
+                        values_dict[property] += DRecord[property]
                     num_vals += 1
 
         return {
             key: val / num_vals
             for key, val
-            in DVals.items()
+            in values_dict.items()
         }
 
     #=========================================================================#

@@ -8,7 +8,7 @@ from .array_write.WriteStrArray import WriteStrArray
 from .array_read.read_array import read_array
 from .array_read.read_arrays import read_arrays
 from .array_read.read_json import read_json
-from .array_read.read_array import read_array as LPartial # HACK!
+from .array_read.read_array import read_array as PartialList # HACK!
 
 from .array_write.write_array import write_array
 from .array_write.write_arrays import write_arrays

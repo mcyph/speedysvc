@@ -11,7 +11,7 @@ class ReadBase:
         Parse a .ini file with [sections] and python variables
         SECURITY NOTE: ASSUMES TRUSTED INPUT!
         """
-        DRtn = OrderedDict()
+        return_dict = OrderedDict()
         LSection = None
         LSections = []
         section_mode = True
@@ -42,7 +42,7 @@ class ReadBase:
                 )
             ):
                 # Start of a new section
-                DRtn.update(
+                return_dict.update(
                     self.get_D_sections(LSections, LSection)
                 )
                 LSections = [line]
@@ -66,10 +66,10 @@ class ReadBase:
                 LSection.append(line)
                 assert LSections
 
-        DRtn.update(
+        return_dict.update(
             self.get_D_sections(LSections, LSection)
         )
-        return DRtn
+        return return_dict
 
     def get_D_sections(self, LSections, LSection):
         #print LSections, LSection

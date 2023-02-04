@@ -54,7 +54,7 @@ def sanitize_css(S):
     # (with a trailing semicolon), but may introduce problems!
 
 
-    LOut = []
+    out_list = []
     for rule in S.split(';'):
         rule = rule.strip()
         if not rule:
@@ -67,9 +67,9 @@ def sanitize_css(S):
             print(('RULE REJECTED #2:', rule))
             continue
 
-        LOut.append(rule)
+        out_list.append(rule)
 
-    S = ';'.join(LOut)
+    S = ';'.join(out_list)
 
 
     # Do a general validation check

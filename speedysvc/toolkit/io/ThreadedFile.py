@@ -23,20 +23,20 @@ def read_line(f):
     #if 1: 
     #   return f.read(2101)
     
-    LData = []
+    data_list = []
     amount = 512
     
     while 1:
         Data = f.read(amount) # TODO: BENCHMARK ME!
         if '\n' in Data:
-            LData.append('%s\n' % Data.split('\n')[0])
+            data_list.append('%s\n' % Data.split('\n')[0])
             break
         else: 
-            LData.append(Data)
+            data_list.append(Data)
             amount *= 2
     
-    print(len(''.join(LData)))
-    return ''.join(LData)
+    print(len(''.join(data_list)))
+    return ''.join(data_list)
 
 
 # The file read-ahead buffer

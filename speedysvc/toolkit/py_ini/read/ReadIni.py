@@ -20,7 +20,7 @@ class ReadIni(ReadBase):
 
         -> {'section': {'key': 'value'}}
         """
-        DRtn = {}
+        return_dict = {}
         for line in data.split('\n'):
             line = line.strip()
 
@@ -30,8 +30,8 @@ class ReadIni(ReadBase):
                 continue
 
             key, _, value = line.partition('=')
-            DRtn[key.strip()] = value.strip()
-        return DRtn
+            return_dict[key.strip()] = value.strip()
+        return return_dict
 
 
 read_D_ini = ReadIni().read_D

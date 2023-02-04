@@ -17,7 +17,7 @@ def write_file_archive(base_dir, LFiles, output_prefix):
     LFiles.sort(key=lambda x: fast_hash(x))
 
     LFilenameHashes = array('Q')
-    LSeek = array('Q')
+    seek_list = array('Q')
 
     with open(f'{output_prefix}_data.bin', 'wb') as f_data:
         with open(
@@ -27,7 +27,7 @@ def write_file_archive(base_dir, LFiles, output_prefix):
             for fnam in LFiles:
                 seek = f_data.tell()
                 LFilenameHashes.append(fast_hash(fnam))
-                LSeek.append(seek)
+                seek_list.append(seek)
 
                 with open('%s/%s' % (base_dir, fnam), 'rb') as f:
                     f_data.write(f.read())
@@ -38,12 +38,12 @@ def write_file_archive(base_dir, LFiles, output_prefix):
                 amount = f_data.tell()-seek
                 f_listing.write(f'{fnam}:{seek}:{amount}')
 
-            LSeek.append(f_data.tell())
+            seek_list.append(f_data.tell())
 
     with open(f'{output_prefix}_filenames.bin', 'wb') as f_filenamehashes:
         LFilenameHashes.tofile(f_filenamehashes)
 
     with open(f'{output_prefix}_seek.bin', 'wb') as f_seek:
-        LSeek.tofile(f_seek)
+        seek_list.tofile(f_seek)
 
 

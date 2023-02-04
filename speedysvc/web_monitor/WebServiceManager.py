@@ -181,16 +181,16 @@ class WebServiceManager:
         }
 
     def __get_data_for_keys(self, values, *keys, divisor=None):
-        LData = []
+        data_list = []
         for x, key in enumerate(keys):
-            LOut = []
+            out_list = []
             for D in values:
                 i = D[key]
                 if divisor is not None:
                     i //= divisor
-                LOut.append(i)
-            LData.append([key, LOut, LColours[x]])
-        return LData
+                out_list.append(i)
+            data_list.append([key, out_list, LColours[x]])
+        return data_list
 
     def __get_table_html(self, service_dict):
         return self.jinja2_env.from_string(
