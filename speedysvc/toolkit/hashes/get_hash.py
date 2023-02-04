@@ -1,6 +1,6 @@
 from .fast_hash import fast_hash
 
-SIgnore = {
+ignore_set = {
     str, str, int, int, float, None
 }
 
@@ -23,7 +23,7 @@ def get_hashable_types(obj):
         return_list.sort()
         obj = ('~~', tuple(return_list))
     
-    elif t in SIgnore or obj is None:
+    elif t in ignore_set or obj is None:
         # Numeric or string/unicode? 
         # It's immutable, so ignore it!
         #try: obj = obj.decode('ascii', 'ignore')
