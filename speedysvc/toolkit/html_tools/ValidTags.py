@@ -48,7 +48,7 @@ SElmAttr = set([
   "start", "style", "summary", "tabindex", "target", "title", "type", "usemap",
   "valign", "value", "vspace", "width", "xml:lang"])
 
-SWiki = set([
+wiki_set = set([
     'abbr','b','big','blockquote','br','caption','center','cite',
     'code','dd','del','div','dl','dt','em','font','h1','h2',
     'h3','h4','h5','h6','hr','i','ins','li','ol','p','pre',

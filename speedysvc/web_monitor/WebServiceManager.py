@@ -50,8 +50,8 @@ class WebServiceManager:
         :param offset:
         :return:
         """
-        offset, LHTML = self.logger_parent.get_html_log(offset=offset)
-        return offset, '<br>'.join(LHTML) + ('<br>' if LHTML else '')
+        offset, html_list = self.logger_parent.get_html_log(offset=offset)
+        return offset, '<br>'.join(html_list) + ('<br>' if html_list else '')
 
     def get_overall_table_html(self, add_links=True):
         return self.jinja2_env.from_string(
@@ -113,12 +113,12 @@ class WebServiceManager:
         service = self.services.get_service_by_port(port)
         stsd = service.get_logger_server().service_time_series_data
         recent_values = stsd.get_recent_values()
-        offset, LHTML = service.logger_server.fifo_json_log.get_html_log(offset=console_offset)
+        offset, html_list = service.logger_server.fifo_json_log.get_html_log(offset=console_offset)
         method_stats_html = self.get_method_stats_html(port)
 
         D = {
             "graphs": self.__get_D_graphs(recent_values),
-            "console_text": '\n'.join(LHTML),
+            "console_text": '\n'.join(html_list),
             "console_offset": offset,
             "method_stats_html": method_stats_html,
         }
