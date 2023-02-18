@@ -37,9 +37,9 @@ def get_simp_trad(multi_translit, s):
     if typ == 'both':
         return s, s
     elif typ == 'simp':
-        return s, multi_translit.translit('zh', 'zh_Hant', s)
+        return s, multi_translit.translit('zh', 'zh-Hant', s)
     else:
-        return multi_translit.translit('zh_Hant', 'zh', s), s
+        return multi_translit.translit('zh-Hant', 'zh', s), s
 
 
 if __name__ == '__main__':
