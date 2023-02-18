@@ -56,7 +56,7 @@ class Thread:
         # usage -> Store how many times a file has been open
         # args -> Store the arguments used to init a file (path, mode)
         # f -> Store the file itself
-        self.DFiles = {}
+        self.files_dict = {}
         # Store how many files are open. There's a limit on open 
         # files and files are opened and closed as needed
         self.open_files = 0
@@ -65,16 +65,16 @@ class Thread:
         self.__close_unused_files()
         
         key = (path, mode)
-        if key in self.DFiles:
-            if self.DFiles[key]['file']:
+        if key in self.files_dict:
+            if self.files_dict[key]['file']:
                 # f already open, return it
-                return self.DFiles[key]['file']
+                return self.files_dict[key]['file']
             else:
                 # Otherwise, recreate it
                 f = FILEINST(path, mode, BUFFER)
                 f = self.__get_CStringIO(f)
                 
-                self.DFiles[key]['file'] = f
+                self.files_dict[key]['file'] = f
                 self.open_files += 1
                 return f
         else:
@@ -82,7 +82,7 @@ class Thread:
             f = FILEINST(path, mode, BUFFER)
             f = self.__get_CStringIO(f)
             
-            self.DFiles[key] = {'usage': 1, 
+            self.files_dict[key] = {'usage': 1, 
                                 'args': (path, mode), 
                                 'file': f}
             self.open_files += 1
@@ -99,7 +99,7 @@ class Thread:
         if self.open_files > 150:
             # There's a limit of say, 512 files open at once on 
             # some OSes. This closes the files which are least used
-            LFiles = [(self.DFiles[k]['usage'], self.DFiles[k]['file']) for k in self.DFiles]
+            LFiles = [(self.files_dict[k]['usage'], self.files_dict[k]['file']) for k in self.files_dict]
             LFiles.sort()
             # Chop off the top one by number of opens :-)
             LFiles[0][1].close()
@@ -190,7 +190,7 @@ class Thread:
         f = self.acquire_lock(LFileArgs)
         
         try:
-            self.DFiles[tuple(LFileArgs)]['file'] = None
+            self.files_dict[tuple(LFileArgs)]['file'] = None
             f.close()
             self.open_files -= 1
         except:
