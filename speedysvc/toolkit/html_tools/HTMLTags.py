@@ -236,30 +236,30 @@ def output_htm(tag_name, xhtml, D,
             return '' # WARNING - Tag not allowed!
     
     # Output the tag
-    LRtn = []
+    rtn_list = []
     if output_tag: 
-        LRtn.append('<%s' % tag_name)
+        rtn_list.append('<%s' % tag_name)
     
     for k in D:
         # Output escaped values
         #print k, D[k]
 
         if D[k] is not None:
-            LRtn.append(' %s="%s"' % (k, esc_q(D[k])))
+            rtn_list.append(' %s="%s"' % (k, esc_q(D[k])))
         else:
             # HTML key without a value, e.g. "nowrap" in "td" elements
-            LRtn.append(' %s' % k)
+            rtn_list.append(' %s' % k)
     
     # Output the end of the tag
     if not output_tag: 
         if xhtml: 
-            LRtn.append(' /')
+            rtn_list.append(' /')
     else:
         if xhtml: 
-            LRtn.append(' />')
+            rtn_list.append(' />')
         else: 
-            LRtn.append('>')
-    return ''.join(LRtn)
+            rtn_list.append('>')
+    return ''.join(rtn_list)
 
 
 if __name__ == '__main__':

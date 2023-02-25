@@ -5,7 +5,7 @@ def write_arrays(f, L):
     if isinstance(L, dict):
         L = list(L.items())
 
-    LRtn = []
+    rtn_list = []
     for key, iL in L:
-        LRtn.append((key, write_array(f, iL)))
-    return LRtn
+        rtn_list.append((key, write_array(f, iL)))
+    return rtn_list

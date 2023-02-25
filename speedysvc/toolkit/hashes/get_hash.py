@@ -10,18 +10,18 @@ def get_hashable_types(obj):
 
     if t in (list, tuple):
         # Convert lists to tuples
-        LRtn = []
+        rtn_list = []
         for i in obj:
-            LRtn.append(get_hashable_types(i))
-        obj = tuple(LRtn)
+            rtn_list.append(get_hashable_types(i))
+        obj = tuple(rtn_list)
 
     elif t == dict:
         # Convert dicts to tuples
-        LRtn = []
+        rtn_list = []
         for k in obj:
-            LRtn.append((k, get_hashable_types(obj[k])))
-        LRtn.sort()
-        obj = ('~~', tuple(LRtn))
+            rtn_list.append((k, get_hashable_types(obj[k])))
+        rtn_list.sort()
+        obj = ('~~', tuple(rtn_list))
     
     elif t in SIgnore or obj is None:
         # Numeric or string/unicode? 
