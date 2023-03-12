@@ -70,7 +70,7 @@ if False:
             print(Char.encode('utf-8'), end=' ')
     print()
 
-DIPA = {}
+ipa_dict = {}
 
 for Line in IPA.split('\n'):
     Line = Line.strip()
@@ -79,9 +79,9 @@ for Line in IPA.split('\n'):
     Key, Chars = Line.split(': ')
     for iKey in Key.split(';'):
         iKey = iKey.strip() # WARNING!
-        DIPA[iKey] = [i for i in Chars if i.strip()]
+        ipa_dict[iKey] = [i for i in Chars if i.strip()]
 
 if __name__ == '__main__':
     from pprint import pprint
-    print((to_unicode(str(GetDAccents(DIPA)).replace("u'", '')).encode('utf-8')))
-    print(GetDAccents(DIPA)['e'][1]['o'])
+    print((to_unicode(str(GetDAccents(ipa_dict)).replace("u'", '')).encode('utf-8')))
+    print(GetDAccents(ipa_dict)['e'][1]['o'])

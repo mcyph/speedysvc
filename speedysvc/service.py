@@ -75,7 +75,7 @@ class Services:
         self.DValuesByPort = {}
         self.DValuesByName = {}
 
-        self.DValues = ReadIni().read_D(argv[-1])
+        self.DValues = ReadIni().read_dict(argv[-1])
 
         self.DArgKeys = {
             'log_dir': lambda x: x,

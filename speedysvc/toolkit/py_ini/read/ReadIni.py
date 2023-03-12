@@ -34,4 +34,4 @@ class ReadIni(ReadBase):
         return DRtn
 
 
-read_D_ini = ReadIni().read_D
+read_D_ini = ReadIni().read_dict

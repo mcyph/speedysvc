@@ -18,4 +18,4 @@ class ReadHtmlIni(ReadBase):
         return data
 
 
-read_D_html_ini = ReadHtmlIni().read_D
+read_D_html_ini = ReadHtmlIni().read_dict

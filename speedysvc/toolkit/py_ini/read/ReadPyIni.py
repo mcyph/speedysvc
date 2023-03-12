@@ -43,4 +43,4 @@ class ReadPyIni(ReadBase):
         return '\n'.join(L)
 
 
-read_D_pyini = ReadPyIni().read_D
+read_D_pyini = ReadPyIni().read_dict

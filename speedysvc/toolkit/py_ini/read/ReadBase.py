@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 
 class ReadBase:
-    def read_D(self, path):
+    def read_dict(self, path):
         with open(path, 'r', errors='replace', encoding='utf-8') as f:
             return self.__read_D(f)
 
