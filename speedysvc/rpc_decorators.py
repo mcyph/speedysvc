@@ -46,12 +46,12 @@ def __from_server_method(server_fn):
 
             # Fill in server default arguments
             # (if there are any)
-            LArgs = []
-            LArgs.extend(args)
+            args_list = []
+            args_list.extend(args)
 
             for x in range(len(args), len(base_args_no_self)):
                 if base_args_no_self[x] in kw:
-                    LArgs.append(kw[base_args_no_self[x]])
+                    args_list.append(kw[base_args_no_self[x]])
                 else:
                     y = x - default_args_offset
                     if y < 0:
@@ -60,9 +60,9 @@ def __from_server_method(server_fn):
                             f"{ len(base_args_no_self) } arguments but "
                             f"{ len(args) + len(kw) } were given"
                         )
-                    LArgs.append(argspec.defaults[y])
+                    args_list.append(argspec.defaults[y])
 
-            return self.send(server_fn, LArgs)
+            return self.send(server_fn, args_list)
     return fn
 
 
