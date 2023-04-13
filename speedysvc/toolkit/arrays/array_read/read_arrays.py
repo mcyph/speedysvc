@@ -8,11 +8,11 @@ def read_arrays(f, L):
     e.g. {'Page': 555, 'Character': 'A', ...}
     """
 
-    DKeys = {}
+    keys_dict = {}
     LOrder = []
 
     for key, iL in L:
-        DKeys[key] = read_array(f, iL)
+        keys_dict[key] = read_array(f, iL)
         LOrder.append(key)
 
-    return LOrder, DKeys
+    return LOrder, keys_dict
