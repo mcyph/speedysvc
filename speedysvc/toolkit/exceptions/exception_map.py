@@ -65,7 +65,7 @@ __exceptions = """
 """.strip()
 
 
-def get_D_exceptions():
+def get_exc_dicteptions():
     DExceptions = {}
     for line in __exceptions.split('\n'):
         line = line.strip()
@@ -74,4 +74,4 @@ def get_D_exceptions():
     return DExceptions
 
 
-DExceptions = get_D_exceptions()
+DExceptions = get_exc_dicteptions()
